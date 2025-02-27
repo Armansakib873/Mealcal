@@ -1,13 +1,21 @@
-// MealSync Application with Supabase Integration
 document.addEventListener('DOMContentLoaded', async () => {
     // --- Supabase Client Initialization ---
-    const supabaseUrl = 'https://wywwpnofgxkdrqxywaaa.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5d3dwbm9mZ3hrZHJxeHl3YWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDM4MzYsImV4cCI6MjA1NjA3OTgzNn0.7v0OIKtQb6RajAbEqFv2HcEwiZzVL0RpFZXSeprptWg';
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = "https://eiqrmxgyyjbndznnbaqv.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcXJteGd5eWpibmR6bm5iYXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1ODk0ODYsImV4cCI6MjA1NjE2NTQ4Nn0.L10Z83pobbfeAId8bCQwxDi83ac37jYum9geSU-htTY";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    // --- Session ---
+    // --- Session and State ---
     let currentUser = JSON.parse(sessionStorage.getItem('mealsync_currentUser')) || null;
-    let selectedMonth = localStorage.getItem('mealsync_selectedMonth') || new Date().toISOString().slice(0, 7); // Current month
+    let appState = {
+        members: [],
+        deposits: [],
+        meals: [],
+        expenses: [],
+        notifications: [],
+        users: [],
+        lastUpdated: null
+    };
 
     // --- DOM Elements ---
     const elements = {
@@ -23,11 +31,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         menuToggle: document.querySelector('.menu-toggle'),
         headerNav: document.querySelector('.header-nav'),
         userStatus: document.getElementById('user-status'),
+        userRole: document.getElementById('user-role'),
         logoutBtn: document.getElementById('logout-btn'),
         notificationLogBtn: document.getElementById('notification-log-btn'),
         adminControls: document.getElementById('admin-controls'),
         editAccessControls: document.getElementById('edit-access-controls'),
         passwordControls: document.getElementById('password-controls'),
+        resetMonthBtn: document.getElementById('reset-month-btn'),
         exportDataBtn: document.getElementById('export-data-btn'),
         exportFormat: document.getElementById('export-format'),
         totalDeposits: document.getElementById('total-deposits'),
@@ -52,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         addMemberBtn: document.getElementById('add-member-btn'),
         summarySection: document.getElementById('summary-section'),
         summaryTableBody: document.querySelector('#summary-table tbody'),
-        monthSelect: document.getElementById('month-select'),
+        cycleDates: document.getElementById('cycle-dates'),
         mealTableBody: document.querySelector('#meal-table tbody'),
         expensesTableBody: document.querySelector('#expenses-table tbody'),
         addExpenseBtn: document.getElementById('add-expense-btn'),
@@ -94,9 +104,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 3000);
 
         if (!isLogin) {
-            supabase.from('notifications').insert([{ message, type, timestamp: new Date().toISOString() }])
+            supabaseClient.from('notifications').insert([{ message, type, timestamp: new Date().toISOString() }])
                 .then(() => renderNotificationLog())
-                .catch(error => console.error('Error logging notification:', error));
+                .catch(error => console.error('Error logging notification:', error.message));
         }
     }
 
@@ -111,31 +121,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     function isToggleTimeAllowed() {
         const now = new Date();
         const hours = now.getHours();
-        return hours >= 20 || hours < 18; // 8 PM to 6 PM
+        return hours >= 20 || hours < 18; // 8 PM to 6 PM (for users only)
     }
 
     function getLocalTime() {
         return new Date().toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
     }
 
+    function getCycleDates() {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return `Current Cycle: ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+
     // --- Authentication Forms ---
     async function createAuthForms() {
-        const { data: members, error } = await supabase.from('members').select('name');
+        const { data: users, error } = await supabaseClient.from('users').select('username');
         if (error) {
-            console.error('Error fetching members:', error);
+            showNotification('Failed to load users.', 'error', true);
             return;
         }
-        const memberOptions = members.map(m => `<option value="${m.name}">${m.name}</option>`).join('') + '<option value="admin">admin</option>';
+        const userOptions = users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
 
         elements.loginFormContainer.innerHTML = `
             <form id="login-form" class="modal-form">
                 <div class="form-group">
                     <label for="login-username">Username:</label>
-                    <select id="login-username" class="select-input" required>${memberOptions}</select>
+                    <select id="login-username" class="select-input" required>${userOptions}</select>
                 </div>
                 <div class="form-group">
                     <label for="login-password">Password:</label>
                     <input type="password" id="login-password" class="input-field" required>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="remember-me"> Remember Me</label>
                 </div>
                 <button type="submit" class="btn primary-btn"><i class="fas fa-sign-in-alt"></i> Login</button>
             </form>
@@ -149,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <form id="signup-form" class="modal-form">
                 <div class="form-group">
                     <label for="signup-username">Username:</label>
-                    <select id="signup-username" class="select-input" required>${memberOptions}<option value="new">New Member</option></select>
+                    <input type="text" id="signup-username" class="input-field" required>
                 </div>
                 <div class="form-group">
                     <label for="signup-password">Password:</label>
@@ -174,12 +194,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function login() {
         const username = document.getElementById('login-username').value.trim();
         const password = document.getElementById('login-password').value;
-        const { data, error } = await supabase.from('users')
+        const rememberMe = document.getElementById('remember-me').checked;
+
+        const { data, error } = await supabaseClient.from('users')
             .select('*')
             .eq('username', username)
             .eq('password', password)
             .single();
-        
+
         if (error || !data) {
             showNotification('Invalid credentials.', 'error', true);
             return;
@@ -187,10 +209,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         currentUser = data;
         sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+        if (rememberMe) {
+            await supabaseClient.from('user_settings')
+                .update({ auto_login: true })
+                .eq('user_id', currentUser.id);
+            localStorage.setItem('mealsync_auto_login', btoa(`${username}:${password}`)); // Basic encoding
+        }
         showNotification(`Welcome, ${username}!`, 'success', true);
         elements.loginPage.classList.add('hidden');
         elements.mainApp.style.display = 'block';
         updateUIForRole();
+        await fetchAllData();
         await updateAllViews();
     }
 
@@ -198,38 +227,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         const username = document.getElementById('signup-username').value.trim();
         const password = document.getElementById('signup-password').value;
 
-        const { data: existingUser, error: userError } = await supabase.from('users')
+        const { data: existingUser } = await supabaseClient.from('users')
             .select('id')
             .eq('username', username)
             .single();
-        if (userError && userError.code !== 'PGRST116') { // PGRST116 = no rows
-            console.error('Error checking user:', userError);
-            return;
-        }
         if (existingUser) {
             showNotification('Username already exists.', 'error', true);
             return;
         }
 
-        const { data: user, error: insertError } = await supabase.from('users')
-            .insert([{ username, password, role: username === 'admin' ? 'admin' : 'user' }])
+        const { data: user, error } = await supabaseClient.from('users')
+            .insert([{ username, password, role: 'user' }])
             .select()
             .single();
-        if (insertError) {
-            console.error('Error inserting user:', insertError);
+        if (error) {
+            showNotification('Signup failed: ' + error.message, 'error', true);
             return;
         }
 
-        if (username !== 'admin' && username !== 'new') {
-            const { error: memberError } = await supabase.from('members')
-                .insert([{ name: username }]);
-            if (memberError) {
-                console.error('Error inserting member:', memberError);
-            } else {
-                showNotification(`New member "${username}" created along with user account.`, 'success', true);
-            }
-        }
-
+        await supabaseClient.from('user_settings')
+            .insert([{ user_id: user.id, theme: 'light', auto_login: false }]);
         showNotification('Account created! Please log in.', 'success', true);
         elements.signupFormContainer.classList.add('hidden');
         elements.loginFormContainer.classList.remove('hidden');
@@ -240,6 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function logout() {
         currentUser = null;
         sessionStorage.removeItem('mealsync_currentUser');
+        localStorage.removeItem('mealsync_auto_login');
         elements.headerNav.classList.remove('active');
         elements.mainApp.style.display = 'none';
         elements.loginPage.classList.remove('hidden');
@@ -248,12 +266,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.toggleSignupBtn.textContent = 'Need an account? Sign Up';
     }
 
+    // --- Auto-Login Check ---
+    async function checkAutoLogin() {
+        const autoLoginData = localStorage.getItem('mealsync_auto_login');
+        if (autoLoginData) {
+            const [username, password] = atob(autoLoginData).split(':');
+            const { data: user } = await supabaseClient.from('users')
+                .select('*')
+                .eq('username', username)
+                .eq('password', password)
+                .single();
+            if (user) {
+                currentUser = user;
+                sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+                elements.loginPage.classList.add('hidden');
+                elements.mainApp.style.display = 'block';
+                updateUIForRole();
+                await fetchAllData();
+                await updateAllViews();
+            }
+        }
+    }
+
     // --- Theme Toggle ---
-    elements.toggleThemeBtn.addEventListener('click', () => {
+    elements.toggleThemeBtn.addEventListener('click', async () => {
         document.body.classList.toggle('dark-mode');
         const isDark = document.body.classList.contains('dark-mode');
         elements.toggleThemeBtn.innerHTML = `<i class="fas fa-${isDark ? 'sun' : 'moon'}"></i>`;
         localStorage.setItem('mealsync_theme', isDark ? 'dark' : 'light');
+        if (currentUser) {
+            await supabaseClient.from('user_settings')
+                .update({ theme: isDark ? 'dark' : 'light' })
+                .eq('user_id', currentUser.id);
+        }
         updateCharts();
     });
 
@@ -266,23 +311,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.currentDate.textContent = new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
+    elements.cycleDates.textContent = getCycleDates();
 
-    // --- Mobile Menu Toggle ---
     elements.menuToggle.addEventListener('click', () => {
         elements.headerNav.classList.toggle('active');
         elements.menuToggle.innerHTML = `<i class="fas fa-${elements.headerNav.classList.contains('active') ? 'times' : 'bars'}"></i>`;
     });
 
-    // --- UI Updates ---
     elements.logoutBtn.addEventListener('click', logout);
 
     function updateUIForRole() {
         elements.userStatus.textContent = currentUser ? `Logged in as: ${currentUser.username}` : '';
-        const isAdminOrCanEdit = currentUser?.username === 'admin' || currentUser?.canEdit;
-        elements.addMemberBtn.classList.toggle('hidden', !isAdminOrCanEdit);
-        elements.addExpenseBtn.classList.toggle('hidden', !isAdminOrCanEdit);
-        elements.adminControls.classList.toggle('hidden', currentUser?.username !== 'admin');
-        elements.summarySection.classList.toggle('hidden', !isAdminOrCanEdit);
+        elements.userRole.textContent = currentUser ? `Role: ${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` : '';
+        const isAdmin = currentUser?.role === 'admin';
+        const isManager = currentUser?.role === 'manager';
+        const canEdit = isAdmin || isManager; // Managers have same access as admins except admin controls and deletes
+
+        elements.addMemberBtn.classList.toggle('hidden', !isAdmin); // Only admin can add members
+        elements.addExpenseBtn.classList.toggle('hidden', !canEdit); // Managers and admins can add expenses
+        elements.adminControls.classList.toggle('hidden', !isAdmin); // Only admin sees admin controls
+        elements.summarySection.classList.toggle('hidden', !canEdit); // Managers and admins see summary
+
+        // Adjust member card actions for managers (full edit, no delete)
+        document.querySelectorAll('.member-card .actions').forEach(actions => {
+            const memberId = actions.closest('.member-card').dataset.id;
+            if (isAdmin) {
+                actions.innerHTML = `
+                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                `;
+            } else if (isManager) {
+                actions.innerHTML = `
+                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                `;
+            } else {
+                actions.innerHTML = ''; // No actions for regular users
+            }
+        });
     }
 
     // --- Event Listeners ---
@@ -298,8 +363,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     elements.closeEditMemberModal.addEventListener('click', () => closeModal(elements.editMemberModal));
     elements.editMemberForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await updateMember();
+        e.preventDefault(); // Prevent default form submission
+        await updateMember(); // Call the update function
     });
 
     elements.addExpenseBtn.addEventListener('click', () => openModal(elements.expenseModal));
@@ -315,12 +380,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             showNotification('Please enter a new password.', 'error');
             return;
         }
-        const { error } = await supabase.from('users')
+        const { error } = await supabaseClient.from('users')
             .update({ password: newPassword })
             .eq('id', currentUser.id);
         if (error) {
-            console.error('Error updating password:', error);
-            showNotification('Failed to update password.', 'error');
+            showNotification('Failed to update password: ' + error.message, 'error');
             return;
         }
         currentUser.password = newPassword;
@@ -331,12 +395,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     elements.notificationLogBtn.addEventListener('click', () => openModal(elements.notificationLogModal));
     elements.closeNotificationLogModal.addEventListener('click', () => closeModal(elements.notificationLogModal));
-
-    elements.monthSelect.addEventListener('change', async () => {
-        selectedMonth = elements.monthSelect.value;
-        localStorage.setItem('mealsync_selectedMonth', selectedMonth);
-        await updateAllViews();
-    });
 
     elements.statsTab.addEventListener('click', () => {
         elements.statsTab.classList.add('active');
@@ -354,6 +412,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     elements.exportDataBtn.addEventListener('click', exportData);
+    elements.resetMonthBtn.addEventListener('click', resetMonth);
 
     // --- Modal Functions ---
     function openModal(modal) {
@@ -387,37 +446,64 @@ document.addEventListener('DOMContentLoaded', async () => {
         container.appendChild(div);
     }
 
+    // --- Data Fetching ---
+    async function fetchAllData() {
+        const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users'];
+        for (const table of tables) {
+            const { data, error } = await supabaseClient.from(table).select('*').order('created_at', { ascending: false });
+            if (error) {
+                showNotification(`Error fetching ${table}: ${error.message}`, 'error');
+                continue;
+            }
+            appState[table] = data;
+        }
+        appState.lastUpdated = Date.now();
+        localStorage.setItem('mealsync_cache', JSON.stringify(appState));
+    }
+
     // --- Member Functions ---
     async function addMember() {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
+        if (currentUser?.role !== 'admin') return;
         const name = document.getElementById('member-name').value.trim();
+        const username = document.getElementById('member-username').value.trim();
+        const password = document.getElementById('member-password').value;
         const preMonthBalance = parseFloat(document.getElementById('pre-month-balance').value) || 0;
-        if (!name) {
-            showNotification('Please enter a member name.', 'error');
+
+        if (!name || !username || !password) {
+            showNotification('Please fill all required fields.', 'error');
             return;
         }
 
-        const { data: existingMember, error: memberCheckError } = await supabase.from('members')
+        const { data: existingMember } = await supabaseClient.from('members')
             .select('id')
             .eq('name', name)
             .single();
-        if (memberCheckError && memberCheckError.code !== 'PGRST116') {
-            console.error('Error checking member:', memberCheckError);
-            return;
-        }
         if (existingMember) {
             showNotification('Member name already exists.', 'error');
             return;
         }
 
-        const { data: member, error: memberError } = await supabase.from('members')
-            .insert([{ name, pre_month_balance: preMonthBalance }])
-            .select()
+        const { data: existingUser } = await supabaseClient.from('users')
+            .select('id')
+            .eq('username', username)
             .single();
-        if (memberError) {
-            console.error('Error adding member:', memberError);
+        if (existingUser) {
+            showNotification('Username already exists.', 'error');
             return;
         }
+
+        const { data: member } = await supabaseClient.from('members')
+            .insert([{ name, pre_month_balance: preMonthBalance, day_status: true, night_status: true }])
+            .select()
+            .single();
+
+        const { data: user } = await supabaseClient.from('users')
+            .insert([{ username, password, role: 'user', member_id: member.id }])
+            .select()
+            .single();
+
+        await supabaseClient.from('user_settings')
+            .insert([{ user_id: user.id, theme: 'light', auto_login: false }]);
 
         const deposits = {};
         elements.depositFields.querySelectorAll('input').forEach(input => {
@@ -425,30 +511,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
             member_id: member.id,
-            month: selectedMonth,
             label,
             amount
         }));
         if (depositEntries.length > 0) {
-            const { error: depositError } = await supabase.from('deposits').insert(depositEntries);
-            if (depositError) console.error('Error adding deposits:', depositError);
+            await supabaseClient.from('deposits').insert(depositEntries);
         }
 
-        const { data: existingUser, error: userCheckError } = await supabase.from('users')
-            .select('id')
-            .eq('username', name)
-            .single();
-        if (!existingUser && !userCheckError) {
-            const { error: userError } = await supabase.from('users')
-                .insert([{ username: name, password: '123', role: 'user' }]);
-            if (userError) {
-                console.error('Error adding user:', userError);
-            } else {
-                showNotification(`User "${name}" created with password "123".`, 'success');
-            }
-        }
-
-        await renderMembers();
+        await fetchAllData();
         await updateAllViews();
         showNotification(`${name} added successfully!`, 'success');
         closeModal(elements.addMemberModal);
@@ -456,58 +526,66 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function updateMember() {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
+        if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
+
+        const member = appState.members.find(m => m.id === editingMemberId);
+        const user = appState.users.find(u => u.member_id === editingMemberId);
+
         const name = document.getElementById('edit-member-name').value.trim();
+        const username = document.getElementById('edit-member-username').value.trim();
         const preMonthBalance = parseFloat(document.getElementById('edit-pre-month-balance').value) || 0;
 
-        const { data: member, error: fetchError } = await supabase.from('members')
-            .select('*')
-            .eq('id', editingMemberId)
-            .single();
-        if (fetchError) {
-            console.error('Error fetching member:', fetchError);
-            return;
+        if (name !== member.name) {
+            const { data: existingMember } = await supabaseClient.from('members')
+                .select('id')
+                .eq('name', name)
+                .single();
+            if (existingMember) {
+                showNotification('Member name already exists.', 'error');
+                return;
+            }
         }
 
-        if (name !== member.name && (await supabase.from('members').select('id').eq('name', name).single()).data) {
-            showNotification('Member name already exists.', 'error');
-            return;
+        if (username !== user.username) {
+            const { data: existingUser } = await supabaseClient.from('users')
+                .select('id')
+                .eq('username', username)
+                .single();
+            if (existingUser) {
+                showNotification('Username already exists.', 'error');
+                return;
+            }
         }
 
-        const oldName = member.name;
-        const { error: updateError } = await supabase.from('members')
-            .update({ name, pre_month_balance: preMonthBalance })
+        const memberUpdate = { name, pre_month_balance: preMonthBalance };
+        await supabaseClient.from('members')
+            .update(memberUpdate)
             .eq('id', editingMemberId);
-        if (updateError) {
-            console.error('Error updating member:', updateError);
-            return;
+
+        const userUpdate = { username };
+        if (currentUser.role === 'admin') { // Only admins can change passwords
+            const password = document.getElementById('edit-member-password').value || undefined;
+            if (password) userUpdate.password = password;
         }
+        await supabaseClient.from('users')
+            .update(userUpdate)
+            .eq('id', user.id);
 
         const deposits = {};
         elements.editDepositFields.querySelectorAll('input').forEach(input => {
             deposits[input.dataset.label] = parseFloat(input.value) || 0;
         });
+        await supabaseClient.from('deposits').delete().eq('member_id', editingMemberId);
         const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
             member_id: editingMemberId,
-            month: selectedMonth,
             label,
             amount
         }));
-        await supabase.from('deposits').delete().eq('member_id', editingMemberId).eq('month', selectedMonth);
         if (depositEntries.length > 0) {
-            const { error: depositError } = await supabase.from('deposits').insert(depositEntries);
-            if (depositError) console.error('Error updating deposits:', depositError);
+            await supabaseClient.from('deposits').insert(depositEntries);
         }
 
-        const { data: user, error: userFetchError } = await supabase.from('users')
-            .select('*')
-            .eq('username', oldName)
-            .single();
-        if (user && user.username !== 'admin') {
-            await supabase.from('users').update({ username: name }).eq('id', user.id);
-        }
-
-        await renderMembers();
+        await fetchAllData();
         await updateAllViews();
         showNotification(`${name} updated successfully!`, 'success');
         closeModal(elements.editMemberModal);
@@ -515,161 +593,186 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function editMember(id) {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
-        const { data: member, error } = await supabase.from('members')
-            .select('*')
-            .eq('id', id)
-            .single();
-        if (error) {
-            console.error('Error fetching member:', error);
-            return;
-        }
+        if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
+        const member = appState.members.find(m => m.id === id);
+        const user = appState.users.find(u => u.member_id === id);
 
         editingMemberId = id;
         document.getElementById('edit-member-name').value = member.name;
+        document.getElementById('edit-member-username').value = user.username;
         document.getElementById('edit-pre-month-balance').value = member.pre_month_balance;
 
-        const { data: deposits, error: depositError } = await supabase.from('deposits')
-            .select('*')
-            .eq('member_id', id)
-            .eq('month', selectedMonth);
-        elements.editDepositFields.innerHTML = '';
-        if (!depositError && deposits) {
-            deposits.forEach(dep => {
-                const div = document.createElement('div');
-                div.className = 'form-group';
-                div.innerHTML = `
-                    <label for="edit-deposit-${dep.label}">${dep.label}:</label>
-                    <input type="number" id="edit-deposit-${dep.label}" class="input-field" value="${dep.amount}" step="1" data-label="${dep.label}">
-                `;
-                elements.editDepositFields.appendChild(div);
-            });
+        // Optionally restrict password editing for managers
+        if (currentUser.role === 'manager') {
+            document.getElementById('edit-member-password').disabled = true;
+        } else {
+            document.getElementById('edit-member-password').value = ''; // Allow password edit for admins
+            document.getElementById('edit-member-password').disabled = false;
         }
+
+        elements.editDepositFields.innerHTML = '';
+        const memberDeposits = appState.deposits.filter(d => d.member_id === id);
+        memberDeposits.forEach(dep => {
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            div.innerHTML = `
+                <label for="edit-deposit-${dep.label}">${dep.label}:</label>
+                <input type="number" id="edit-deposit-${dep.label}" class="input-field" value="${dep.amount}" step="1" data-label="${dep.label}">
+            `;
+            elements.editDepositFields.appendChild(div);
+        });
 
         openModal(elements.editMemberModal);
     }
 
     async function deleteMember(id) {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
-        if (!confirm('Are you sure you want to delete this member?')) return;
+        if (currentUser.role !== 'admin') return; // Managers cannot delete
+        if (!confirm('Are you sure you want to delete this member and associated user?')) return;
 
-        const { data: member, error: fetchError } = await supabase.from('members')
-            .select('name')
-            .eq('id', id)
-            .single();
-        if (fetchError) {
-            console.error('Error fetching member:', fetchError);
-            return;
+        const member = appState.members.find(m => m.id === id);
+        const user = appState.users.find(u => u.member_id === id);
+
+        await supabaseClient.from('deposits').delete().eq('member_id', id);
+        await supabaseClient.from('meals').delete().eq('member_id', id);
+        await supabaseClient.from('expenses').delete().eq('member_id', id);
+        await supabaseClient.from('members').delete().eq('id', id);
+        if (user) {
+            await supabaseClient.from('user_settings').delete().eq('user_id', user.id);
+            await supabaseClient.from('users').delete().eq('id', user.id);
         }
 
-        const { error: deleteError } = await supabase.from('members').delete().eq('id', id);
-        if (deleteError) {
-            console.error('Error deleting member:', deleteError);
-            return;
-        }
-
-        await renderMembers();
+        await fetchAllData();
         await updateAllViews();
         showNotification(`${member.name} deleted successfully!`, 'success');
     }
 
-    async function renderMembers() {
-        elements.membersList.innerHTML = '';
-        const { data: members, error } = await supabase.from('members').select('*');
-        if (error) {
-            console.error('Error fetching members:', error);
-            return;
-        }
+    function updateUserToggleButtons() {
+        if (currentUser.role !== 'user') return;
+        const isAllowed = isToggleTimeAllowed();
+        document.querySelectorAll('.user-toggle').forEach(btn => {
+            if (isAllowed) {
+                btn.classList.remove('disabled');
+                btn.removeAttribute('disabled');
+                btn.style.cursor = 'pointer'; // Explicitly set cursor
+                btn.style.opacity = '1'; // Ensure full opacity
+            } else {
+                btn.classList.add('disabled');
+                btn.setAttribute('disabled', 'disabled');
+                btn.style.cursor = 'not-allowed'; // Explicitly set cursor
+                btn.style.opacity = '0.7'; // Dimmed appearance
+            }
+        });
+    }
 
-        const visibleMembers = (currentUser?.username === 'admin' || currentUser?.canEdit) 
-            ? members 
-            : members.filter(m => m.name.toLowerCase() === currentUser?.username.toLowerCase());
-        
-        for (const member of visibleMembers) {
-            const totalMeals = await calculateTotalMeals(member.id);
-            const totalDeposit = await calculateTotalDeposit(member.id);
-            const totalCost = await calculateTotalCost(member.id);
-            const balance = totalDeposit - totalCost;
-            const balanceClass = balance >= 0 ? 'positive' : 'negative';
-            const totalBazar = await calculateTotalBazar(member.id);
+    function isToggleTimeAllowed() {
+        const now = new Date();
+        const hours = now.getHours();
+        return hours >= 20 || hours < 18; // 8 PM (20:00) to 6 PM (18:00)
+    }
 
-            const card = document.createElement('div');
-            card.className = 'member-card';
-            card.dataset.id = member.id;
+async function renderMembers() {
+    elements.membersList.innerHTML = '';
+    const visibleMembers = currentUser.role === 'admin' || currentUser.role === 'manager'
+        ? appState.members
+        : appState.members.filter(m => m.id === currentUser.member_id);
 
-            card.innerHTML = `
-                <h3>${member.name}</h3>
-                <div>Total Deposit: ${formatCurrency(totalDeposit)}</div>
-                <div>Balance: <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
-                <div>Total Meals: <span class="total-meals">${totalMeals}</span></div>
-                <div>Total Bazar: ${totalBazar}</div>
-                <div class="toggles">
-                    <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${currentUser?.role === 'user' && !currentUser.canEdit && !isToggleTimeAllowed() ? 'disabled' : ''}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
-                    <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${currentUser?.role === 'user' && !currentUser.canEdit && !isToggleTimeAllowed() ? 'disabled' : ''}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
-                </div>
-                ${(currentUser?.username === 'admin' || currentUser?.canEdit) ? `
-                <div class="actions">
+    const isToggleAllowed = isToggleTimeAllowed(); // Check time once for initial render
+
+    for (const member of visibleMembers) {
+        const totalMeals = await calculateTotalMeals(member.id);
+        const totalDeposit = await calculateTotalDeposit(member.id);
+        const totalCost = await calculateTotalCost(member.id);
+        const balance = totalDeposit - totalCost;
+        const balanceClass = balance >= 0 ? 'positive' : 'negative';
+        const totalBazar = await calculateTotalBazar(member.id);
+
+        const card = document.createElement('div');
+        card.className = 'member-card';
+        card.dataset.id = member.id;
+
+        // Determine toggle state for users dynamically
+        const isOwnCard = currentUser.role === 'user' && member.id === currentUser.member_id;
+        const toggleClass = isOwnCard ? `user-toggle ${isToggleAllowed ? '' : 'disabled'}` : '';
+
+        card.innerHTML = `
+            <h3>${member.name}</h3>
+            <div>Total Deposit: ${formatCurrency(totalDeposit)}</div>
+            <div>Balance: <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
+            <div>Total Meals: <span class="total-meals">${totalMeals}</span></div>
+            <div>Total Bazar: ${totalBazar}</div>
+            <div class="toggles">
+                <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
+                <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
+            </div>
+            ${(currentUser.role === 'admin' || currentUser.role === 'manager') ? `
+            <div class="actions">
+                ${currentUser.role === 'admin' ? `
                     <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
                     <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
-                </div>` : ''}
-            `;
+                ` : `
+                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                `}
+            </div>` : ''}
+        `;
 
-            if (balance < 0 && currentUser?.role === 'user') {
-                showNotification('Warning: Your balance is negative!', 'error');
-            }
-
-            const toggleButtons = card.querySelectorAll('.toggle-btn');
-            toggleButtons.forEach(btn => {
-                btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
-            });
-
-            if (currentUser?.username === 'admin' || currentUser?.canEdit) {
-                card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
-                card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));
-            }
-
-            elements.membersList.appendChild(card);
+        if (balance < 0 && currentUser.role === 'user') {
+            showNotification('Warning: Your balance is negative!', 'error');
         }
-        await populateExpenseSelect();
+
+        const toggleButtons = card.querySelectorAll('.toggle-btn');
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
+        });
+
+        if (currentUser.role === 'admin') {
+            card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
+            card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));
+        } else if (currentUser.role === 'manager') {
+            card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
+        }
+
+        elements.membersList.appendChild(card);
+    }
+    await populateExpenseSelect();
+    updateUserToggleButtons(); // Ensure buttons are updated after initial render
+}
+
+    
+async function toggleMealStatus(member, type) {
+    if (currentUser.role === 'user' && !isToggleTimeAllowed()) {
+        showNotification('Meal toggling is only allowed between 8 PM and 6 PM.', 'error');
+        return;
     }
 
-    async function toggleMealStatus(member, type) {
-        if (currentUser?.role === 'user' && !currentUser.canEdit && !isToggleTimeAllowed()) {
-            showNotification('Meal toggling is only allowed between 8 PM and 6 PM.', 'error');
-            return;
-        }
+    const statusKey = type === 'day' ? 'day_status' : 'night_status';
+    const newStatus = !member[statusKey];
+    await supabaseClient.from('members')
+        .update({ [statusKey]: newStatus })
+        .eq('id', member.id);
 
-        const statusKey = type === 'day' ? 'day_status' : 'night_status';
-        const newStatus = !member[statusKey];
-        const { error } = await supabase.from('members')
-            .update({ [statusKey]: newStatus })
-            .eq('id', member.id);
-        if (error) {
-            console.error('Error toggling status:', error);
-            return;
-        }
+    if (currentUser.member_id === member.id) {
+        currentUser[statusKey] = newStatus;
+        sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+    }
 
-        await renderMembers();
-        await updateDashboard();
+    await fetchAllData();
+    await updateMemberCard(member.id); // Update the specific card
+    await updateDashboard();
+    if (currentUser.member_id === member.id) {
         await updateUserOverview();
     }
-
+    updateUserToggleButtons(); // Sync button appearance after toggle
+}
+    
     // --- Expense Functions ---
     async function openExpenseModal(expenseId = null) {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
+        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
         editingExpenseId = expenseId;
         const title = expenseId ? 'Edit Expense' : 'Add Expense';
         elements.expenseModal.querySelector('h2').textContent = `<i class="fas fa-receipt"></i> ${title}`;
 
         if (expenseId) {
-            const { data: expense, error } = await supabase.from('expenses')
-                .select('*')
-                .eq('id', expenseId)
-                .single();
-            if (error) {
-                console.error('Error fetching expense:', error);
-                return;
-            }
+            const expense = appState.expenses.find(e => e.id === expenseId);
             document.getElementById('expense-date').value = expense.date;
             document.getElementById('expense-member').value = expense.member_id;
             document.getElementById('expense-amount').value = expense.amount;
@@ -682,7 +785,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function addExpense() {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
+        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
         const date = document.getElementById('expense-date').value;
         const memberId = parseInt(document.getElementById('expense-member').value);
         const amount = parseFloat(document.getElementById('expense-amount').value);
@@ -692,83 +795,63 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const month = date.slice(0, 7); // e.g., "2025-02" from "2025-02-15"
-        const { error } = await supabase.from('expenses')
-            .insert([{ member_id: memberId, month, date, amount }]);
-        if (error) {
-            console.error('Error adding expense:', error);
-            return;
-        }
+        await supabaseClient.from('expenses')
+            .insert([{ member_id: memberId, date, amount }]);
 
-        await renderExpenses();
+        await fetchAllData();
         await updateAllViews();
         showNotification('Expense added successfully!', 'success');
         closeModal(elements.expenseModal);
     }
 
     async function updateExpense() {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
+        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
         const date = document.getElementById('expense-date').value;
         const memberId = parseInt(document.getElementById('expense-member').value);
         const amount = parseFloat(document.getElementById('expense-amount').value);
-        const month = date.slice(0, 7);
 
-        const { error } = await supabase.from('expenses')
-            .update({ date, member_id: memberId, amount, month })
-            .eq('id', editingExpenseId);
-        if (error) {
-            console.error('Error updating expense:', error);
+        if (!date || isNaN(memberId) || isNaN(amount)) {
+            showNotification('Please fill all fields.', 'error');
             return;
         }
 
-        await renderExpenses();
-        await updateAllViews();
+        await supabaseClient.from('expenses')
+            .update({ date, member_id: memberId, amount })
+            .eq('id', editingExpenseId);
+
+        await fetchAllData();
+        await renderExpenses(); // Update only expenses section
+        await updateDashboard();
         showNotification('Expense updated successfully!', 'success');
         closeModal(elements.expenseModal);
     }
 
     async function deleteExpense(id) {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
+        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
         if (!confirm('Are you sure you want to delete this expense?')) return;
 
-        const { error } = await supabase.from('expenses').delete().eq('id', id);
-        if (error) {
-            console.error('Error deleting expense:', error);
-            return;
-        }
-
+        await supabaseClient.from('expenses').delete().eq('id', id);
+        await fetchAllData();
         await renderExpenses();
-        await updateAllViews();
+        await updateDashboard();
         showNotification('Expense deleted successfully!', 'success');
     }
 
     async function renderExpenses() {
         elements.expensesTableBody.innerHTML = '';
-        const { data: expenses, error } = await supabase.from('expenses')
-            .select('*')
-            .eq('month', selectedMonth);
-        if (error) {
-            console.error('Error fetching expenses:', error);
-            return;
-        }
-
-        for (const expense of expenses) {
-            const { data: member, error: memberError } = await supabase.from('members')
-                .select('name')
-                .eq('id', expense.member_id)
-                .single();
-            if (memberError) console.error('Error fetching member:', memberError);
-
+        for (const expense of appState.expenses) {
+            const member = appState.members.find(m => m.id === expense.member_id);
             const row = document.createElement('tr');
+            row.dataset.id = expense.id;
             row.innerHTML = `
                 <td>${formatDate(expense.date)}</td>
                 <td>${member ? member.name : 'Unknown'}</td>
                 <td>${formatCurrency(expense.amount)}</td>
-                <td>${(currentUser?.username === 'admin' || currentUser?.canEdit) ? `
+                <td>${(currentUser.can_edit || currentUser.role === 'admin' || currentUser.role === 'manager') ? `
                     <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
                     <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>` : ''}</td>
             `;
-            if (currentUser?.username === 'admin' || currentUser?.canEdit) {
+            if (currentUser.can_edit || currentUser.role === 'admin' || currentUser.role === 'manager') {
                 row.querySelector('.edit-btn').addEventListener('click', () => openExpenseModal(expense.id));
                 row.querySelector('.delete-btn').addEventListener('click', () => deleteExpense(expense.id));
             }
@@ -785,27 +868,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         headerRow.innerHTML = '<th>Name</th>' + Array.from({ length: daysInMonth }, (_, i) => `<th>${i + 1}</th>`).join('') + '<th>Total</th>';
         elements.mealTableBody.appendChild(headerRow);
 
-        const { data: members, error } = await supabase.from('members').select('*');
-        if (error) {
-            console.error('Error fetching members:', error);
-            return;
-        }
-
-        const visibleMembers = (currentUser?.username === 'admin' || currentUser?.canEdit) 
-            ? members 
-            : members.filter(m => m.name.toLowerCase() === currentUser?.username.toLowerCase());
-        
-        const { data: meals, error: mealsError } = await supabase.from('meals')
-            .select('*')
-            .eq('month', selectedMonth);
-        if (mealsError) console.error('Error fetching meals:', mealsError);
+        const visibleMembers = currentUser.role === 'admin' || currentUser.role === 'manager'
+            ? appState.members
+            : appState.members.filter(m => m.id === currentUser.member_id);
 
         for (const member of visibleMembers) {
             const row = document.createElement('tr');
             row.dataset.memberId = member.id;
             row.innerHTML = `<td>${member.name}</td>`;
-            
-            const memberMeals = meals ? meals.filter(m => m.member_id === member.id) : [];
+
+            const memberMeals = appState.meals.filter(m => m.member_id === member.id);
             const mealData = {};
             memberMeals.forEach(m => mealData[m.day] = m.count);
 
@@ -815,26 +887,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 input.type = 'number';
                 input.min = 0;
                 input.value = mealData[i] || 0;
-                input.disabled = !(currentUser?.username === 'admin' || currentUser?.canEdit);
+                input.disabled = currentUser.role === 'user' && !currentUser.can_edit;
                 input.addEventListener('change', async () => {
                     const newCount = parseInt(input.value) || 0;
-                    const { data: existingMeal } = await supabase.from('meals')
-                        .select('id')
-                        .eq('member_id', member.id)
-                        .eq('month', selectedMonth)
-                        .eq('day', i)
-                        .single();
-
+                    const existingMeal = appState.meals.find(m => m.member_id === member.id && m.day === i);
                     if (existingMeal) {
-                        await supabase.from('meals')
+                        await supabaseClient.from('meals')
                             .update({ count: newCount })
                             .eq('id', existingMeal.id);
                     } else {
-                        await supabase.from('meals')
-                            .insert([{ member_id: member.id, month: selectedMonth, day: i, count: newCount }]);
+                        await supabaseClient.from('meals')
+                            .insert([{ member_id: member.id, day: i, count: newCount }]);
                     }
+                    await fetchAllData();
                     updateTotalMeals(row, member.id);
-                    await updateAllViews();
+                    await updateDashboard();
                 });
                 cell.appendChild(input);
                 row.appendChild(cell);
@@ -854,143 +921,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         totalCell.textContent = await calculateTotalMeals(memberId);
     }
 
-    async function populateMonthSelect() {
-        const currentYear = new Date().getFullYear();
-        const options = [];
-        for (let year = currentYear - 1; year <= currentYear + 1; year++) {
-            for (let month = 0; month < 12; month++) {
-                const date = new Date(year, month, 1);
-                const value = date.toISOString().slice(0, 7);
-                const label = date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
-                options.push(`<option value="${value}" ${value === selectedMonth ? 'selected' : ''}>${label}</option>`);
-            }
-        }
-        elements.monthSelect.innerHTML = options.join('');
-    }
-
     async function automateMealTracker() {
         const now = new Date(getLocalTime());
-        if (now.getHours() === 19 && now.getMinutes() === 0) { // 7 PM local time
+        if (now.getHours() === 19 && now.getMinutes() === 0) {
             const today = now.getDate();
-            const currentMonth = now.toISOString().slice(0, 7);
-            const { data: members, error } = await supabase.from('members').select('*');
-            if (error) {
-                console.error('Error fetching members:', error);
-                return;
-            }
-
-            for (const member of members) {
+            for (const member of appState.members) {
                 const mealCount = (member.day_status ? 1 : 0) + (member.night_status ? 1 : 0);
-                const { data: existingMeal } = await supabase.from('meals')
-                    .select('id')
-                    .eq('member_id', member.id)
-                    .eq('month', currentMonth)
-                    .eq('day', today)
-                    .single();
-
+                const existingMeal = appState.meals.find(m => m.member_id === member.id && m.day === today);
                 if (existingMeal) {
-                    await supabase.from('meals')
+                    await supabaseClient.from('meals')
                         .update({ count: mealCount })
                         .eq('id', existingMeal.id);
                 } else {
-                    await supabase.from('meals')
-                        .insert([{ member_id: member.id, month: currentMonth, day: today, count: mealCount }]);
+                    await supabaseClient.from('meals')
+                        .insert([{ member_id: member.id, day: today, count: mealCount }]);
                 }
             }
-
-            if (selectedMonth === currentMonth) {
-                await renderMealTracker();
-                await updateAllViews();
-            }
+            await fetchAllData();
+            await updateAllViews();
             showNotification('Meal tracker updated for today at 7 PM.', 'success');
         }
     }
 
-    setInterval(automateMealTracker, 60000); // Check every minute
+    setInterval(automateMealTracker, 60000);
 
     // --- Calculations ---
     async function calculateTotalMeals(memberId) {
-        const { data: meals, error } = await supabase.from('meals')
-            .select('count')
-            .eq('member_id', memberId)
-            .eq('month', selectedMonth);
-        if (error) {
-            console.error('Error calculating total meals:', error);
-            return 0;
-        }
+        const meals = appState.meals.filter(m => m.member_id === memberId);
         return meals.reduce((sum, m) => sum + (m.count || 0), 0);
     }
 
     async function calculateTotalDeposit(memberId) {
-        const { data: member, error: memberError } = await supabase.from('members')
-            .select('pre_month_balance')
-            .eq('id', memberId)
-            .single();
-        if (memberError) {
-            console.error('Error fetching pre_month_balance:', memberError);
-            return 0;
-        }
-
-        const { data: deposits, error } = await supabase.from('deposits')
-            .select('amount')
-            .eq('member_id', memberId)
-            .eq('month', selectedMonth);
-        if (error) {
-            console.error('Error calculating total deposit:', error);
-            return member.pre_month_balance || 0;
-        }
-
+        const member = appState.members.find(m => m.id === memberId);
+        const deposits = appState.deposits.filter(d => d.member_id === memberId);
         return Math.round((member.pre_month_balance || 0) + deposits.reduce((sum, d) => sum + (d.amount || 0), 0));
     }
 
     async function calculateTotalCost(memberId) {
         const totalMeals = await calculateTotalMeals(memberId);
-        const { data: expenses, error } = await supabase.from('expenses')
-            .select('amount')
-            .eq('month', selectedMonth);
-        if (error) {
-            console.error('Error calculating total expenses:', error);
-            return 0;
-        }
-
-        const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-        const { data: allMeals, error: mealsError } = await supabase.from('meals')
-            .select('count')
-            .eq('month', selectedMonth);
-        if (mealsError) {
-            console.error('Error calculating all meals:', mealsError);
-            return 0;
-        }
-
-        const totalMealsCount = allMeals.reduce((sum, m) => sum + (m.count || 0), 0);
+        const totalExpenses = appState.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const totalMealsCount = appState.meals.reduce((sum, m) => sum + (m.count || 0), 0);
         const mealRate = totalMealsCount ? totalExpenses / totalMealsCount : 0;
         return Math.round(totalMeals * mealRate);
     }
 
     async function calculateTotalBazar(memberId) {
-        const { data: expenses, error } = await supabase.from('expenses')
-            .select('id')
-            .eq('member_id', memberId)
-            .eq('month', selectedMonth);
-        if (error) {
-            console.error('Error calculating total bazar:', error);
-            return 0;
-        }
-        return expenses.length;
+        return appState.expenses.filter(e => e.member_id === memberId).length;
     }
 
     // --- Admin Controls ---
     async function renderAdminControls() {
-        if (currentUser?.username !== 'admin') return;
+        if (currentUser.role !== 'admin') return;
 
-        const { data: users, error } = await supabase.from('users').select('*');
-        if (error) {
-            console.error('Error fetching users:', error);
-            return;
-        }
-
-        elements.editAccessControls.innerHTML = '<h3>Grant Editing Access</h3>' + users
-            .filter(u => u.username !== 'admin')
+        elements.editAccessControls.innerHTML = '<h3>Grant Editing Access</h3>' + appState.users
+            .filter(u => u.role !== 'admin')
             .map(user => `
                 <div class="user-toggle">
                     <label>${user.username}</label>
@@ -998,23 +982,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `).join('');
 
-        elements.passwordControls.innerHTML = '<h3>Change Passwords</h3>' + users
+        elements.passwordControls.innerHTML = '<h3>Change Passwords</h3>' + appState.users
             .map(user => `
                 <div class="password-input">
                     <label>${user.username}</label>
                     <input type="password" data-user-id="${user.id}" placeholder="New password">
                     <button class="btn primary-btn update-password">Update</button>
-                    ${user.username !== 'admin' ? `<button class="btn danger-btn delete-user" data-user-id="${user.id}">Delete</button>` : ''}
+                    ${user.role !== 'admin' ? `<button class="btn danger-btn delete-user" data-user-id="${user.id}">Delete</button>` : ''}
                 </div>
             `).join('');
 
         elements.editAccessControls.querySelectorAll('input[type="checkbox"]').forEach(input => {
             input.addEventListener('change', async () => {
                 const userId = parseInt(input.dataset.userId);
-                const { error } = await supabase.from('users')
-                    .update({ can_edit: input.checked })
+                const newCanEdit = input.checked;
+                await supabaseClient.from('users')
+                    .update({ can_edit: newCanEdit, role: newCanEdit ? 'manager' : 'user' })
                     .eq('id', userId);
-                if (error) console.error('Error updating can_edit:', error);
+                await fetchAllData();
+                if (currentUser.id === userId) {
+                    currentUser = appState.users.find(u => u.id === userId);
+                    sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+                }
                 await updateUIForRole();
                 await updateAllViews();
             });
@@ -1029,28 +1018,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showNotification('Please enter a new password.', 'error');
                     return;
                 }
-                const { error } = await supabase.from('users')
+                await supabaseClient.from('users')
                     .update({ password: newPassword })
                     .eq('id', userId);
-                if (error) console.error('Error updating password:', error);
-                else {
-                    if (userId === currentUser.id) {
-                        currentUser.password = newPassword;
-                        sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
-                    }
-                    input.value = '';
-                    showNotification(`Password updated for user ID ${userId}!`, 'success');
+                if (userId === currentUser.id) {
+                    currentUser.password = newPassword;
+                    sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
                 }
+                input.value = '';
+                await fetchAllData();
+                showNotification(`Password updated for user ${userId}!`, 'success');
             });
         });
 
         elements.passwordControls.querySelectorAll('.delete-user').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = parseInt(btn.dataset.userId);
-                if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-                    const { error } = await supabase.from('users').delete().eq('id', userId);
-                    if (error) console.error('Error deleting user:', error);
-                    else {
+                if (confirm('Are you sure you want to delete this user and associated member?')) {
+                    const user = appState.users.find(u => u.id === userId);
+                    if (user.member_id) {
+                        await deleteMember(user.member_id);
+                    } else {
+                        await supabaseClient.from('user_settings').delete().eq('user_id', userId);
+                        await supabaseClient.from('users').delete().eq('id', userId);
+                        await fetchAllData();
                         await renderAdminControls();
                         showNotification('User deleted successfully!', 'success');
                     }
@@ -1061,48 +1052,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Dashboard ---
     async function updateDashboard() {
-        const { data: members, error: membersError } = await supabase.from('members').select('*');
-        if (membersError) {
-            console.error('Error fetching members:', membersError);
-            return;
-        }
-
-        const totalDeposits = (await Promise.all(members.map(m => calculateTotalDeposit(m.id)))).reduce((sum, d) => sum + d, 0);
-        const { data: expenses, error: expensesError } = await supabase.from('expenses')
-            .select('amount')
-            .eq('month', selectedMonth);
-        const totalExpenses = expensesError ? 0 : expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-        const totalMealsCount = (await Promise.all(members.map(m => calculateTotalMeals(m.id)))).reduce((sum, m) => sum + m, 0);
+        const totalDeposits = (await Promise.all(appState.members.map(m => calculateTotalDeposit(m.id)))).reduce((sum, d) => sum + (d || 0), 0);
+        const totalExpenses = appState.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const totalMealsCount = appState.meals.reduce((sum, m) => sum + (m.count || 0), 0);
         const mealRate = totalMealsCount ? totalExpenses / totalMealsCount : 0;
 
         elements.totalDeposits.textContent = formatCurrency(totalDeposits);
         elements.totalExpenditure.textContent = formatCurrency(totalExpenses);
         elements.currentBalance.textContent = formatCurrency(totalDeposits - totalExpenses);
-        elements.todayDayCount.textContent = members.filter(m => m.day_status).length;
-        elements.todayNightCount.textContent = members.filter(m => m.night_status).length;
+        elements.todayDayCount.textContent = appState.members.filter(m => m.day_status).length;
+        elements.todayNightCount.textContent = appState.members.filter(m => m.night_status).length;
         elements.totalMeals.textContent = totalMealsCount;
         elements.mealRate.textContent = formatCurrency(mealRate, true);
     }
 
     async function updateCharts() {
         const isDark = document.body.classList.contains('dark-mode');
-        const { data: members, error: membersError } = await supabase.from('members').select('id, name');
-        if (membersError) {
-            console.error('Error fetching members:', membersError);
-            return;
-        }
-
-        const { data: expenses, error: expensesError } = await supabase.from('expenses')
-            .select('member_id, amount')
-            .eq('month', selectedMonth);
-        if (expensesError) console.error('Error fetching expenses:', expensesError);
-
-        const expenseData = members.map(member => ({
+        const expenseData = appState.members.map(member => ({
             label: member.name,
-            value: expenses ? expenses.filter(e => e.member_id === member.id).reduce((sum, e) => sum + e.amount, 0) : 0
+            value: appState.expenses.filter(e => e.member_id === member.id).reduce((sum, e) => sum + e.amount, 0)
         }));
 
-        const mealData = await Promise.all(members.map(async member => ({
+        const mealData = await Promise.all(appState.members.map(async member => ({
             label: member.name,
             value: await calculateTotalMeals(member.id)
         })));
@@ -1121,7 +1092,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             },
             options: {
                 responsive: true,
-                plugins: { legend: { labels: { color: isDark ? '#e2e8f0' : '#2d3748' } } }
+                plugins: {
+                    legend: { labels: { color: isDark ? '#e2e8f0' : '#2d3748' } },
+                    tooltip: { enabled: true }
+                }
             }
         });
 
@@ -1141,50 +1115,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                     y: { beginAtZero: true, ticks: { color: isDark ? '#e2e8f0' : '#2d3748' } },
                     x: { ticks: { color: isDark ? '#e2e8f0' : '#2d3748' } }
                 },
-                plugins: { legend: { labels: { color: isDark ? '#e2e8f0' : '#2d3748' } } }
+                plugins: {
+                    legend: { labels: { color: isDark ? '#e2e8f0' : '#2d3748' } },
+                    tooltip: { enabled: true }
+                }
             }
         });
     }
 
     // --- User Overview ---
     async function updateUserOverview() {
-        let member;
-        if (currentUser?.username === 'admin') {
-            const { data, error } = await supabase.from('members').select('*').limit(1).single();
-            member = data || { name: 'N/A', pre_month_balance: 0, deposits: {}, meals: {} };
-            if (error && error.code !== 'PGRST116') console.error('Error fetching admin member:', error);
-        } else {
-            const { data, error } = await supabase.from('members')
-                .select('*')
-                .eq('name', currentUser.username)
-                .single();
-            member = data;
-            if (error && error.code !== 'PGRST116') console.error('Error fetching member:', error);
-        }
-
-        if (!member) {
-            elements.userName.textContent = 'N/A';
+        if (!currentUser.member_id) {
+            elements.userName.textContent = currentUser.username;
             elements.userDeposit.textContent = formatCurrency(0);
             elements.userBalance.textContent = formatCurrency(0);
             elements.userBalance.className = 'balance-text';
             elements.userMeals.textContent = '0';
-            elements.depositHistoryList.innerHTML = '';
-            if (currentUser?.role === 'user') {
-                showNotification('No matching member found for your username.', 'error');
-            }
+            elements.depositHistoryList.innerHTML = '<li>No member data</li>';
             return;
         }
+
+        const member = appState.members.find(m => m.id === currentUser.member_id);
+        if (!member) return;
 
         const totalDeposit = await calculateTotalDeposit(member.id);
         const totalCost = await calculateTotalCost(member.id);
         const balance = totalDeposit - totalCost;
         const balanceClass = balance >= 0 ? 'positive' : 'negative';
 
-        const { data: deposits, error: depositsError } = await supabase.from('deposits')
-            .select('label, amount')
-            .eq('member_id', member.id)
-            .eq('month', selectedMonth);
-        if (depositsError) console.error('Error fetching deposits:', depositsError);
+        const deposits = appState.deposits.filter(d => d.member_id === member.id);
 
         elements.userName.textContent = member.name;
         elements.userDeposit.textContent = formatCurrency(totalDeposit);
@@ -1194,10 +1153,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         elements.depositHistoryList.innerHTML = `
             <li>Pre-Month: ${formatCurrency(member.pre_month_balance)}</li>
-            ${deposits ? deposits.map(d => `<li>${d.label}: ${formatCurrency(d.amount)}</li>`).join('') : ''}
+            ${deposits.map(d => `<li>${d.label}: ${formatCurrency(d.amount)}</li>`).join('')}
         `;
 
-        if (balance < 0 && currentUser?.role === 'user') {
+        if (balance < 0 && currentUser.role === 'user') {
             showNotification('Warning: Your balance is negative!', 'error');
         }
     }
@@ -1205,27 +1164,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Summary ---
     async function renderSummary() {
         elements.summaryTableBody.innerHTML = '';
-        if (!(currentUser?.username === 'admin' || currentUser?.canEdit)) return;
+        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
 
-        const { data: members, error } = await supabase.from('members').select('*');
-        if (error) {
-            console.error('Error fetching members:', error);
-            return;
-        }
-
-        const { data: deposits, error: depositsError } = await supabase.from('deposits')
-            .select('member_id, label, amount')
-            .eq('month', selectedMonth);
-        if (depositsError) console.error('Error fetching deposits:', depositsError);
-
-        for (const member of members) {
+        for (const member of appState.members) {
             const totalMeals = await calculateTotalMeals(member.id);
             const totalDeposit = await calculateTotalDeposit(member.id);
             const totalCost = await calculateTotalCost(member.id);
             const balance = totalDeposit - totalCost;
             const balanceClass = balance >= 0 ? 'positive' : 'negative';
             const totalBazar = await calculateTotalBazar(member.id);
-            const memberDeposits = deposits ? deposits.filter(d => d.member_id === member.id) : [];
+            const memberDeposits = appState.deposits.filter(d => d.member_id === member.id);
             const depositMap = Object.fromEntries(memberDeposits.map(d => [d.label, d.amount]));
 
             const row = document.createElement('tr');
@@ -1249,24 +1197,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Populate Expense Select ---
     async function populateExpenseSelect() {
-        if (!(currentUser?.username === 'admin' || currentUser?.canEdit)) return;
-        const { data: members, error } = await supabase.from('members').select('id, name');
-        if (error) {
-            console.error('Error fetching members for expense select:', error);
-            return;
-        }
-        elements.expenseMemberSelect.innerHTML = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
+        elements.expenseMemberSelect.innerHTML = appState.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
     }
 
     // --- Notification Log ---
     async function renderNotificationLog() {
-        const { data: notifications, error } = await supabase.from('notifications').select('*');
-        if (error) {
-            console.error('Error fetching notifications:', error);
-            return;
-        }
-
-        elements.notificationLogList.innerHTML = notifications.map(n => `
+        elements.notificationLogList.innerHTML = appState.notifications.map(n => `
             <div class="log-entry ${n.type}">
                 <span>${n.message} (${new Date(n.timestamp).toLocaleString()})</span>
                 <button class="btn danger-btn" data-id="${n.id}">Dismiss</button>
@@ -1276,61 +1213,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.notificationLogList.querySelectorAll('.danger-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = parseInt(btn.dataset.id);
-                const { error } = await supabase.from('notifications').delete().eq('id', id);
-                if (error) console.error('Error deleting notification:', error);
-                else await renderNotificationLog();
+                await supabaseClient.from('notifications').delete().eq('id', id);
+                await fetchAllData();
+                await renderNotificationLog();
             });
         });
     }
 
     // --- Data Export ---
     async function exportData() {
-        if (!currentUser || !(currentUser.username === 'admin' || currentUser.canEdit)) return;
+        if (currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
         const format = elements.exportFormat.value;
-
-        const { data: members, error: membersError } = await supabase.from('members').select('id, name, pre_month_balance');
-        if (membersError) {
-            console.error('Error fetching members for export:', membersError);
-            return;
-        }
-
-        const { data: meals, error: mealsError } = await supabase.from('meals')
-            .select('member_id, count')
-            .eq('month', selectedMonth);
-        if (mealsError) console.error('Error fetching meals:', mealsError);
-
-        const { data: deposits, error: depositsError } = await supabase.from('deposits')
-            .select('member_id, label, amount')
-            .eq('month', selectedMonth);
-        if (depositsError) console.error('Error fetching deposits:', depositsError);
-
-        const { data: expenses, error: expensesError } = await supabase.from('expenses')
-            .select('member_id, amount')
-            .eq('month', selectedMonth);
-        if (expensesError) console.error('Error fetching expenses:', expensesError);
 
         let data, mime, filename;
         if (format === 'csv') {
             const headers = 'Name,Total Meals,Total Cost,Total Deposit,Balance,Pre-Month,1st,2nd,3rd,4th,5th,Total Bazar\n';
-            const rows = await Promise.all(members.map(async m => {
-                const totalMeals = meals ? meals.filter(meal => meal.member_id === m.id).reduce((sum, meal) => sum + meal.count, 0) : 0;
+            const rows = await Promise.all(appState.members.map(async m => {
+                const totalMeals = await calculateTotalMeals(m.id);
                 const totalDeposit = await calculateTotalDeposit(m.id);
                 const totalCost = await calculateTotalCost(m.id);
                 const balance = totalDeposit - totalCost;
-                const totalBazar = expenses ? expenses.filter(e => e.member_id === m.id).length : 0;
-                const memberDeposits = deposits ? deposits.filter(d => d.member_id === m.id) : [];
-                const depositMap = Object.fromEntries(memberDeposits.map(d => [d.label, d.amount]));
+                const totalBazar = await calculateTotalBazar(m.id);
+                const depositMap = Object.fromEntries(appState.deposits.filter(d => d.member_id === m.id).map(d => [d.label, d.amount]));
                 return `${m.name},${totalMeals},${totalCost},${totalDeposit},${balance},${m.pre_month_balance || 0},${depositMap['1st'] || 0},${depositMap['2nd'] || 0},${depositMap['3rd'] || 0},${depositMap['4th'] || 0},${depositMap['5th'] || 0},${totalBazar}`;
             }));
             data = headers + rows.join('\n');
             mime = 'data:text/csv;charset=utf-8,';
-            filename = `mealsync_data_${selectedMonth}.csv`;
+            filename = `mealsync_${new Date().toISOString().slice(0, 10)}.csv`;
         } else {
-            const exportData = await Promise.all(members.map(async m => {
-                const totalMeals = meals ? meals.filter(meal => meal.member_id === m.id).reduce((sum, meal) => sum + meal.count, 0) : 0;
+            const exportData = await Promise.all(appState.members.map(async m => {
+                const totalMeals = await calculateTotalMeals(m.id);
                 const totalDeposit = await calculateTotalDeposit(m.id);
                 const totalCost = await calculateTotalCost(m.id);
-                const memberDeposits = deposits ? deposits.filter(d => d.member_id === m.id) : [];
+                const totalBazar = await calculateTotalBazar(m.id);
                 return {
                     name: m.name,
                     totalMeals,
@@ -1338,13 +1253,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     totalDeposit,
                     balance: totalDeposit - totalCost,
                     preMonthBalance: m.pre_month_balance,
-                    deposits: Object.fromEntries(memberDeposits.map(d => [d.label, d.amount])),
-                    totalBazar: expenses ? expenses.filter(e => e.member_id === m.id).length : 0
+                    deposits: Object.fromEntries(appState.deposits.filter(d => d.member_id === m.id).map(d => [d.label, d.amount])),
+                    totalBazar
                 };
             }));
             data = JSON.stringify(exportData, null, 2);
             mime = 'data:application/json;charset=utf-8,';
-            filename = `mealsync_data_${selectedMonth}.json`;
+            filename = `mealsync_${new Date().toISOString().slice(0, 10)}.json`;
         }
 
         const link = document.createElement('a');
@@ -1353,8 +1268,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        showNotification('Data exported successfully!', 'success');
     }
 
+    // --- Reset Month ---
+    async function resetMonth() {
+        if (currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
+        if (!confirm('Are you sure you want to export and reset all data except members and users?')) return;
+
+        await exportData(); // Export before reset
+        await supabaseClient.from('deposits').delete().neq('id', 0); // Clear all
+        await supabaseClient.from('meals').delete().neq('id', 0);
+        await supabaseClient.from('expenses').delete().neq('id', 0);
+        await supabaseClient.from('members').update({ pre_month_balance: 0 }).neq('id', 0);
+        await fetchAllData();
+        await updateAllViews();
+        showNotification('Month reset successfully!', 'success');
+    }
+
+    // --- Targeted Updates ---
+    async function updateMemberCard(memberId) {
+        const card = elements.membersList.querySelector(`.member-card[data-id="${memberId}"]`);
+        if (!card) return;
+    
+        const member = appState.members.find(m => m.id === memberId);
+        if (!member) return;
+    
+        const [totalMeals, totalDeposit, totalCost, totalBazar] = await Promise.all([
+            calculateTotalMeals(memberId),
+            calculateTotalDeposit(memberId),
+            calculateTotalCost(memberId),
+            calculateTotalBazar(memberId)
+        ]);
+    
+        const balance = totalDeposit - totalCost;
+        const balanceClass = balance >= 0 ? 'positive' : 'negative';
+        const isOwnCard = currentUser.role === 'user' && member.id === currentUser.member_id;
+        const toggleClass = isOwnCard ? `user-toggle ${isToggleTimeAllowed() ? '' : 'disabled'}` : '';
+    
+        card.innerHTML = `
+            <h3>${member.name}</h3>
+            <div>Total Deposit: ${formatCurrency(totalDeposit)}</div>
+            <div>Balance: <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
+            <div>Total Meals: <span class="total-meals">${totalMeals}</span></div>
+            <div>Total Bazar: ${totalBazar}</div>
+            <div class="toggles">
+                <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
+                <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
+            </div>
+            ${(currentUser.role === 'admin' || currentUser.role === 'manager') ? `
+            <div class="actions">
+                ${currentUser.role === 'admin' ? `
+                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                ` : `
+                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                `}
+            </div>` : ''}
+        `;
+    
+        if (balance < 0 && currentUser.role === 'user') {
+            showNotification('Warning: Your balance is negative!', 'error');
+        }
+    
+        const toggleButtons = card.querySelectorAll('.toggle-btn');
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
+        });
+    
+        if (currentUser.role === 'admin') {
+            card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
+            card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));
+        } else if (currentUser.role === 'manager') {
+            card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
+        }
+    }
     // --- Update All Views ---
     async function updateAllViews() {
         if (!currentUser) {
@@ -1367,7 +1355,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         await updateUserOverview();
         await renderMembers();
         await renderSummary();
-        await populateMonthSelect();
         await renderMealTracker();
         await renderExpenses();
         await renderNotificationLog();
@@ -1375,19 +1362,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Initial Render ---
     await createAuthForms();
+    await checkAutoLogin();
     if (currentUser) {
         elements.loginPage.classList.add('hidden');
         elements.mainApp.style.display = 'block';
-        selectedMonth = localStorage.getItem('mealsync_selectedMonth') || new Date().toISOString().slice(0, 7);
         updateUIForRole();
+        await fetchAllData();
         await updateAllViews();
-    }
-
-    // --- Auto-Assign First Admin (Only if needed) ---
-    const { data: users, error: usersError } = await supabase.from('users').select('id').limit(1);
-    if (usersError) console.error('Error checking users:', usersError);
-    if (!users || users.length === 0) {
-        await supabase.from('users').insert([{ username: 'admin', password: 'admin123', role: 'admin' }]);
-        showNotification('Default admin created: username "admin", password "admin123". Please log in.', 'success', true);
     }
 });
