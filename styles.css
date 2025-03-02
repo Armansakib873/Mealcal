@@ -1589,7 +1589,7 @@ a:hover {
     }
 
     .control-group .user-toggle{
-        background-color: rgb(204, 234, 250); /* User toggle background (light mode) */
+     
         border-radius: var(--radius-sm);
         margin: 1rem;
         width: 100px;
