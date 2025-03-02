@@ -82,7 +82,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         expenseMemberSelect: document.getElementById('expense-member'),
         notificationLogModal: document.getElementById('notification-log-modal'),
         closeNotificationLogModal: document.getElementById('close-notification-log-modal'),
-        notificationLogList: document.getElementById('notification-log-list')
+        notificationLogList: document.getElementById('notification-log-list'),
+        notificationLogList: document.getElementById('notification-log-list'),
+        memberSelectContainer: document.getElementById('member-select-container'),
+        memberSelect: document.getElementById('member-select'),
+        userSelectContainer: document.getElementById('user-select-container'),
+        userSelect: document.getElementById('user-select')
     };
 
     let editingMemberId = null;
@@ -325,13 +330,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.userRole.textContent = currentUser ? `Role: ${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` : '';
         const isAdmin = currentUser?.role === 'admin';
         const isManager = currentUser?.role === 'manager';
-        const canEdit = isAdmin || isManager; // Managers have same access as admins except admin controls and deletes
-
+        const canEdit = isAdmin || isManager;
+    
         elements.addMemberBtn.classList.toggle('hidden', !isAdmin); // Only admin can add members
         elements.addExpenseBtn.classList.toggle('hidden', !canEdit); // Managers and admins can add expenses
         elements.adminControls.classList.toggle('hidden', !isAdmin); // Only admin sees admin controls
         elements.summarySection.classList.toggle('hidden', !canEdit); // Managers and admins see summary
-
+    
+        // Show/hide member select dropdown based on role (already exists for members)
+        elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
+        if (isAdmin || isManager) {
+            populateMemberSelect(isAdmin);
+        }
+    
+        // Show/hide user select dropdown for account settings (only for admins)
+        elements.userSelectContainer.classList.toggle('hidden', !isAdmin);
+        if (isAdmin) {
+            populateUserSelect();
+        }
+    
         // Adjust member card actions for managers (full edit, no delete)
         document.querySelectorAll('.member-card .actions').forEach(actions => {
             const memberId = actions.closest('.member-card').dataset.id;
@@ -347,6 +364,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 actions.innerHTML = ''; // No actions for regular users
             }
+        });
+    }
+
+    async function populateUserSelect() {
+        const users = appState.users;
+        elements.userSelect.innerHTML = users.map(u => `
+            <option value="${u.id}">${u.username}</option>
+        `).join('');
+    
+        // Set default selection to the first user for admins
+        elements.userSelect.value = users[0]?.id || '';
+    
+        // Add event listener to update password card on selection change
+        elements.userSelect.addEventListener('change', async () => {
+            await renderAdminControls(); // Re-render to show only the selected user's password card
+        });
+    }
+
+    async function populateMemberSelect(isAdmin) {
+        const members = appState.members;
+        elements.memberSelect.innerHTML = members.map(m => `
+            <option value="${m.id}">${m.name}</option>
+        `).join('');
+    
+        // Set default selection
+        if (isAdmin) {
+            // For admins, default to the first member
+            elements.memberSelect.value = members[0]?.id || '';
+        } else if (isManager) {
+            // For managers, default to their own member (based on currentUser.member_id)
+            elements.memberSelect.value = currentUser.member_id || '';
+        }
+    
+        // Add event listener to update member card on selection change
+        elements.memberSelect.addEventListener('change', async () => {
+            await renderMembers(); // Re-render to show only the selected member
         });
     }
 
@@ -672,11 +725,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function renderMembers() {
     elements.membersList.innerHTML = '';
-    const visibleMembers = currentUser.role === 'admin' || currentUser.role === 'manager'
-        ? appState.members
-        : appState.members.filter(m => m.id === currentUser.member_id);
+    const isAdmin = currentUser?.role === 'admin';
+    const isManager = currentUser?.role === 'manager';
 
-    const isToggleAllowed = isToggleTimeAllowed(); // Check time once for initial render
+    let visibleMembers;
+    if (isAdmin || isManager) {
+        // For admins/managers, show only the member selected in the dropdown
+        const selectedMemberId = parseInt(elements.memberSelect.value);
+        visibleMembers = appState.members.filter(m => m.id === selectedMemberId);
+    } else {
+        // For users, show only their own member card
+        visibleMembers = appState.members.filter(m => m.id === currentUser.member_id);
+    }
+
+    const isToggleAllowed = isToggleTimeAllowed(); // Check time for toggle state
 
     for (const member of visibleMembers) {
         const totalMeals = await calculateTotalMeals(member.id);
@@ -690,7 +752,6 @@ async function renderMembers() {
         card.className = 'member-card';
         card.dataset.id = member.id;
 
-        // Determine toggle state for users dynamically
         const isOwnCard = currentUser.role === 'user' && member.id === currentUser.member_id;
         const toggleClass = isOwnCard ? `user-toggle ${isToggleAllowed ? '' : 'disabled'}` : '';
 
@@ -704,9 +765,9 @@ async function renderMembers() {
                 <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
                 <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
             </div>
-            ${(currentUser.role === 'admin' || currentUser.role === 'manager') ? `
+            ${(isAdmin || isManager) ? `
             <div class="actions">
-                ${currentUser.role === 'admin' ? `
+                ${isAdmin ? `
                     <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
                     <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
                 ` : `
@@ -724,10 +785,10 @@ async function renderMembers() {
             btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
         });
 
-        if (currentUser.role === 'admin') {
+        if (isAdmin) {
             card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
             card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));
-        } else if (currentUser.role === 'manager') {
+        } else if (isManager) {
             card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
         }
 
@@ -736,7 +797,6 @@ async function renderMembers() {
     await populateExpenseSelect();
     updateUserToggleButtons(); // Ensure buttons are updated after initial render
 }
-
     
 async function toggleMealStatus(member, type) {
     if (currentUser.role === 'user' && !isToggleTimeAllowed()) {
@@ -972,8 +1032,8 @@ async function toggleMealStatus(member, type) {
     // --- Admin Controls ---
     async function renderAdminControls() {
         if (currentUser.role !== 'admin') return;
-
-        elements.editAccessControls.innerHTML = '<h3>Grant Editing Access</h3>' + appState.users
+    
+        elements.editAccessControls.innerHTML = '<h3></h3>' + appState.users
             .filter(u => u.role !== 'admin')
             .map(user => `
                 <div class="user-toggle">
@@ -981,17 +1041,20 @@ async function toggleMealStatus(member, type) {
                     <input type="checkbox" ${user.can_edit ? 'checked' : ''} data-user-id="${user.id}">
                 </div>
             `).join('');
-
-        elements.passwordControls.innerHTML = '<h3>Change Passwords</h3>' + appState.users
-            .map(user => `
-                <div class="password-input">
-                    <label>${user.username}</label>
-                    <input type="password" data-user-id="${user.id}" placeholder="New password">
-                    <button class="btn primary-btn update-password">Update</button>
-                    ${user.role !== 'admin' ? `<button class="btn danger-btn delete-user" data-user-id="${user.id}">Delete</button>` : ''}
-                </div>
-            `).join('');
-
+    
+        // Filter to show only the selected user's password card
+        const selectedUserId = parseInt(elements.userSelect.value);
+        const selectedUser = appState.users.find(u => u.id === selectedUserId);
+    
+        elements.passwordControls.innerHTML = selectedUser ? `
+            <div class="password-input">
+                <label>${selectedUser.username}</label>
+                <input type="password" data-user-id="${selectedUser.id}" placeholder="New password">
+                <button class="btn primary-btn update-password">Update</button>
+                ${selectedUser.role !== 'admin' ? `<button class="btn danger-btn delete-user" data-user-id="${selectedUser.id}">Delete</button>` : ''}
+            </div>
+        ` : '';
+    
         elements.editAccessControls.querySelectorAll('input[type="checkbox"]').forEach(input => {
             input.addEventListener('change', async () => {
                 const userId = parseInt(input.dataset.userId);
@@ -1008,7 +1071,7 @@ async function toggleMealStatus(member, type) {
                 await updateAllViews();
             });
         });
-
+    
         elements.passwordControls.querySelectorAll('.update-password').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const input = btn.previousElementSibling;
@@ -1030,7 +1093,7 @@ async function toggleMealStatus(member, type) {
                 showNotification(`Password updated for user ${userId}!`, 'success');
             });
         });
-
+    
         elements.passwordControls.querySelectorAll('.delete-user').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = parseInt(btn.dataset.userId);
