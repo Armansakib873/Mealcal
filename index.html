@@ -45,12 +45,14 @@
                 <div class="nav-buttons">
                     <button id="logout-btn" class="btn danger-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
                 </div>
+                <div class="toggle-head-buttons">
                 <button id="toggle-theme" class="btn theme-toggle-btn" title="Toggle Dark Mode">
                     <i class="fas fa-moon"></i>
                 </button>
                 <button id="notification-log-btn" class="btn secondary-btn" title="View Notification Log">
                     <i class="fas fa-bell"></i>
                 </button>
+            </div>
             </nav>
         </header>
 
@@ -59,24 +61,32 @@
             <!-- Notification -->
             <div id="notification" class="notification"></div>
 
-            <!-- Admin Controls (Admin Only) -->
-            <section id="admin-controls" class="admin-controls card hidden">
-                <h2><i class="fas fa-tools"></i> Admin Controls</h2>
-                <div id="edit-access-controls" class="control-group">
-                    <h3>Grant Editing Access</h3>
-                    <!-- Dynamic user toggles -->
-                </div>
-                <div id="password-controls" class="control-group">
-                    <h3>Change Passwords</h3>
-                    <!-- Dynamic password inputs -->
-                </div>
-                <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-sync-alt"></i> Reset Month</button> <!-- Added reset button -->
-                <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Data</button>
-                <select id="export-format" class="select-input">
-                    <option value="csv">CSV</option>
-                    <option value="xlsx">XLSX</option> <!-- Added XLSX option -->
-                </select>
-            </section>
+          <!-- Admin Controls (Admin Only) -->
+<section id="admin-controls" class="admin-controls card hidden">
+    <h2><i class="fas fa-tools"></i> Admin Controls</h2>
+    <h3>Give Manager Access</h3>
+    <div id="edit-access-controls" class="control-group">
+        <br>
+        <h3>Grant Editing Access</h3>
+        <!-- Dynamic user toggles -->
+    </div>
+    <h3>Account settings</h3>
+    <div id="user-select-container" class="user-select-container hidden">
+        <select id="user-select" class="select-input">
+            <!-- Options will be populated dynamically via JS -->
+        </select>
+    </div>
+    <div id="password-controls" class="control-group">
+        <!-- Dynamic password inputs -->
+    </div>
+    <h3>Data Control</h3>
+    <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-sync-alt"></i> Reset Month</button>
+    <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Data</button>
+    <select id="export-format" class="select-input">
+        <option value="csv">CSV</option>
+        <option value="xlsx">XLSX</option>
+    </select>
+</section>
 
             <!-- Dashboard Section -->
             <section class="dashboard-section card">
@@ -97,7 +107,7 @@
                             <h3>Total Expenditure</h3>
                             <p id="total-expenditure">৳0</p>
                         </div>
-                        <div class="stat-box">
+                        <div class="stat-box" id="current-balance-box">
                             <i class="fas fa-balance-scale"></i>
                             <h3>Current Balance</h3>
                             <p id="current-balance">৳0</p>
@@ -169,12 +179,17 @@
                 </div>
             </section>
 
-            <!-- Members Section -->
-            <section class="members-section card">
-                <h2><i class="fas fa-user-friends"></i> Member Details</h2>
-                <button id="add-member-btn" class="btn primary-btn hidden"><i class="fas fa-plus"></i> Add Member</button>
-                <div id="members-list" class="members-grid"></div>
-            </section>
+<!-- Members Section -->
+<section class="members-section card">
+    <h2><i class="fas fa-user-friends"></i> Member Details</h2>
+    <div id="member-select-container" class="member-select-container hidden">
+        <select id="member-select" class="select-input">
+            <!-- Options will be populated dynamically via JS -->
+        </select>
+    </div>
+    <button style="margin-bottom: 30px;" id="add-member-btn" class="btn primary-btn hidden"><i class="fas fa-plus"></i> Add Member</button>
+    <div id="members-list" class="members-grid"></div>
+</section>
 
             <!-- Summary Section (Admin & Manager Only) -->
             <section id="summary-section" class="summary-section card hidden">
@@ -183,6 +198,7 @@
                     <table id="summary-table" class="data-table">
                         <thead>
                             <tr>
+                                <th>Name</th>
                                 <th>Total Meals</th>
                                 <th>Total Cost</th>
                                 <th>Total Deposit</th>
