@@ -1,7 +1,17 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // --- Loading Elements ---
+    const loadingAnimation = document.getElementById('loading-animation');
+    const loginPage = document.getElementById('login-page');
+    const mainApp = document.getElementById('main-app');
+
+    // Ensure loading animation is visible and content is hidden
+    loadingAnimation.style.display = 'flex';
+    loginPage.style.display = 'none';
+    mainApp.style.display = 'none';
+
     // --- Supabase Client Initialization ---
     const supabaseUrl = "https://eiqrmxgyyjbndznnbaqv.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcXJteGd5eWpibmR6bm5iYXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1ODk0ODYsImV4cCI6MjA1NjE2NTQ4Nn0.L10Z83pobbfeAId8bCQwxDi83ac37jYum9geSU-htTY";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcXJteGd5eWpibmR6bm5iYXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1ODk0ODYsImV4cCI6MjA1NjE2NTQ4Nn0.L10Z83pobbfeAId8bCQwxDi83ac37jYum9geSU-htTY"; // Replace with actual key
     const { createClient } = supabase;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
@@ -83,11 +93,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         notificationLogModal: document.getElementById('notification-log-modal'),
         closeNotificationLogModal: document.getElementById('close-notification-log-modal'),
         notificationLogList: document.getElementById('notification-log-list'),
-        notificationLogList: document.getElementById('notification-log-list'),
         memberSelectContainer: document.getElementById('member-select-container'),
         memberSelect: document.getElementById('member-select'),
         userSelectContainer: document.getElementById('user-select-container'),
-        userSelect: document.getElementById('user-select')
+        userSelect: document.getElementById('user-select'),
+        clearAllNotificationsBtn: document.getElementById('clear-all-notifications-btn'),
+        mobileUserInfo: document.getElementById('mobile-user-info')
     };
 
     let editingMemberId = null;
@@ -96,22 +107,68 @@ document.addEventListener('DOMContentLoaded', async () => {
     let expensesChart = null;
     let mealsChart = null;
 
+    // Function to hide loading animation
+    const hideLoading = () => {
+        loadingAnimation.classList.add('hidden');
+        setTimeout(() => {
+            loadingAnimation.style.display = 'none';
+        }, 300); // Match CSS transition duration
+    };
+
     // --- Utility Functions ---
-    function showNotification(message, type = 'success', isLogin = false) {
+    function showNotification(message, type = 'success', isLogin = false, details = {}) {
         const target = isLogin ? elements.loginNotification : elements.notification;
-        target.textContent = message;
+        const timestamp = new Date().toLocaleString('en-US', { 
+            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
+        const editorName = currentUser?.username || 'System';
+        const fullMessage = `${message} on ${timestamp} by Editor: ${editorName}`;
+    
+        target.textContent = fullMessage;
         target.className = `notification ${type}`;
         target.style.display = 'block';
         setTimeout(() => target.classList.add('show'), 10);
         setTimeout(() => {
             target.classList.remove('show');
             setTimeout(() => target.style.display = 'none', 300);
-        }, 3000);
+        }, 5000);
+    
+        const importantTypes = [
+            'deposit_added', 'deposit_edited', 'deposit_deleted',
+            'expense_added', 'expense_edited', 'expense_deleted',
+            'manager_access_granted', 'manager_access_revoked'
+        ];
+    
+        if (!isLogin && importantTypes.includes(details.type)) {
+            const notificationData = { 
+                message: fullMessage, 
+                type, 
+                timestamp: new Date().toISOString(),
+                related_user: details.userName || null,
+                amount: details.amount || null,
+                action_type: details.type || null
+            };
+            console.log('Attempting to insert notification:', notificationData);
+            supabaseClient.from('notifications')
+                .insert([notificationData])
+                .then(({ data, error }) => {
+                    if (error) {
+                        console.error('Failed to insert notification:', error.message);
+                    } else {
+                        console.log('Notification inserted successfully:', data);
+                        renderNotificationLog(); // Update log immediately
+                    }
+                })
+                .catch(error => console.error('Unexpected error inserting notification:', error));
+        }
+    }
 
-        if (!isLogin) {
-            supabaseClient.from('notifications').insert([{ message, type, timestamp: new Date().toISOString() }])
-                .then(() => renderNotificationLog())
-                .catch(error => console.error('Error logging notification:', error.message));
+    function updateMobileUserInfo() {
+        if (currentUser) {
+            const role = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+            elements.mobileUserInfo.textContent = `${currentUser.username} - ${role}`;
+        } else {
+            elements.mobileUserInfo.textContent = 'Guest - None';
         }
     }
 
@@ -200,31 +257,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         const username = document.getElementById('login-username').value.trim();
         const password = document.getElementById('login-password').value;
         const rememberMe = document.getElementById('remember-me').checked;
-
+    
         const { data, error } = await supabaseClient.from('users')
             .select('*')
             .eq('username', username)
             .eq('password', password)
             .single();
-
+    
         if (error || !data) {
             showNotification('Invalid credentials.', 'error', true);
             return;
         }
-
+    
         currentUser = data;
         sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
         if (rememberMe) {
             await supabaseClient.from('user_settings')
                 .update({ auto_login: true })
                 .eq('user_id', currentUser.id);
-            localStorage.setItem('mealsync_auto_login', btoa(`${username}:${password}`)); // Basic encoding
+            localStorage.setItem('mealsync_auto_login', btoa(`${username}:${password}`));
         }
         showNotification(`Welcome, ${username}!`, 'success', true);
-        elements.loginPage.classList.add('hidden');
+    
+        elements.loginPage.style.display = 'none';
+        elements.loginPage.classList.remove('hidden');
         elements.mainApp.style.display = 'block';
-        updateUIForRole();
+        await new Promise(resolve => setTimeout(resolve, 0));
+    
         await fetchAllData();
+        updateUIForRole();
+        updateMobileUserInfo(); // Update mobile info
         await updateAllViews();
     }
 
@@ -265,10 +327,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.removeItem('mealsync_auto_login');
         elements.headerNav.classList.remove('active');
         elements.mainApp.style.display = 'none';
+        elements.loginPage.style.display = 'flex';
         elements.loginPage.classList.remove('hidden');
         elements.signupFormContainer.classList.add('hidden');
         elements.loginFormContainer.classList.remove('hidden');
         elements.toggleSignupBtn.textContent = 'Need an account? Sign Up';
+        setTimeout(() => {
+            elements.loginPage.style.display = 'flex';
+        }, 0);
+        updateMobileUserInfo(); // Update mobile info
     }
 
     // --- Auto-Login Check ---
@@ -286,13 +353,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
                 elements.loginPage.classList.add('hidden');
                 elements.mainApp.style.display = 'block';
-                updateUIForRole();
                 await fetchAllData();
+                updateUIForRole();
+                updateMobileUserInfo(); // Update mobile info
                 await updateAllViews();
             }
         }
     }
-
     // --- Theme Toggle ---
     elements.toggleThemeBtn.addEventListener('click', async () => {
         document.body.classList.toggle('dark-mode');
@@ -326,30 +393,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.logoutBtn.addEventListener('click', logout);
 
     function updateUIForRole() {
+        console.log('Updating UI for role:', currentUser ? currentUser.role : 'No user');
         elements.userStatus.textContent = currentUser ? `Logged in as: ${currentUser.username}` : '';
         elements.userRole.textContent = currentUser ? `Role: ${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` : '';
         const isAdmin = currentUser?.role === 'admin';
         const isManager = currentUser?.role === 'manager';
         const canEdit = isAdmin || isManager;
     
-        elements.addMemberBtn.classList.toggle('hidden', !isAdmin); // Only admin can add members
-        elements.addExpenseBtn.classList.toggle('hidden', !canEdit); // Managers and admins can add expenses
-        elements.adminControls.classList.toggle('hidden', !isAdmin); // Only admin sees admin controls
-        elements.summarySection.classList.toggle('hidden', !canEdit); // Managers and admins see summary
+        elements.addMemberBtn.classList.toggle('hidden', !isAdmin);
+        elements.addExpenseBtn.classList.toggle('hidden', !canEdit);
+        elements.adminControls.classList.toggle('hidden', !isAdmin);
+        elements.summarySection.classList.toggle('hidden', !canEdit);
     
-        // Show/hide member select dropdown based on role (already exists for members)
         elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
         if (isAdmin || isManager) {
-            populateMemberSelect(isAdmin);
+            if (appState.members && appState.members.length > 0) {
+                populateMemberSelect(isAdmin || isManager);
+            } else {
+                console.warn('No members available in appState for dropdown');
+                elements.memberSelectContainer.classList.add('hidden');
+            }
         }
     
-        // Show/hide user select dropdown for account settings (only for admins)
         elements.userSelectContainer.classList.toggle('hidden', !isAdmin);
         if (isAdmin) {
-            populateUserSelect();
+            if (appState.users && appState.users.length > 0) {
+                populateUserSelect();
+            } else {
+                console.warn('No users available in appState for dropdown');
+                elements.userSelectContainer.classList.add('hidden');
+            }
         }
     
-        // Adjust member card actions for managers (full edit, no delete)
         document.querySelectorAll('.member-card .actions').forEach(actions => {
             const memberId = actions.closest('.member-card').dataset.id;
             if (isAdmin) {
@@ -362,45 +437,67 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
                 `;
             } else {
-                actions.innerHTML = ''; // No actions for regular users
+                actions.innerHTML = '';
             }
         });
-    }
-
-    async function populateUserSelect() {
-        const users = appState.users;
-        elements.userSelect.innerHTML = users.map(u => `
-            <option value="${u.id}">${u.username}</option>
-        `).join('');
     
-        // Set default selection to the first user for admins
-        elements.userSelect.value = users[0]?.id || '';
-    
-        // Add event listener to update password card on selection change
-        elements.userSelect.addEventListener('change', async () => {
-            await renderAdminControls(); // Re-render to show only the selected user's password card
-        });
+        updateMobileUserInfo(); // Update mobile info
     }
-
     async function populateMemberSelect(isAdmin) {
+        console.log('Populating member select:', appState.members);
+        if (!appState.members || appState.members.length === 0) {
+            elements.memberSelect.innerHTML = '<option value="">No members available</option>';
+            return;
+        }
+
         const members = appState.members;
         elements.memberSelect.innerHTML = members.map(m => `
             <option value="${m.id}">${m.name}</option>
         `).join('');
-    
+
         // Set default selection
         if (isAdmin) {
-            // For admins, default to the first member
             elements.memberSelect.value = members[0]?.id || '';
         } else if (isManager) {
-            // For managers, default to their own member (based on currentUser.member_id)
             elements.memberSelect.value = currentUser.member_id || '';
         }
-    
+
+        // Remove existing event listener to prevent duplicates
+        elements.memberSelect.removeEventListener('change', handleMemberSelectChange);
         // Add event listener to update member card on selection change
-        elements.memberSelect.addEventListener('change', async () => {
-            await renderMembers(); // Re-render to show only the selected member
-        });
+        elements.memberSelect.addEventListener('change', handleMemberSelectChange);
+    }
+
+    async function populateUserSelect() {
+        console.log('Populating user select:', appState.users);
+        if (!appState.users || appState.users.length === 0) {
+            elements.userSelect.innerHTML = '<option value="">No users available</option>';
+            return;
+        }
+
+        const users = appState.users;
+        elements.userSelect.innerHTML = users.map(u => `
+            <option value="${u.id}">${u.username}</option>
+        `).join('');
+
+        // Set default selection to the first user for admins
+        elements.userSelect.value = users[0]?.id || '';
+
+        // Remove existing event listener to prevent duplicates
+        elements.userSelect.removeEventListener('change', handleUserSelectChange);
+        // Add event listener to update password card on selection change
+        elements.userSelect.addEventListener('change', handleUserSelectChange);
+    }
+
+    // New handler functions for dropdown changes
+    async function handleMemberSelectChange() {
+        console.log('Member select changed to:', elements.memberSelect.value);
+        await renderMembers(); // Re-render to show only the selected member
+    }
+
+    async function handleUserSelectChange() {
+        console.log('User select changed to:', elements.userSelect.value);
+        await renderAdminControls(); // Re-render to show only the selected user's password card
     }
 
     // --- Event Listeners ---
@@ -501,17 +598,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Data Fetching ---
     async function fetchAllData() {
+        const loadingAnimation = document.getElementById('loading-animation');
+        loadingAnimation.style.display = 'flex';
+        loadingAnimation.classList.remove('hidden');
+    
         const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users'];
         for (const table of tables) {
             const { data, error } = await supabaseClient.from(table).select('*').order('created_at', { ascending: false });
             if (error) {
+                console.error(`Error fetching ${table}:`, error.message);
                 showNotification(`Error fetching ${table}: ${error.message}`, 'error');
                 continue;
             }
             appState[table] = data;
+            console.log(`Fetched ${table}:`, data); // Debug log
         }
         appState.lastUpdated = Date.now();
         localStorage.setItem('mealsync_cache', JSON.stringify(appState));
+    
+        loadingAnimation.classList.add('hidden');
+        setTimeout(() => {
+            loadingAnimation.style.display = 'none';
+        }, 300);
     }
 
     // --- Member Functions ---
@@ -521,12 +629,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const username = document.getElementById('member-username').value.trim();
         const password = document.getElementById('member-password').value;
         const preMonthBalance = parseFloat(document.getElementById('pre-month-balance').value) || 0;
-
+    
         if (!name || !username || !password) {
             showNotification('Please fill all required fields.', 'error');
             return;
         }
-
+    
         const { data: existingMember } = await supabaseClient.from('members')
             .select('id')
             .eq('name', name)
@@ -535,7 +643,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showNotification('Member name already exists.', 'error');
             return;
         }
-
+    
         const { data: existingUser } = await supabaseClient.from('users')
             .select('id')
             .eq('username', username)
@@ -544,20 +652,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             showNotification('Username already exists.', 'error');
             return;
         }
-
+    
         const { data: member } = await supabaseClient.from('members')
             .insert([{ name, pre_month_balance: preMonthBalance, day_status: true, night_status: true }])
             .select()
             .single();
-
+    
         const { data: user } = await supabaseClient.from('users')
             .insert([{ username, password, role: 'user', member_id: member.id }])
             .select()
             .single();
-
+    
         await supabaseClient.from('user_settings')
             .insert([{ user_id: user.id, theme: 'light', auto_login: false }]);
-
+    
         const deposits = {};
         elements.depositFields.querySelectorAll('input').forEach(input => {
             deposits[input.dataset.label] = parseFloat(input.value) || 0;
@@ -569,8 +677,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }));
         if (depositEntries.length > 0) {
             await supabaseClient.from('deposits').insert(depositEntries);
+            depositEntries.forEach(entry => {
+                showNotification(`${name} deposits BDT ${entry.amount} added`, 'success', false, {
+                    userName: name,
+                    amount: entry.amount,
+                    type: 'deposit_added'
+                });
+            });
         }
-
+    
         await fetchAllData();
         await updateAllViews();
         showNotification(`${name} added successfully!`, 'success');
@@ -578,72 +693,80 @@ document.addEventListener('DOMContentLoaded', async () => {
         await createAuthForms();
     }
 
-    async function updateMember() {
-        if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
 
-        const member = appState.members.find(m => m.id === editingMemberId);
-        const user = appState.users.find(u => u.member_id === editingMemberId);
+ async function updateMember() {
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
 
-        const name = document.getElementById('edit-member-name').value.trim();
-        const username = document.getElementById('edit-member-username').value.trim();
-        const preMonthBalance = parseFloat(document.getElementById('edit-pre-month-balance').value) || 0;
+    const member = appState.members.find(m => m.id === editingMemberId);
+    const user = appState.users.find(u => u.member_id === editingMemberId);
 
-        if (name !== member.name) {
-            const { data: existingMember } = await supabaseClient.from('members')
-                .select('id')
-                .eq('name', name)
-                .single();
-            if (existingMember) {
-                showNotification('Member name already exists.', 'error');
-                return;
-            }
+    const name = document.getElementById('edit-member-name').value.trim();
+    const username = document.getElementById('edit-member-username').value.trim();
+    const preMonthBalance = parseFloat(document.getElementById('edit-pre-month-balance').value) || 0;
+
+    if (name !== member.name) {
+        const { data: existingMember } = await supabaseClient.from('members')
+            .select('id')
+            .eq('name', name)
+            .single();
+        if (existingMember) {
+            showNotification('Member name already exists.', 'error');
+            return;
         }
-
-        if (username !== user.username) {
-            const { data: existingUser } = await supabaseClient.from('users')
-                .select('id')
-                .eq('username', username)
-                .single();
-            if (existingUser) {
-                showNotification('Username already exists.', 'error');
-                return;
-            }
-        }
-
-        const memberUpdate = { name, pre_month_balance: preMonthBalance };
-        await supabaseClient.from('members')
-            .update(memberUpdate)
-            .eq('id', editingMemberId);
-
-        const userUpdate = { username };
-        if (currentUser.role === 'admin') { // Only admins can change passwords
-            const password = document.getElementById('edit-member-password').value || undefined;
-            if (password) userUpdate.password = password;
-        }
-        await supabaseClient.from('users')
-            .update(userUpdate)
-            .eq('id', user.id);
-
-        const deposits = {};
-        elements.editDepositFields.querySelectorAll('input').forEach(input => {
-            deposits[input.dataset.label] = parseFloat(input.value) || 0;
-        });
-        await supabaseClient.from('deposits').delete().eq('member_id', editingMemberId);
-        const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
-            member_id: editingMemberId,
-            label,
-            amount
-        }));
-        if (depositEntries.length > 0) {
-            await supabaseClient.from('deposits').insert(depositEntries);
-        }
-
-        await fetchAllData();
-        await updateAllViews();
-        showNotification(`${name} updated successfully!`, 'success');
-        closeModal(elements.editMemberModal);
-        await createAuthForms();
     }
+
+    if (username !== user.username) {
+        const { data: existingUser } = await supabaseClient.from('users')
+            .select('id')
+            .eq('username', username)
+            .single();
+        if (existingUser) {
+            showNotification('Username already exists.', 'error');
+            return;
+        }
+    }
+
+    const memberUpdate = { name, pre_month_balance: preMonthBalance };
+    await supabaseClient.from('members')
+        .update(memberUpdate)
+        .eq('id', editingMemberId);
+
+    const userUpdate = { username };
+    if (currentUser.role === 'admin') {
+        const password = document.getElementById('edit-member-password').value || undefined;
+        if (password) userUpdate.password = password;
+    }
+    await supabaseClient.from('users')
+        .update(userUpdate)
+        .eq('id', user.id);
+
+    const deposits = {};
+    elements.editDepositFields.querySelectorAll('input').forEach(input => {
+        deposits[input.dataset.label] = parseFloat(input.value) || 0;
+    });
+    await supabaseClient.from('deposits').delete().eq('member_id', editingMemberId);
+    const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
+        member_id: editingMemberId,
+        label,
+        amount
+    }));
+    if (depositEntries.length > 0) {
+        await supabaseClient.from('deposits').insert(depositEntries);
+        depositEntries.forEach(entry => {
+            showNotification(`${name} deposits BDT ${entry.amount} edited`, 'success', false, {
+                userName: name,
+                amount: entry.amount,
+                type: 'deposit_edited'
+            });
+        });
+    }
+
+    await fetchAllData();
+    await updateAllViews();
+    showNotification(`${name} updated successfully!`, 'success');
+    closeModal(elements.editMemberModal);
+    await createAuthForms();
+}
 
     async function editMember(id) {
         if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
@@ -679,12 +802,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function deleteMember(id) {
-        if (currentUser.role !== 'admin') return; // Managers cannot delete
+        if (currentUser.role !== 'admin') return;
         if (!confirm('Are you sure you want to delete this member and associated user?')) return;
-
+    
         const member = appState.members.find(m => m.id === id);
         const user = appState.users.find(u => u.member_id === id);
-
+        const deletedDeposits = appState.deposits.filter(d => d.member_id === id);
+    
         await supabaseClient.from('deposits').delete().eq('member_id', id);
         await supabaseClient.from('meals').delete().eq('member_id', id);
         await supabaseClient.from('expenses').delete().eq('member_id', id);
@@ -693,9 +817,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             await supabaseClient.from('user_settings').delete().eq('user_id', user.id);
             await supabaseClient.from('users').delete().eq('id', user.id);
         }
-
+    
         await fetchAllData();
         await updateAllViews();
+        deletedDeposits.forEach(dep => {
+            showNotification(`${member.name} deposits BDT ${dep.amount} deleted`, 'success', false, {
+                userName: member.name,
+                amount: dep.amount,
+                type: 'deposit_deleted'
+            });
+        });
         showNotification(`${member.name} deleted successfully!`, 'success');
     }
 
@@ -717,113 +848,107 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    function isToggleTimeAllowed() {
-        const now = new Date();
-        const hours = now.getHours();
-        return hours >= 20 || hours < 18; // 8 PM (20:00) to 6 PM (18:00)
-    }
+    async function renderMembers() {
+        elements.membersList.innerHTML = '';
+        const isAdmin = currentUser?.role === 'admin';
+        const isManager = currentUser?.role === 'manager';
 
-async function renderMembers() {
-    elements.membersList.innerHTML = '';
-    const isAdmin = currentUser?.role === 'admin';
-    const isManager = currentUser?.role === 'manager';
-
-    let visibleMembers;
-    if (isAdmin || isManager) {
-        // For admins/managers, show only the member selected in the dropdown
-        const selectedMemberId = parseInt(elements.memberSelect.value);
-        visibleMembers = appState.members.filter(m => m.id === selectedMemberId);
-    } else {
-        // For users, show only their own member card
-        visibleMembers = appState.members.filter(m => m.id === currentUser.member_id);
-    }
-
-    const isToggleAllowed = isToggleTimeAllowed(); // Check time for toggle state
-
-    for (const member of visibleMembers) {
-        const totalMeals = await calculateTotalMeals(member.id);
-        const totalDeposit = await calculateTotalDeposit(member.id);
-        const totalCost = await calculateTotalCost(member.id);
-        const balance = totalDeposit - totalCost;
-        const balanceClass = balance >= 0 ? 'positive' : 'negative';
-        const totalBazar = await calculateTotalBazar(member.id);
-
-        const card = document.createElement('div');
-        card.className = 'member-card';
-        card.dataset.id = member.id;
-
-        const isOwnCard = currentUser.role === 'user' && member.id === currentUser.member_id;
-        const toggleClass = isOwnCard ? `user-toggle ${isToggleAllowed ? '' : 'disabled'}` : '';
-
-        card.innerHTML = `
-            <h3>${member.name}</h3>
-            <div>Total Deposit: ${formatCurrency(totalDeposit)}</div>
-            <div>Balance: <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
-            <div>Total Meals: <span class="total-meals">${totalMeals}</span></div>
-            <div>Total Bazar: ${totalBazar}</div>
-            <div class="toggles">
-                <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
-                <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
-            </div>
-            ${(isAdmin || isManager) ? `
-            <div class="actions">
-                ${isAdmin ? `
-                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
-                    <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
-                ` : `
-                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
-                `}
-            </div>` : ''}
-        `;
-
-        if (balance < 0 && currentUser.role === 'user') {
-            showNotification('Warning: Your balance is negative!', 'error');
+        let visibleMembers;
+        if (isAdmin || isManager) {
+            // For admins/managers, show only the member selected in the dropdown
+            const selectedMemberId = parseInt(elements.memberSelect?.value) || (isManager ? currentUser.member_id : appState.members[0]?.id);
+            visibleMembers = appState.members.filter(m => m.id === selectedMemberId);
+        } else {
+            // For users, show only their own member card
+            visibleMembers = appState.members.filter(m => m.id === currentUser.member_id);
         }
 
-        const toggleButtons = card.querySelectorAll('.toggle-btn');
-        toggleButtons.forEach(btn => {
-            btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
-        });
+        const isToggleAllowed = isToggleTimeAllowed(); // Check time for toggle state
 
-        if (isAdmin) {
-            card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
-            card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));
-        } else if (isManager) {
-            card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
+        for (const member of visibleMembers) {
+            const totalMeals = await calculateTotalMeals(member.id);
+            const totalDeposit = await calculateTotalDeposit(member.id);
+            const totalCost = await calculateTotalCost(member.id);
+            const balance = totalDeposit - totalCost;
+            const balanceClass = balance >= 0 ? 'positive' : 'negative';
+            const totalBazar = await calculateTotalBazar(member.id);
+
+            const card = document.createElement('div');
+            card.className = 'member-card';
+            card.dataset.id = member.id;
+
+            const isOwnCard = currentUser.role === 'user' && member.id === currentUser.member_id;
+            const toggleClass = isOwnCard ? `user-toggle ${isToggleAllowed ? '' : 'disabled'}` : '';
+
+            card.innerHTML = `
+                <h3>${member.name}</h3>
+                <div>Total Deposit: ${formatCurrency(totalDeposit)}</div>
+                <div>Balance: <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
+                <div>Total Meals: <span class="total-meals">${totalMeals}</span></div>
+                <div>Total Bazar: ${totalBazar}</div>
+                <div class="toggles">
+                    <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
+                    <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
+                </div>
+                ${(isAdmin || isManager) ? `
+                <div class="actions">
+                    ${isAdmin ? `
+                        <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                    ` : `
+                        <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                    `}
+                </div>` : ''}
+            `;
+
+            if (balance < 0 && currentUser.role === 'user') {
+                showNotification('Warning: Your balance is negative!', 'error');
+            }
+
+            const toggleButtons = card.querySelectorAll('.toggle-btn');
+            toggleButtons.forEach(btn => {
+                btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
+            });
+
+            if (isAdmin) {
+                card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
+                card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));
+            } else if (isManager) {
+                card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
+            }
+
+            elements.membersList.appendChild(card);
+        }
+        await populateExpenseSelect();
+        updateUserToggleButtons(); // Ensure buttons are updated after initial render
+    }
+
+    async function toggleMealStatus(member, type) {
+        if (currentUser.role === 'user' && !isToggleTimeAllowed()) {
+            showNotification('Meal toggling is only allowed between 8 PM and 6 PM.', 'error');
+            return;
         }
 
-        elements.membersList.appendChild(card);
-    }
-    await populateExpenseSelect();
-    updateUserToggleButtons(); // Ensure buttons are updated after initial render
-}
-    
-async function toggleMealStatus(member, type) {
-    if (currentUser.role === 'user' && !isToggleTimeAllowed()) {
-        showNotification('Meal toggling is only allowed between 8 PM and 6 PM.', 'error');
-        return;
+        const statusKey = type === 'day' ? 'day_status' : 'night_status';
+        const newStatus = !member[statusKey];
+        await supabaseClient.from('members')
+            .update({ [statusKey]: newStatus })
+            .eq('id', member.id);
+
+        if (currentUser.member_id === member.id) {
+            currentUser[statusKey] = newStatus;
+            sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+        }
+
+        await fetchAllData();
+        await renderMembers(); // Re-render the member card after toggle
+        await updateDashboard();
+        if (currentUser.member_id === member.id) {
+            await updateUserOverview();
+        }
+        updateUserToggleButtons(); // Sync button appearance after toggle
     }
 
-    const statusKey = type === 'day' ? 'day_status' : 'night_status';
-    const newStatus = !member[statusKey];
-    await supabaseClient.from('members')
-        .update({ [statusKey]: newStatus })
-        .eq('id', member.id);
-
-    if (currentUser.member_id === member.id) {
-        currentUser[statusKey] = newStatus;
-        sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
-    }
-
-    await fetchAllData();
-    await updateMemberCard(member.id); // Update the specific card
-    await updateDashboard();
-    if (currentUser.member_id === member.id) {
-        await updateUserOverview();
-    }
-    updateUserToggleButtons(); // Sync button appearance after toggle
-}
-    
     // --- Expense Functions ---
     async function openExpenseModal(expenseId = null) {
         if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
@@ -844,58 +969,77 @@ async function toggleMealStatus(member, type) {
         openModal(elements.expenseModal);
     }
 
-    async function addExpense() {
-        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
-        const date = document.getElementById('expense-date').value;
-        const memberId = parseInt(document.getElementById('expense-member').value);
-        const amount = parseFloat(document.getElementById('expense-amount').value);
+   async function addExpense() {
+    if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
+    const date = document.getElementById('expense-date').value;
+    const memberId = parseInt(document.getElementById('expense-member').value);
+    const amount = parseFloat(document.getElementById('expense-amount').value);
 
-        if (!date || isNaN(memberId) || isNaN(amount)) {
-            showNotification('Please fill all fields.', 'error');
-            return;
-        }
-
-        await supabaseClient.from('expenses')
-            .insert([{ member_id: memberId, date, amount }]);
-
-        await fetchAllData();
-        await updateAllViews();
-        showNotification('Expense added successfully!', 'success');
-        closeModal(elements.expenseModal);
+    if (!date || isNaN(memberId) || isNaN(amount)) {
+        showNotification('Please fill all fields.', 'error');
+        return;
     }
 
-    async function updateExpense() {
-        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
-        const date = document.getElementById('expense-date').value;
-        const memberId = parseInt(document.getElementById('expense-member').value);
-        const amount = parseFloat(document.getElementById('expense-amount').value);
+    await supabaseClient.from('expenses')
+        .insert([{ member_id: memberId, date, amount }]);
 
-        if (!date || isNaN(memberId) || isNaN(amount)) {
-            showNotification('Please fill all fields.', 'error');
-            return;
-        }
+    const member = appState.members.find(m => m.id === memberId);
+    await fetchAllData();
+    await updateAllViews();
+    showNotification(`${member.name} made an expense of BDT ${amount}`, 'success', false, {
+        userName: member.name,
+        amount,
+        type: 'expense_added'
+    });
+    closeModal(elements.expenseModal);
+}
 
-        await supabaseClient.from('expenses')
-            .update({ date, member_id: memberId, amount })
-            .eq('id', editingExpenseId);
 
-        await fetchAllData();
-        await renderExpenses(); // Update only expenses section
-        await updateDashboard();
-        showNotification('Expense updated successfully!', 'success');
-        closeModal(elements.expenseModal);
+async function updateExpense() {
+    if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
+    const date = document.getElementById('expense-date').value;
+    const memberId = parseInt(document.getElementById('expense-member').value);
+    const amount = parseFloat(document.getElementById('expense-amount').value);
+
+    if (!date || isNaN(memberId) || isNaN(amount)) {
+        showNotification('Please fill all fields.', 'error');
+        return;
     }
 
-    async function deleteExpense(id) {
-        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
-        if (!confirm('Are you sure you want to delete this expense?')) return;
+    await supabaseClient.from('expenses')
+        .update({ date, member_id: memberId, amount })
+        .eq('id', editingExpenseId);
 
-        await supabaseClient.from('expenses').delete().eq('id', id);
-        await fetchAllData();
-        await renderExpenses();
-        await updateDashboard();
-        showNotification('Expense deleted successfully!', 'success');
-    }
+    const member = appState.members.find(m => m.id === memberId);
+    await fetchAllData();
+    await renderExpenses();
+    await updateDashboard();
+    showNotification(`${member.name} expense edited to BDT ${amount}`, 'success', false, {
+        userName: member.name,
+        amount,
+        type: 'expense_edited'
+    });
+    closeModal(elements.expenseModal);
+}
+
+async function deleteExpense(id) {
+    if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
+    if (!confirm('Are you sure you want to delete this expense?')) return;
+
+    const expense = appState.expenses.find(e => e.id === id);
+    const member = appState.members.find(m => m.id === expense.member_id);
+
+    await supabaseClient.from('expenses').delete().eq('id', id);
+    await fetchAllData();
+    await renderExpenses();
+    await updateDashboard();
+    showNotification(`${member.name} expense of BDT ${expense.amount} deleted`, 'success', false, {
+        userName: member.name,
+        amount: expense.amount,
+        type: 'expense_deleted'
+    });
+}
+
 
     async function renderExpenses() {
         elements.expensesTableBody.innerHTML = '';
@@ -1042,8 +1186,7 @@ async function toggleMealStatus(member, type) {
                 </div>
             `).join('');
     
-        // Filter to show only the selected user's password card
-        const selectedUserId = parseInt(elements.userSelect.value);
+        const selectedUserId = parseInt(elements.userSelect?.value) || (appState.users[0]?.id || '');
         const selectedUser = appState.users.find(u => u.id === selectedUserId);
     
         elements.passwordControls.innerHTML = selectedUser ? `
@@ -1067,11 +1210,16 @@ async function toggleMealStatus(member, type) {
                     currentUser = appState.users.find(u => u.id === userId);
                     sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
                 }
+                const user = appState.users.find(u => u.id === userId);
+                showNotification(`${user.username} ${newCanEdit ? 'granted' : 'revoked'} manager access`, 'success', false, {
+                    userName: user.username,
+                    type: newCanEdit ? 'manager_access_granted' : 'manager_access_revoked'
+                });
                 await updateUIForRole();
                 await updateAllViews();
             });
         });
-    
+
         elements.passwordControls.querySelectorAll('.update-password').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const input = btn.previousElementSibling;
@@ -1093,7 +1241,7 @@ async function toggleMealStatus(member, type) {
                 showNotification(`Password updated for user ${userId}!`, 'success');
             });
         });
-    
+
         elements.passwordControls.querySelectorAll('.delete-user').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const userId = parseInt(btn.dataset.userId);
@@ -1266,14 +1414,27 @@ async function toggleMealStatus(member, type) {
 
     // --- Notification Log ---
     async function renderNotificationLog() {
-        elements.notificationLogList.innerHTML = appState.notifications.map(n => `
-            <div class="log-entry ${n.type}">
-                <span>${n.message} (${new Date(n.timestamp).toLocaleString()})</span>
-                <button class="btn danger-btn" data-id="${n.id}">Dismiss</button>
-            </div>
-        `).join('');
-
-        elements.notificationLogList.querySelectorAll('.danger-btn').forEach(btn => {
+        if (!appState.notifications || appState.notifications.length === 0) {
+            elements.notificationLogList.innerHTML = '<div class="log-entry">No notifications available.</div>';
+            console.log('No notifications in appState:', appState.notifications);
+        } else {
+            elements.notificationLogList.innerHTML = appState.notifications.map(n => `
+                <div class="log-entry ${n.type}">
+                    <span>${n.message}</span>
+                    <button class="btn danger-btn" data-id="${n.id}">Dismiss</button>
+                </div>
+            `).join('');
+        }
+    
+        // Show "Clear All" button only for admins
+        if (currentUser?.role === 'admin') {
+            elements.clearAllNotificationsBtn.classList.remove('hidden');
+        } else {
+            elements.clearAllNotificationsBtn.classList.add('hidden');
+        }
+    
+        // Individual dismiss buttons
+        elements.notificationLogList.querySelectorAll('.danger-btn[data-id]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = parseInt(btn.dataset.id);
                 await supabaseClient.from('notifications').delete().eq('id', id);
@@ -1281,6 +1442,21 @@ async function toggleMealStatus(member, type) {
                 await renderNotificationLog();
             });
         });
+    
+        // Clear all notifications button (admin only)
+        elements.clearAllNotificationsBtn.removeEventListener('click', clearAllNotificationsHandler); // Prevent duplicate listeners
+        elements.clearAllNotificationsBtn.addEventListener('click', clearAllNotificationsHandler);
+    }
+    
+    async function clearAllNotificationsHandler() {
+        if (currentUser?.role !== 'admin') return;
+        if (!confirm('Are you sure you want to clear all notifications?')) return;
+    
+        await supabaseClient.from('notifications').delete().neq('id', 0); // Delete all rows
+        appState.notifications = []; // Clear local state
+        await fetchAllData();
+        await renderNotificationLog();
+        showNotification('All notifications cleared successfully!', 'success');
     }
 
     // --- Data Export ---
@@ -1337,38 +1513,39 @@ async function toggleMealStatus(member, type) {
     // --- Reset Month ---
     async function resetMonth() {
         if (currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
-        if (!confirm('Are you sure you want to export and reset all data except members and users?')) return;
-
+        if (!confirm('Are you sure you want to export and reset all data except members and users? This will also clear all notifications.')) return;
+    
         await exportData(); // Export before reset
-        await supabaseClient.from('deposits').delete().neq('id', 0); // Clear all
+        await supabaseClient.from('deposits').delete().neq('id', 0);
         await supabaseClient.from('meals').delete().neq('id', 0);
         await supabaseClient.from('expenses').delete().neq('id', 0);
+        await supabaseClient.from('notifications').delete().neq('id', 0); // Clear notifications
         await supabaseClient.from('members').update({ pre_month_balance: 0 }).neq('id', 0);
         await fetchAllData();
         await updateAllViews();
-        showNotification('Month reset successfully!', 'success');
+        showNotification('Month reset successfully! All notifications cleared.', 'success');
     }
 
     // --- Targeted Updates ---
     async function updateMemberCard(memberId) {
         const card = elements.membersList.querySelector(`.member-card[data-id="${memberId}"]`);
         if (!card) return;
-    
+
         const member = appState.members.find(m => m.id === memberId);
         if (!member) return;
-    
+
         const [totalMeals, totalDeposit, totalCost, totalBazar] = await Promise.all([
             calculateTotalMeals(memberId),
             calculateTotalDeposit(memberId),
             calculateTotalCost(memberId),
             calculateTotalBazar(memberId)
         ]);
-    
+
         const balance = totalDeposit - totalCost;
         const balanceClass = balance >= 0 ? 'positive' : 'negative';
         const isOwnCard = currentUser.role === 'user' && member.id === currentUser.member_id;
         const toggleClass = isOwnCard ? `user-toggle ${isToggleTimeAllowed() ? '' : 'disabled'}` : '';
-    
+
         card.innerHTML = `
             <h3>${member.name}</h3>
             <div>Total Deposit: ${formatCurrency(totalDeposit)}</div>
@@ -1389,16 +1566,16 @@ async function toggleMealStatus(member, type) {
                 `}
             </div>` : ''}
         `;
-    
+
         if (balance < 0 && currentUser.role === 'user') {
             showNotification('Warning: Your balance is negative!', 'error');
         }
-    
+
         const toggleButtons = card.querySelectorAll('.toggle-btn');
         toggleButtons.forEach(btn => {
             btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
         });
-    
+
         if (currentUser.role === 'admin') {
             card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
             card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));
@@ -1406,6 +1583,7 @@ async function toggleMealStatus(member, type) {
             card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
         }
     }
+
     // --- Update All Views ---
     async function updateAllViews() {
         if (!currentUser) {
@@ -1421,16 +1599,43 @@ async function toggleMealStatus(member, type) {
         await renderMealTracker();
         await renderExpenses();
         await renderNotificationLog();
+
+        // Ensure dropdowns are visible and populated
+        const isAdmin = currentUser.role === 'admin';
+        const isManager = currentUser.role === 'manager';
+        if (isAdmin || isManager) {
+            elements.memberSelectContainer.classList.remove('hidden');
+            if (appState.members && appState.members.length > 0) {
+                populateMemberSelect(isAdmin);
+            }
+        }
+        if (isAdmin) {
+            elements.userSelectContainer.classList.remove('hidden');
+            if (appState.users && appState.users.length > 0) {
+                populateUserSelect();
+            }
+        }
     }
 
-    // --- Initial Render ---
-    await createAuthForms();
-    await checkAutoLogin();
-    if (currentUser) {
-        elements.loginPage.classList.add('hidden');
-        elements.mainApp.style.display = 'block';
-        updateUIForRole();
-        await fetchAllData();
-        await updateAllViews();
+    try {
+        await createAuthForms();
+        await checkAutoLogin();
+        if (currentUser) {
+            loginPage.style.display = 'none';
+            mainApp.style.display = 'block';
+            await fetchAllData();
+            updateUIForRole();
+            updateMobileUserInfo(); // Initial update
+            await updateAllViews();
+        } else {
+            loginPage.style.display = 'flex';
+            mainApp.style.display = 'none';
+            updateMobileUserInfo(); // Initial update for guest
+        }
+    } catch (error) {
+        console.error('Initialization failed:', error);
+        showNotification('Failed to load the app. Please try again.', 'error', true);
+    } finally {
+        hideLoading();
     }
 });
