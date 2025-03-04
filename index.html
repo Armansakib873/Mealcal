@@ -13,8 +13,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.js"></script>
 </head>
 <body>
+
+    <div id="loading-animation" style="display: flex;">
+        <div class="spinner"></div>
+        <p>Loading MealSync...</p>
+    </div>
+
     <!-- Login Page -->
-    <div id="login-page" class="login-page">
+     
+    <div id="login-page" class="login-page" style="display: none;">
         <div class="login-container">
             <div class="logo-container">
                 <img src="logo.png" alt="MealSync Logo" class="logo">
@@ -28,31 +35,30 @@
     </div>
 
     <!-- Main App (Hidden by Default) -->
-    <div id="main-app" class="main-app hidden">
+    <div id="main-app" class="main-app" style="display: none;">
         <!-- Header -->
         <header class="header">
-            <div class="logo-container">
-                <img src="logo.png" alt="MealSync Logo" class="logo">
-                <h1>MealSync</h1>
-            </div>
             <button class="menu-toggle" aria-label="Toggle Menu">
                 <i class="fas fa-bars"></i>
             </button>
+            <span id="mobile-user-info" class="mobile-user-info"></span>
+            <img src="logo.png" alt="MealSync Logo" class="logo">
+            <h1>MealSync</h1>
             <nav class="header-nav">
                 <span id="current-date" class="date-display"></span>
                 <span id="user-status" class="user-status"></span>
-                <span id="user-role" class="user-role"></span> <!-- Added for role display -->
+                <span id="user-role" class="user-role"></span>
                 <div class="nav-buttons">
                     <button id="logout-btn" class="btn danger-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
                 </div>
                 <div class="toggle-head-buttons">
-                <button id="toggle-theme" class="btn theme-toggle-btn" title="Toggle Dark Mode">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <button id="notification-log-btn" class="btn secondary-btn" title="View Notification Log">
-                    <i class="fas fa-bell"></i>
-                </button>
-            </div>
+                    <button id="toggle-theme" class="btn theme-toggle-btn" title="Toggle Dark Mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="notification-log-btn" class="btn secondary-btn" title="View Notification Log">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                </div>
             </nav>
         </header>
 
@@ -338,15 +344,20 @@
             </div>
         </div>
 
+        
+
         <!-- Notification Log Modal -->
         <div id="notification-log-modal" class="modal">
             <div class="modal-content">
-                <span class="modal-close" id="close-notification-log-modal">×</span>
                 <h2><i class="fas fa-bell"></i> Notification Log</h2>
                 <div id="notification-log-list" class="notification-log"></div>
+                <div class="modal-actions">
+                    <button id="clear-all-notifications-btn" class="btn danger-btn hidden"><i class="fas fa-trash-alt"></i> Clear All</button>
+                    <button id="close-notification-log-modal" class="btn secondary-btn"><i class="fas fa-times"></i> Close</button>
+                </div>
             </div>
         </div>
-    </div>
+    
 
     <script src="app.js"></script>
 </body>
