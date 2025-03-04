@@ -118,17 +118,18 @@ html {
 
 body {
     font-family: var(--font-sans);
-    background-color: var(--background);
+    background-color: var(--background); /* Ensure fallback */
     color: var(--foreground);
     line-height: 1.6;
     font-size: 16px;
     min-height: 100vh;
-    min-height: -webkit-fill-available; /* Mobile viewport fix, from Style2*/
+    min-height: -webkit-fill-available;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color var(--transition-normal) ease, color var(--transition-normal) ease;
-     padding-bottom: env(safe-area-inset-bottom); /* iOS safety area, Style2 */
+    padding-bottom: env(safe-area-inset-bottom);
+
 }
 
 html, body {
@@ -230,6 +231,56 @@ a:hover {
     color: var(--foreground); /* Header title color */
 }
 
+.header img {
+    margin-right: 10px;
+}
+
+#loading-animation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(240, 242, 245, 0.9); /* Match --background in light mode */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.3s ease; /* Smooth fade out */
+}
+
+#loading-animation.hidden {
+    opacity: 0;
+    pointer-events: none; /* Prevent interaction when hidden */
+}
+
+.spinner {
+    border: 6px solid rgba(0, 0, 0, 0.1);
+    border-top: 6px solid var(--primary); /* Use primary color */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+#loading-animation p {
+    margin-top: var(--spacing-md);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Dark mode adjustments */
+body.dark-mode #loading-animation {
+    background-color: rgba(26, 32, 44, 0.9); /* Match --background in dark mode */
+}
+
 /* Mobile Menu Toggle */
 .menu-toggle {
     background: none;
@@ -277,8 +328,23 @@ a:hover {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-     background: linear-gradient(135deg, #e0f2fe, var(--background)); /* Login page background */
-    padding: var(--spacing-md);  /* Consistent padding */
+    background: linear-gradient(135deg, #e0f2fe, var(--background));
+    padding: var(--spacing-md);
+    z-index: 10;
+    position: relative;
+}
+
+.login-page[style*="display: none"] {
+    display: none !important; /* Enforce inline style */
+}
+
+.main-app {
+    display: none;
+    padding: 0;
+    width: 100%;
+    color: var(--foreground);
+    z-index: 20;
+    position: relative;
 }
 
 .login-container {
@@ -793,6 +859,22 @@ a:hover {
 
 .notification.error {
     background-color: var(--error); /* Error notification background */
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--spacing-md);
+}
+
+.btn.danger-btn {
+    background-color: #e53e3e; /* Red for danger */
+    color: white;
+    border: none;
+}
+
+.btn.danger-btn:hover {
+    background-color: #c53030; /* Darker red on hover */
 }
 
 #login-notification {
@@ -1479,6 +1561,21 @@ a:hover {
     background-color: var(--primary); /* Log entry button background */
 }
 
+.mobile-user-info {
+    padding-left: 10px;
+    display: none; /* Hidden by default (desktop) */
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin-left: var(--spacing-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px; /* Limit width to avoid overflow */
+}
+
+
+
 /* --- Mobile-First Responsive Design --- */
 @media (max-width: 768px) {
     .header {
@@ -1494,19 +1591,23 @@ a:hover {
     }
 
     .header-nav {
+
         display: none;  /* Hide by default */
         width: 100%;
         flex-direction: column;
         align-items: flex-start;
         padding: var(--spacing-md); /* Consistent padding */
-        background: var(--light); /* Nav background */
+        background: rgb(223, 238, 229); /* Nav background */
         position: absolute;
+        gap: 30px;
         top: 65px;  /* Adjust as needed */
         left: 0;
         right: 0;
         box-shadow: var(--shadow-light);
         color: var(--foreground); /* Nav text color */
+        
     }
+
 
     .header-nav.active {
         display: flex; /* Show when active */
@@ -1514,7 +1615,9 @@ a:hover {
 
     .nav-buttons {
         flex-direction: column;
-        width: 100%;
+        align-items: flex-start;
+        width: 50%;
+        margin: 30px;
         color: var(--foreground); /* Nav buttons text color */
     }
 
@@ -1569,7 +1672,31 @@ a:hover {
     #summary-table th{
         font-size: 0.7rem;
     }
+    .mobile-user-info {
+        display: inline-block; /* Show in mobile view */
+    }
 
+    .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* Ensure logo stays on right */
+    }
+
+    .menu-toggle {
+        margin-right: 0; /* Remove extra margin for tight spacing */
+    }
+
+    .logo {
+        margin-left: auto; /* Push logo to the right */
+    }
+
+    .header-nav {
+        display: none; /* Ensure nav is hidden unless toggled */
+    }
+
+    .header-nav.active {
+        display: block; /* Show nav when toggled */
+    }
 
 
     .notification {
