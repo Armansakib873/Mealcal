@@ -8,6 +8,9 @@
 
 /* CSS Variables (Combined and Refined for Light and Dark Modes) */
 :root {
+    --primary-rgb: 67, 97, 238;
+    --light-rgb: 255, 255, 255;
+    --foreground-rgb: 33, 37, 41;
     --primary: #4361ee; /* Primary color for buttons, links */
     --primary-hover: #3a56d4; /* Darker primary for hover */
     --secondary: #6c757d; /* Secondary color for buttons, text */
@@ -28,10 +31,12 @@
     --spacing-md: 16px;    
     --spacing-lg: 24px;    
     --spacing-xl: 32px;    
-    --font-sans: 'Nunito Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif; 
+    --font-sans: 'Inter', 'Nunito Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
     --transition-speed: 0.3s; 
     --transition-fast: 0.2s;   
     --transition-normal: 0.3s; 
+    --transition-smooth: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 /* Dark Mode Variables (Override light mode vars for colors only) */
@@ -45,6 +50,25 @@ body.dark-mode {
 body.dark-mode {
     background-color: var(--background); /* Dark background */
     color: var(--foreground); /* Light text for dark mode */
+}
+
+/* Dark Mode Specific Adjustments */
+body.dark-mode .login-page {
+    background: linear-gradient(135deg, #2d3748, var(--background));
+}
+
+body.dark-mode .login-container::before {
+    opacity: 0.2;
+}
+
+body.dark-mode .input-field {
+    background-color: rgba(45, 55, 72, 0.5);
+    border-color: var(--border);
+}
+
+body.dark-mode .input-field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.25);
 }
 
 body.dark-mode .header,
@@ -145,7 +169,6 @@ html, body {
 h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
     line-height: 1.3;
-    margin-bottom: 0.5em;
     color: var(--foreground); /* Consistent text color */
 }
 /* Using clamp() for responsive font sizes (Style2 approach) */
@@ -193,46 +216,97 @@ a:hover {
 }
 /* --- Header --- */
 .header {
-    background: var(--light); /* Header background */
-    color: var(--foreground); /* Header text color */
-    padding: var(--spacing-md); /* Consistent padding */
-    display: flex;
-    width:100%; /*from style 2*/
-    justify-content: space-between;
-    align-items: center;
+    padding: var(--spacing-sm);
+    height: 80px;
+    background: linear-gradient(to right, var(--light), rgba(var(--primary-rgb), 0.05));
+    border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 1000;
-    box-shadow: var(--shadow-light);
-    border-bottom: 1px solid var(--border); /* Header border color */
-}
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .header.scrolled {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
 
 .header .logo-container {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);  /* Style2 spacing */
+    gap: var(--spacing-sm);
 }
 
 .header .logo {
-    height: 40px; /* Style2 height */
-    transition: transform var(--transition-normal) ease, filter var(--transition-normal) ease;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)); /*from style 2*/
+    height: 36px; /* Slightly smaller for balance */
+    margin-right: var(--spacing-sm);
 }
-
-.header .logo:hover {
-    transform: scale(1.05); /* Slightly reduced scale */
+.header .logo-icon {
+    display: flex;
+    align-items: center;
+    height: clamp(40px, 15vw, 60px);
+    transition: transform var(--transition-bounce);
+    filter: drop-shadow(0 2px 4px rgba(var(--primary-rgb), 0.2));
 }
-
 .header h1 {
-  font-size: clamp(1.2rem, 4vw, 1.5rem); /* Responsive font size, Style2 */
-    font-weight: 700;
-     margin-bottom: 0; /* Style2 */
-    white-space: nowrap; /* Style2 */
-    color: var(--foreground); /* Header title color */
+    margin: 0;
+    margin-top: 10px;
+
+    font-size: clamp(1.6rem, 6vw, 1.8rem);
+    color: var(--foreground);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--foreground), var(--primary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
 }
 
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg); /* Larger gap for breathing room */
+}
+
+.date-display,
+.user-status,
+.user-role {
+    font-size: 0.9rem; /* Slightly smaller for hierarchy */
+    font-weight: 500;
+    color: var(--foreground);
+}
+
+.nav-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.toggle-head-buttons {
+    display: flex;
+    gap: var(--spacing-md); /* Consistent gap, remove margin-bottom */
+    margin-bottom: 0; /* Reset unnecessary margin */
+}
+
+.theme-toggle-btn,
+#notification-log-btn {
+    width: 36px; /* Slightly smaller */
+    height: 36px;
+    border-radius: 50%;
+    background: var(--light);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    transition: all var(--transition-fast) ease;
+}
+
+.theme-toggle-btn:hover,
+#notification-log-btn:hover {
+    background: var(--primary);
+    color: var(--light);
+    transform: scale(1.05);
+}
 .header img {
-    margin-right: 10px;
+    margin-right: 5px;
 }
 
 #loading-animation {
@@ -281,6 +355,8 @@ body.dark-mode #loading-animation {
     background-color: rgba(26, 32, 44, 0.9); /* Match --background in dark mode */
 }
 
+
+
 /* Mobile Menu Toggle */
 .menu-toggle {
     background: none;
@@ -325,18 +401,345 @@ body.dark-mode #loading-animation {
 /* --- Login Page --- */
 .login-page {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #e0f2fe, var(--background));
+    background: linear-gradient(135deg, #cbe5f6, var(--background));
     padding: var(--spacing-md);
     z-index: 10;
     position: relative;
+    overflow: hidden;
+}
+
+/* Add decorative elements */
+.login-page::before {
+    content: "";
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: 50%;
+    top: -100px;
+    right: -100px;
+    z-index: -1;
+}
+
+.login-page::after {
+    content: "";
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    background: rgba(var(--primary-rgb), 0.05);
+    border-radius: 50%;
+    bottom: -80px;
+    left: -80px;
+    z-index: -1;
 }
 
 .login-page[style*="display: none"] {
     display: none !important; /* Enforce inline style */
 }
+
+.login-page .greetings {
+    display: flex;
+    flex-direction: column;
+    width: 80%;
+    align-items: center;
+    text-align: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.login-page .greetings h1 {
+    font-size: clamp(2rem, 5vw, 2.5rem);
+    color: var(--primary);
+    margin-bottom: var(--spacing-xs);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.login-page .greetings p {
+    font-size: clamp(1rem, 3vw, 1.1rem);
+    max-width: 500px;
+    color: var(--foreground);
+    opacity: 0.9;
+    line-height: 1.5;
+}
+
+.login-container {
+    background: var(--light);
+    border-radius: var(--radius-lg);
+    padding: clamp(var(--spacing-lg), 5vw, var(--spacing-xl));
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.1),
+                0 5px 10px -5px var(--shadow-medium);
+    text-align: center;
+    color: var(--foreground);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(var(--primary-rgb), 0.1);
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Subtle pattern for container */
+.login-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(rgba(var(--primary-rgb), 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.5;
+    z-index: -1;
+}
+
+.login-container .logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.login-container .logo {
+    height: clamp(40px, 15vw, 60px);
+    transition: transform var(--transition-bounce);
+    filter: drop-shadow(0 2px 4px rgba(var(--primary-rgb), 0.2));
+}
+
+.login-container .logo:hover {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.login-container h1 {
+    margin-top: 10px;
+    font-size: clamp(1.6rem, 6vw, 1.8rem);
+    color: var(--foreground);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--foreground), var(--primary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+}
+
+.login-form-container, .signup-form-container {
+    margin-bottom: var(--spacing-lg);
+    align-items: center;
+    color: var(--foreground);
+}
+
+.login-form, .signup-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+/* Input Fields Styling */
+.input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.input-field {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--light);
+    transition: all var(--transition-normal);
+    color: var(--foreground);
+    outline: none;
+}
+
+.input-field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
+}
+
+.input-label {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--secondary);
+    transition: all var(--transition-normal);
+    pointer-events: none;
+    font-size: 1rem;
+}
+
+.input-field:focus + .input-label,
+.input-field:not(:placeholder-shown) + .input-label {
+    transform: translateY(-28px) scale(0.85);
+    color: var(--primary);
+    font-weight: 500;
+}
+
+/* Button Styling */
+.btn {
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    border: none;
+    outline: none;
+    text-align: center;
+}
+
+.primary-btn {
+    background: var(--primary);
+    color: var(--light);
+    width: 100%;
+    box-shadow: 0 4px 6px rgba(var(--primary-rgb), 0.2);
+}
+
+.primary-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(var(--primary-rgb), 0.25);
+}
+
+.primary-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(var(--primary-rgb), 0.2);
+}
+
+.secondary-btn {
+    background: transparent;
+    color: var(--primary);
+    margin-top: var(--spacing-md);
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.secondary-btn::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary);
+    transform: scaleX(0);
+    transform-origin: bottom right;
+    transition: transform 0.3s ease;
+    z-index: -1;
+}
+
+.secondary-btn:hover::before {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}
+
+.secondary-btn:hover {
+    color: var(--light);
+}
+
+/* Notification Styling */
+.notification {
+    padding: 10px;
+    margin-bottom: var(--spacing-md);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: none;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.notification.success {
+    background-color: rgba(46, 204, 113, 0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    display: block;
+}
+
+.notification.error {
+    background-color: rgba(231, 76, 60, 0.1);
+    border: 1px solid var(--error);
+    color: var(--error);
+    display: block;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Remember Me Checkbox */
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: var(--spacing-xs);
+}
+
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 0.9rem;
+    color: var(--secondary);
+}
+
+.forgot-password {
+    color: var(--primary);
+    font-size: 0.9rem;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color var(--transition-normal);
+}
+
+.forgot-password:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+/* Form toggle button animation */
+#toggle-signup {
+    transition: transform var(--transition-normal), background var(--transition-normal);
+}
+
+#toggle-signup:hover {
+    transform: translateY(-2px);
+}
+
+/* Add responsive adjustments */
+@media (max-width: 480px) {
+    .login-container {
+        padding: var(--spacing-lg);
+    }
+    
+    .login-page .greetings {
+        width: 95%;
+    }
+}
+
+
+
+.hidden {
+    display: none;
+}
+
+/* --- Main App --- */
 
 .main-app {
     display: none;
@@ -347,64 +750,7 @@ body.dark-mode #loading-animation {
     position: relative;
 }
 
-.login-container {
-    background: var(--light); /* Login container background */
-    border-radius: var(--radius-lg); /* Larger radius */
-     padding: clamp(var(--spacing-lg), 5vw, var(--spacing-xl));  /* Responsive padding, Style2 */
-    width: 100%;
-    max-width: 400px; /* Slightly smaller max-width */
-    box-shadow: var(--shadow-heavy);  /* Heavier shadow */
-    text-align: center;
-    color: var(--foreground); /* Login container text color */
-}
 
-.login-container .logo-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: var(--spacing-md);  /* Style2 gap */
-    margin-bottom: var(--spacing-lg); /* Style2 spacing */
-}
-
-.login-container .logo {
-     height: clamp(50px, 15vw, 60px);   /* Responsive height, Style2 */
-    transition: transform var(--transition-normal);  /* Style2 transition */
-}
-
-.login-container .logo:hover {
-     transform: scale(1.08);
-}
-
-.login-container h1 {
-    font-size: clamp(1.6rem, 6vw, 1.8rem); /* Responsive, Style2 */
-    color: var(--foreground); /* Login title color */
-    margin-bottom: var(--spacing-md); /* Style2 spacing */
-    font-weight: 800;
-}
-
-.login-form-container,
-.signup-form-container {
-    margin-bottom: var(--spacing-lg); /* Style2 spacing */
-    color: var(--foreground); /* Form container text color */
-}
-.login-form,
-.signup-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);  /* Style2 gap */
-}
-
-.hidden {
-    display: none;
-}
-
-/* --- Main App --- */
-.main-app {
-    display: none; /* Hidden by default */
-    padding: 0; /* Remove padding on mobile, or adjust as needed */
-    width: 100%; /* Ensure full width */
-    color: var(--foreground); /* Main app text color */
-}
 
 /* For cards (e.g., admin controls) */
 .card {
@@ -768,10 +1114,7 @@ body.dark-mode #loading-animation {
     border: 1px solid var(--border); /* Stat box border color */
 }
 
-.stat-box:hover {
-    transform: translateY(-3px);   /* Style2 */
-    box-shadow: var(--shadow-md);  /* Style2 */
-}
+
 
 .stat-box:active {
      transform: translateY(-1px);   /* Style2 */
@@ -917,11 +1260,6 @@ body.dark-mode #loading-animation {
     border: 1px solid var(--border); /* Overview item border color */
 }
 
-.overview-item:hover {
-     background-color: rgba(0, 0, 0, 0.02); /* Style2 */
-    transform: scale(1.02);
-    color: var(--foreground); /* Overview item hover text color */
-}
 
 .overview-item span {
    font-size: 0.85rem;           /* Style2 */
@@ -1475,6 +1813,11 @@ body.dark-mode #loading-animation {
     gap: var(--spacing-md);      /* Style2 */
     color: var(--foreground); /* Form text color */
 }
+.modal-form button{
+    margin-left: 25px;
+    height: 40px;
+}
+
 
 .form-group {
     display: flex;
@@ -1579,54 +1922,90 @@ body.dark-mode #loading-animation {
 /* --- Mobile-First Responsive Design --- */
 @media (max-width: 768px) {
     .header {
-        flex-wrap: wrap;
-        padding: 0.75rem 1rem;  /* Reduced padding */
-        background: var(--light); /* Header background */
-        color: var(--foreground); /* Header text color */
+        padding: var(--spacing-sm) var(--spacing-md);
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* Keep logo on right */
+        position: relative;
     }
 
     .menu-toggle {
-        display: block; /* Show menu toggle */
-        color: var(--foreground); /* Toggle color */
+        display: block;
+        font-size: 1.5rem; /* Slightly smaller */
+        order: 1; /* Ensure it’s on the left */
+    }
+
+    .mobile-user-info {
+        display: block;
+        font-size: 0.85rem;
+        order: 2; /* Center or between toggle and logo */
+        flex-grow: 1; /* Allow it to take available space */
+        text-align: center;
+        padding: 0 var(--spacing-sm);
+    }
+
+    .logo-container {
+        order: 3; /* Push logo to the right */
+    }
+
+    .header .logo {
+        height: 32px; /* Smaller for mobile */
+    }
+
+    .header h1 {
+        font-size: 1.25rem; /* Adjusted for mobile */
     }
 
     .header-nav {
-
-        display: none;  /* Hide by default */
-        width: 100%;
-        flex-direction: column;
-        align-items: flex-start;
-        padding: var(--spacing-md); /* Consistent padding */
-        background: rgb(223, 238, 229); /* Nav background */
+        display: none;
         position: absolute;
-        gap: 30px;
-        top: 65px;  /* Adjust as needed */
+        top: 100%; /* Below header */
         left: 0;
         right: 0;
-        box-shadow: var(--shadow-light);
-        color: var(--foreground); /* Nav text color */
-        
+        flex-direction: column;
+        align-items: center; /* Center-align items */
+        background: var(--light); /* Match header background */
+        padding: var(--spacing-md);
+        box-shadow: var(--shadow-medium);
+        border-bottom: 1px solid var(--border);
+        gap: var(--spacing-md); /* Consistent spacing */
     }
 
-
     .header-nav.active {
-        display: flex; /* Show when active */
+        display: flex;
     }
 
     .nav-buttons {
+        width: 100%; /* Full width for buttons */
         flex-direction: column;
-        align-items: flex-start;
-        width: 50%;
-        margin: 30px;
-        color: var(--foreground); /* Nav buttons text color */
+        align-items: center;
+        margin: 0; /* Reset margin */
+        gap: var(--spacing-md);
     }
 
     .btn {
-        width: 100%;
-        justify-content: center; /* Center buttons */
-        color: var(--light); /* Button text color */
-        background-color: var(--primary); /* Button background */
+        width: 80%; /* Slightly narrower buttons */
+        padding: var(--spacing-sm) var(--spacing-md);
     }
+
+    .toggle-head-buttons {
+        flex-direction: row; /* Keep horizontal on mobile */
+        justify-content: center;
+        gap: var(--spacing-md);
+    }
+/* log in greetings */
+    .login-page .greetings h1 {
+        font-size: clamp(1.8rem, 5vw, 2.5rem);
+    }
+    
+    .login-page .greetings p {
+        font-size: clamp(1rem, 3vw, 1.1rem);
+        max-width: 500px;
+        color: var(--foreground);
+        opacity: 0.9;
+        line-height: 1.5;
+    }
+
 
     .dashboard-grid {
         grid-template-columns: 3fr; /* Single column */
@@ -1686,9 +2065,7 @@ body.dark-mode #loading-animation {
         margin-right: 0; /* Remove extra margin for tight spacing */
     }
 
-    .logo {
-        margin-left: auto; /* Push logo to the right */
-    }
+   
 
     .header-nav {
         display: none; /* Ensure nav is hidden unless toggled */
@@ -1708,18 +2085,30 @@ body.dark-mode #loading-animation {
         color: var(--light); /* Notification text color */
     }
 
-    .control-group .user-toggle,
+    .control-group {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: var(--spacing-md); /* Add spacing */
+        color: var(--foreground); /* Control group text color */
+    }
+
+
     .control-group .password-input {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
         color: var(--foreground); /* Toggle/input text color */
     }
 
     .control-group .user-toggle{
-     
+        flex-direction: column;
+        align-items: center;
+        color: var(--foreground); /* Toggle/input text color */
         border-radius: var(--radius-sm);
         margin: 1rem;
-        width: 100px;
+        width:100px;
+        justify-content: center;
         align-items: center;
         padding: 0.8rem;
         border: 1px solid rgba(130, 61, 61, 0.681); /* User toggle border color */
@@ -1731,6 +2120,8 @@ body.dark-mode #loading-animation {
         margin-bottom: var(--spacing-xs); /* Add spacing */
         color: var(--foreground); /* Label text color */
     }
+
+    
 
     #password-controls {
         display: flex;
@@ -1806,12 +2197,19 @@ body.dark-mode #loading-animation {
         border: 1px solid var(--border); /* Modal content border color */
     }
 
+    .login-container .logo-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: var(--spacing-md); /* Add spacing */
+    }
+
     .login-container .logo {
-        height: 50px; /* Smaller logo */
+        height: 40px; /* Smaller logo */
     }
 
     .header .logo {
-        height: 38px; /* Smaller logo */
+        height: 30px; /* Smaller logo */
     }
 
     .login-container h1 {
@@ -1819,10 +2217,6 @@ body.dark-mode #loading-animation {
         color: var(--foreground); /* Login title color */
     }
 
-    .header h1 {
-        font-size: 1.3rem; /* Smaller font */
-        color: var(--foreground); /* Header title color */
-    }
 
     .stat-box {
         min-height: 100px;      /* Smaller height */
@@ -1891,7 +2285,7 @@ body.dark-mode #loading-animation {
     }
     .header h1,
     .login-container h1 {
-        font-size: 1.4rem; /* Slightly larger */
+        font-size: 1rem; /* Slightly larger */
         color: var(--foreground); /* Header/login title color */
     }
     .btn {
