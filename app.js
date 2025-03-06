@@ -113,10 +113,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingAnimation.classList.add('hidden');
         setTimeout(() => {
             loadingAnimation.style.display = 'none';
-        }, 300); // Match CSS transition duration
+        }, 100); // Match CSS transition duration
     };
-    
 
+
+// --- Collapsible Sections ---
+const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+
+collapsibleHeaders.forEach(header => {
+    const content = header.nextElementSibling;
+
+    // Set initial state for header and icon
+    if (content.style.display === 'none') {
+        header.classList.add('collapsed');
+        content.classList.remove('expanded');
+        content.style.display = ''; // Remove inline style to let CSS handle it
+
+        // Set icon to "right" (collapsed state)
+        const icon = header.querySelector('.toggle-icon i');
+        if (icon) {
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-right');
+        }
+    } else {
+        header.classList.remove('collapsed');
+        content.classList.add('expanded');
+        content.style.display = '';
+
+        // Set icon to "down" (expanded state)
+        const icon = header.querySelector('.toggle-icon i');
+        if (icon) {
+            icon.classList.remove('fa-chevron-right');
+            icon.classList.add('fa-chevron-down');
+        }
+    }
+
+    // Click event listener
+    header.addEventListener('click', function() {
+        this.classList.toggle('collapsed');
+        content.classList.toggle('expanded');
+
+        // Explicitly set icon based on state
+        const icon = this.querySelector('.toggle-icon i');
+        if (icon) {
+            if (this.classList.contains('collapsed')) {
+                // Collapsed: Show right arrow
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                // Expanded: Show down arrow
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+    });
+});
     // --- Utility Functions ---
     function showNotification(message, type = 'success', isLogin = false, details = {}) {
         const target = isLogin ? elements.loginNotification : elements.notification;
@@ -631,7 +682,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingAnimation.classList.add('hidden');
         setTimeout(() => {
             loadingAnimation.style.display = 'none';
-        }, 300);
+        }, 100);
     }
 
     // --- Member Functions ---

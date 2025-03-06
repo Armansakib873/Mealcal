@@ -11,15 +11,16 @@
     --primary-rgb: 67, 97, 238;
     --light-rgb: 255, 255, 255;
     --foreground-rgb: 33, 37, 41;
-    --primary: #4361ee; /* Primary color for buttons, links */
-    --primary-hover: #3a56d4; /* Darker primary for hover */
+    --primary: #06b1b4; /* Primary color for buttons, links */
+    --primary-hover: #dde256; /* Darker primary for hover */
     --secondary: #6c757d; /* Secondary color for buttons, text */
     --accent: #2ecc71; /* Success color for notifications, toggles */
     --error: #e74c3c; /* Danger color for errors, buttons */
-    --background: #f0f2f5; /* Light background */
+    --background: #ffffff; /* Light background */
     --foreground: #212529; /* Dark text for light mode */
     --light: #ffffff; /* White background/elements */
     --border: #e2e8f0; /* Light border color */
+    --dash: #d4f4ff; /* Lighter background for dashboards */
     --shadow-light: rgba(0, 0, 0, 0.1);  
     --shadow-medium: rgba(0, 0, 0, 0.1); 
     --shadow-heavy: rgba(0, 0, 0, 0.15); 
@@ -214,6 +215,118 @@ a:hover {
         max-width: 100%; /* Use full width on mobile */
     }
 }
+
+/* Ensure the parent container allows sticky positioning */
+.main-container {
+    position: relative; /* Establish a positioning context */
+    overflow: auto; /* Optional: Ensures scroll behavior if needed */
+}
+
+/* Style for each card to contain the sticky header */
+.card {
+    position: relative;
+    margin-bottom: var(--spacing-md); /* Space between cards */
+    background-color: var(--light); /* Ensure background is consistent */
+    border-radius: var(--radius-md); /* Match your design */
+    overflow: hidden; /* Prevents content from bleeding under sticky header */
+}
+
+/* Make collapsible headers sticky within their card */
+.collapsible-header {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: var(--spacing-md);
+    background-color: var(--light);
+    transition: background-color var(--transition-smooth);
+    position: sticky; /* Sticky positioning */
+    top: 0; /* Sticks to the top of the card */
+    z-index: 1; /* Ensures it stays above content */
+}
+
+.collapsible-header > *:first-child {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.collapsible-header > *:first-child i {
+    margin-right: 0;
+}
+
+.collapsible-header > *:first-child span,
+.collapsible-header > *:first-child h2 {
+    margin: 0;
+}
+
+/* Enable transition for icon rotation */
+
+.collapsible-header .toggle-icon {
+    margin-left: auto; /* Pushes the icon to the right */
+    display: flex;
+    align-items: center;
+}
+
+.collapsible-header .toggle-icon i {
+    transition: transform var(--transition-smooth); /* Ensure transition is applied */
+    left: 0;
+}
+
+/* Define rotation states for the icon */
+.collapsible-header .toggle-icon i.fa-chevron-down {
+    transform: rotate(0deg); /* Downward arrow (expanded) */
+}
+
+
+
+.collapsible-header .toggle-icon i.fa-chevron-right {
+    transform: rotate(-90deg); /* Right arrow (collapsed) */
+}
+
+.fa-solid, .fas {
+    margin-right: 8px;
+}
+
+/* Collapsible Content */
+.collapsible-content {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transform: scaleY(0.95);
+    transform-origin: top;
+    padding: 0 var(--spacing-md);
+    background-color: var(--light);
+    border-bottom: none;
+    transition: max-height var(--transition-smooth),
+                opacity var(--transition-smooth),
+                transform var(--transition-smooth),
+                padding var(--transition-smooth);
+}
+
+.collapsible-content.expanded {
+    max-height: 200vh;
+    opacity: 1;
+    transform: scaleY(1);
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border);
+}
+
+/* Dark Mode Adjustments */
+body.dark-mode .collapsible-header {
+    background-color: var(--light);
+    border-bottom-color: var(--border);
+}
+
+body.dark-mode .collapsible-header:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-mode .collapsible-content {
+    background-color: var(--light);
+    border-bottom-color: var(--border);
+}
 /* --- Header --- */
 .header {
     padding: var(--spacing-sm);
@@ -335,7 +448,7 @@ a:hover {
     border-radius: 50%;
     width: 50px;
     height: 50px;
-    animation: spin 1s linear infinite;
+    animation: spin 0.3s linear infinite;
 }
 
 #loading-animation p {
@@ -367,6 +480,7 @@ body.dark-mode #loading-animation {
     display: none;  /* Hidden by default, shown in media query */
     transition: transform var(--transition-fast); /* Style2 speed */
     -webkit-tap-highlight-color: transparent; /*from style2*/
+    transition: all 0.3s ease;
 }
 
 .menu-toggle:hover {
@@ -803,22 +917,18 @@ body.dark-mode #loading-animation {
 /* --- Admin Controls --- */
 .admin-controls {
     background: var(--light); /* Admin controls background */
-    border-radius: var(--radius-md); /* Style2 */
     padding: var(--spacing-lg);       /* Style2 */
     box-shadow: var(--shadow-sm);      /* Style2 */
-    margin-bottom: var(--spacing-lg);  /* Style2 */
     color: var(--foreground); /* Admin controls text color */
 }
 .admin-controls .section-title {
     font-size: 1.3rem;           /* Style2 */
-    margin-bottom: var(--spacing-md); /* Style2 */
     border-bottom: 2px solid var(--border); /* Section title border color */
     padding-bottom: var(--spacing-sm); /* Style2 */
     color: var(--foreground); /* Section title color */
 }
 
 .control-group {
-    margin-bottom: var(--spacing-lg);
     display: flex;
     flex-direction: row;
     align-items: center; 
@@ -1040,7 +1150,6 @@ body.dark-mode #loading-animation {
 
 /* --- Dashboard --- */
 .dashboard-section {
-    margin-top: var(--spacing-lg); /* Style2 */
     color: var(--foreground); /* Dashboard text color */
     border-radius: 0;
 }
@@ -1048,7 +1157,6 @@ body.dark-mode #loading-animation {
 .dashboard-tabs {
     display: none;
      gap: var(--spacing-sm);      /* Style2 */
-    margin-bottom: var(--spacing-md); /* Style2 */
      overflow-x: auto;              /* Style2 */
     -webkit-overflow-scrolling: touch; /* Style2 */
     padding-bottom: var(--spacing-sm);  /* Style2 */
@@ -1099,7 +1207,7 @@ body.dark-mode #loading-animation {
 }
 
 .stat-box {
-     background: var(--light); /* Stat box background */
+     background: var(--dash); /* Stat box background */
     color: var(--foreground); /* Stat box text color */
     padding: var(--spacing-md);      /* Style2 */
     border-radius: var(--radius-md); /* Style2 */
@@ -1169,6 +1277,11 @@ body.dark-mode #loading-animation {
         color: var(--foreground); /* Meal count value color */
     }
 
+    .meal-count span {
+        font-size: 2rem;       /* Style2 */
+        color: var(--secondary); /* Meal count label color */
+    }
+
 /* --- Notification --- */
 .notification {
     position: fixed;
@@ -1236,9 +1349,7 @@ body.dark-mode #loading-animation {
 .user-overview {
      background: var(--light); /* User overview background */
     padding: var(--spacing-md);    /* Style2 */
-    border-radius: var(--radius-md);/* Style2 */
     box-shadow: var(--shadow-sm);   /* Style2 */
-    margin-bottom: var(--spacing-lg);/* Style2 */
     color: var(--foreground); /* User overview text color */
 }
 
@@ -1270,7 +1381,6 @@ body.dark-mode #loading-animation {
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--foreground); /* Overview item value color */
-    margin-top: var(--spacing-xs);  /* Style2 spacing */
     margin-bottom: 0;
 }
 
@@ -1524,7 +1634,7 @@ body.dark-mode #loading-animation {
 }
 
 #meal-table tr:hover td:first-child {
-     background: rgba(0, 0, 0, 0.05); /* Sticky column hover background */
+    background: rgb(207, 229, 247); /* Sticky column hover background */
 }
 
 /* Sticky Name Column for Summary Table */
@@ -1547,7 +1657,7 @@ body.dark-mode #loading-animation {
 }
 
 #summary-table tr:hover td:first-child {
-    background: rgba(0, 0, 0, 0.05); /* Sticky column hover background */
+    background: rgb(207, 229, 247); /* Sticky column hover background */
 }
 
 .data-table input[type="number"] {
@@ -2056,9 +2166,16 @@ body.dark-mode #loading-animation {
     }
 
     .header {
+        position: sticky;
         display: flex;
         align-items: center;
         justify-content: space-between; /* Ensure logo stays on right */
+    }
+
+    .head-menu{
+        display: flex;
+        justify-content: start;
+        align-items: center;
     }
 
     .menu-toggle {
@@ -2105,7 +2222,6 @@ body.dark-mode #loading-animation {
         flex-direction: column;
         align-items: center;
         color: var(--foreground); /* Toggle/input text color */
-        border-radius: var(--radius-sm);
         margin: 1rem;
         width:100px;
         justify-content: center;
@@ -2221,7 +2337,6 @@ body.dark-mode #loading-animation {
     .stat-box {
         min-height: 100px;      /* Smaller height */
         padding: var(--spacing-md); /* Reduced padding */
-        background: var(--light); /* Stat box background */
         color: var(--foreground); /* Stat box text color */
         border: 1px solid var(--border); /* Stat box border color */
     }
@@ -2233,12 +2348,12 @@ body.dark-mode #loading-animation {
     }
 
     .stat-box h3 {
-        font-size: 0.9rem; /* Smaller font */
+        font-size: 1rem; /* Smaller font */
         color: var(--secondary); /* Stat box heading color */
     }
 
     .stat-box p {
-        font-size: 1.1rem; /* Smaller font */
+        font-size: 1.8rem; /* Smaller font */
         color: var(--foreground); /* Stat box value color */
     }
 
