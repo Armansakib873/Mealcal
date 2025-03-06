@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Supabase Client Initialization ---
     const supabaseUrl = "https://eiqrmxgyyjbndznnbaqv.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcXJteGd5eWpibmR6bm5iYXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1ODk0ODYsImV4cCI6MjA1NjE2NTQ4Nn0.L10Z83pobbfeAId8bCQwxDi83ac37jYum9geSU-htTY"; // Replace with actual key
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcXJteGd5eWpibmR6bm5iYXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1ODk0ODYsImV4cCI6MjA1NjE2NTQ4Nn0.L10Z83pobbfeAId8bCQwxDi83ac37jYum9geSU-htTY";
     const { createClient } = supabase;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         users: [],
         lastUpdated: null
     };
-
     // --- DOM Elements ---
     const elements = {
         loginPage: document.getElementById('login-page'),
@@ -99,6 +98,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         userSelect: document.getElementById('user-select'),
         clearAllNotificationsBtn: document.getElementById('clear-all-notifications-btn'),
         mobileUserInfo: document.getElementById('mobile-user-info')
+
+        
     };
 
     let editingMemberId = null;
@@ -114,6 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadingAnimation.style.display = 'none';
         }, 300); // Match CSS transition duration
     };
+    
 
     // --- Utility Functions ---
     function showNotification(message, type = 'success', isLogin = false, details = {}) {
@@ -332,10 +334,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.signupFormContainer.classList.add('hidden');
         elements.loginFormContainer.classList.remove('hidden');
         elements.toggleSignupBtn.textContent = 'Need an account? Sign Up';
-        setTimeout(() => {
-            elements.loginPage.style.display = 'flex';
-        }, 0);
-        updateMobileUserInfo(); // Update mobile info
+        updateMobileUserInfo();
     }
 
     // --- Auto-Login Check ---
@@ -387,10 +386,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     elements.menuToggle.addEventListener('click', () => {
         elements.headerNav.classList.toggle('active');
-        elements.menuToggle.innerHTML = `<i class="fas fa-${elements.headerNav.classList.contains('active') ? 'times' : 'bars'}"></i>`;
+        const isActive = elements.headerNav.classList.contains('active');
+        elements.menuToggle.innerHTML = `<i class="fas fa-${isActive ? 'times' : 'bars'}"></i>`;
+        elements.headerNav.style.transition = 'max-height 0.3s ease, opacity 0.3s ease';
+        if (isActive) {
+            elements.headerNav.style.maxHeight = '300px'; // Adjust based on content
+            elements.headerNav.style.opacity = '1';
+        } else {
+            elements.headerNav.style.maxHeight = '0';
+            elements.headerNav.style.opacity = '0';
+        }
     });
-
-    elements.logoutBtn.addEventListener('click', logout);
+    
+    function updateMobileUserInfo() {
+        if (currentUser) {
+            const role = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+            elements.mobileUserInfo.textContent = `${currentUser.username} (${role})`;
+            elements.mobileUserInfo.style.maxWidth = '150px'; // Prevent overflow
+        } else {
+            elements.mobileUserInfo.textContent = 'Guest';
+        }
+    }
 
     function updateUIForRole() {
         console.log('Updating UI for role:', currentUser ? currentUser.role : 'No user');
@@ -500,30 +516,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         await renderAdminControls(); // Re-render to show only the selected user's password card
     }
 
-    // --- Event Listeners ---
+// --- Event Listeners ---
     elements.addMemberBtn.addEventListener('click', () => openModal(elements.addMemberModal));
     elements.closeAddMemberModal.addEventListener('click', () => closeModal(elements.addMemberModal));
     elements.addMemberForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await addMember();
     });
-
     elements.addDepositBtn.addEventListener('click', () => addDepositField(elements.depositFields));
     elements.editAddDepositBtn.addEventListener('click', () => addDepositField(elements.editDepositFields));
-
     elements.closeEditMemberModal.addEventListener('click', () => closeModal(elements.editMemberModal));
     elements.editMemberForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Prevent default form submission
-        await updateMember(); // Call the update function
+        e.preventDefault();
+        await updateMember();
     });
-
     elements.addExpenseBtn.addEventListener('click', () => openModal(elements.expenseModal));
     elements.closeExpenseModal.addEventListener('click', () => closeModal(elements.expenseModal));
     elements.expenseForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         editingExpenseId ? await updateExpense() : await addExpense();
     });
-
     elements.updatePasswordBtn.addEventListener('click', async () => {
         const newPassword = elements.userPassword.value.trim();
         if (!newPassword) {
@@ -542,9 +554,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.userPassword.value = '';
         showNotification('Password updated successfully!', 'success');
     });
-
     elements.notificationLogBtn.addEventListener('click', () => openModal(elements.notificationLogModal));
     elements.closeNotificationLogModal.addEventListener('click', () => closeModal(elements.notificationLogModal));
+    elements.logoutBtn.addEventListener('click', logout); // Added here
 
     elements.statsTab.addEventListener('click', () => {
         elements.statsTab.classList.add('active');
