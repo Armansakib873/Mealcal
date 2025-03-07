@@ -233,6 +233,7 @@ a:hover {
 
 /* Make collapsible headers sticky within their card */
 .collapsible-header {
+    background-color: red;
     cursor: pointer;
     user-select: none;
     display: flex;
@@ -313,6 +314,13 @@ a:hover {
     border-bottom: 1px solid var(--border);
 }
 
+.collapsible-content p {
+    display: inline-block;
+    margin-bottom: var(--spacing-md);
+    color: var(--foreground);
+    
+    
+}
 /* Dark Mode Adjustments */
 body.dark-mode .collapsible-header {
     background-color: var(--light);
@@ -916,7 +924,7 @@ body.dark-mode #loading-animation {
 /* --- Admin Controls --- */
 .admin-controls {
     background: var(--light); /* Admin controls background */
-    padding: 0; /* Style2 padding */
+   
 
     box-shadow: var(--shadow-sm);      /* Style2 */
     color: var(--foreground); /* Admin controls text color */
@@ -928,10 +936,6 @@ body.dark-mode #loading-animation {
     color: var(--foreground); /* Section title color */
 }
 
-#admin-controls{
-    padding: 0px 8px;
-
-}
 
 .control-group {
     display: flex;
@@ -1157,7 +1161,6 @@ body.dark-mode #loading-animation {
 .dashboard-section {
     color: var(--foreground); /* Dashboard text color */
     border-radius: 0;
-    padding: 0px 8px;
 }
 
 .dashboard-tabs {
@@ -1354,7 +1357,7 @@ body.dark-mode #loading-animation {
 /* --- User Overview --- */
 .user-overview {
      background: var(--light); /* User overview background */
-    padding: 1px 8px;    /* Style2 */
+ 
     box-shadow: var(--shadow-sm);   /* Style2 */
     color: var(--foreground); /* User overview text color */
 }
@@ -1453,7 +1456,6 @@ body.dark-mode #loading-animation {
     padding: var(--spacing-md);    /* Style2 */
     border-radius: var(--radius-md);/* Style2 */
     box-shadow: var(--shadow-sm);   /* Style2 */
-    margin-top: var(--spacing-md);  /* Style2 */
     color: var(--foreground); /* Profile section text color */
 }
 
