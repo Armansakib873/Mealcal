@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingAnimation.classList.add('hidden');
         setTimeout(() => {
             loadingAnimation.style.display = 'none';
-        }, 100); // Match CSS transition duration
+        }, 50); // Match CSS transition duration
     };
 
 
@@ -682,7 +682,7 @@ collapsibleHeaders.forEach(header => {
         loadingAnimation.classList.add('hidden');
         setTimeout(() => {
             loadingAnimation.style.display = 'none';
-        }, 100);
+        }, 50);
     }
 
     // --- Member Functions ---

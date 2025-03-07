@@ -238,7 +238,7 @@ a:hover {
     display: flex;
     align-items: center;
     width: 100%;
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     background-color: var(--light);
     transition: background-color var(--transition-smooth);
     position: sticky; /* Sticky positioning */
@@ -870,7 +870,7 @@ body.dark-mode #loading-animation {
 .card {
     background: var(--light); /* Card background */
     border-radius: 0;
-    padding: var(--spacing-lg); /* Keep padding for content spacing, but ensure it doesn’t add unnecessary space */
+    padding: 0px; /* Keep padding for content spacing, but ensure it doesn’t add unnecessary space */
     margin: 0; /* Remove margins to avoid extra space */
     box-shadow: var(--shadow-sm);
     transition: box-shadow var(--transition-normal) ease, transform var(--transition-fast) ease;
@@ -882,7 +882,7 @@ body.dark-mode #loading-animation {
 /* Mobile-specific adjustment for cards */
 @media (max-width: 768px) {
     .card {
-        padding: var(--spacing-md); /* Reduce padding if needed */
+        padding: var(--spacing-sm); /* Reduce padding if needed */
         margin: 0; /* Ensure no margins */
         border-radius: 0; /* Optional: Remove rounded corners for full-width effect */
         background: var(--light); /* Card background */
@@ -895,7 +895,6 @@ body.dark-mode #loading-animation {
 .card h2 {
      font-size: clamp(1.35rem, 4vw, 1.5rem); /* Responsive, Style2 */
     color: var(--foreground); /* Card heading color */
-    margin-bottom: var(--spacing-md);  /* Style2 spacing */
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);  /* Style2 gap */
@@ -917,15 +916,21 @@ body.dark-mode #loading-animation {
 /* --- Admin Controls --- */
 .admin-controls {
     background: var(--light); /* Admin controls background */
-    padding: var(--spacing-lg);       /* Style2 */
+    padding: 0; /* Style2 padding */
+
     box-shadow: var(--shadow-sm);      /* Style2 */
     color: var(--foreground); /* Admin controls text color */
 }
 .admin-controls .section-title {
     font-size: 1.3rem;           /* Style2 */
     border-bottom: 2px solid var(--border); /* Section title border color */
-    padding-bottom: var(--spacing-sm); /* Style2 */
+
     color: var(--foreground); /* Section title color */
+}
+
+#admin-controls{
+    padding: 0px 8px;
+
 }
 
 .control-group {
@@ -1152,6 +1157,7 @@ body.dark-mode #loading-animation {
 .dashboard-section {
     color: var(--foreground); /* Dashboard text color */
     border-radius: 0;
+    padding: 0px 8px;
 }
 
 .dashboard-tabs {
@@ -1348,7 +1354,7 @@ body.dark-mode #loading-animation {
 /* --- User Overview --- */
 .user-overview {
      background: var(--light); /* User overview background */
-    padding: var(--spacing-md);    /* Style2 */
+    padding: 1px 8px;    /* Style2 */
     box-shadow: var(--shadow-sm);   /* Style2 */
     color: var(--foreground); /* User overview text color */
 }
