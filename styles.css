@@ -404,6 +404,7 @@ body.dark-mode .collapsible-content {
 }
 
 .theme-toggle-btn,
+
 #notification-log-btn {
     width: 36px; /* Slightly smaller */
     height: 36px;

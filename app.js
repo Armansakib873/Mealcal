@@ -164,7 +164,7 @@ collapsibleHeaders.forEach(header => {
         const timestamp = new Date().toLocaleString('en-US', { 
             month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
         });
-        const editorName = currentUser?.username || 'System';
+        const editorName = details.editor || (currentUser?.username || 'System'); // Use details.editor if provided
         const fullMessage = `${message} on ${timestamp} by Editor: ${editorName}`;
     
         target.textContent = fullMessage;
@@ -179,7 +179,8 @@ collapsibleHeaders.forEach(header => {
         const importantTypes = [
             'deposit_added', 'deposit_edited', 'deposit_deleted',
             'expense_added', 'expense_edited', 'expense_deleted',
-            'manager_access_granted', 'manager_access_revoked'
+            'manager_access_granted', 'manager_access_revoked',
+            'meal_day_on', 'meal_day_off', 'meal_night_on', 'meal_night_off'
         ];
     
         if (!isLogin && importantTypes.includes(details.type)) {
@@ -461,6 +462,7 @@ collapsibleHeaders.forEach(header => {
         elements.addExpenseBtn.classList.toggle('hidden', !canEdit);
         elements.adminControls.classList.toggle('hidden', !isAdmin);
         elements.summarySection.classList.toggle('hidden', !canEdit);
+        document.getElementById('user-overview').classList.toggle('hidden', isAdmin); // Add this line
     
         elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
         if (isAdmin || isManager) {
@@ -972,18 +974,33 @@ collapsibleHeaders.forEach(header => {
             showNotification('Meal toggling is only allowed between 8 PM and 6 PM.', 'error');
             return;
         }
-
+    
         const statusKey = type === 'day' ? 'day_status' : 'night_status';
         const newStatus = !member[statusKey];
         await supabaseClient.from('members')
             .update({ [statusKey]: newStatus })
             .eq('id', member.id);
-
+    
         if (currentUser.member_id === member.id) {
             currentUser[statusKey] = newStatus;
             sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
         }
-
+    
+        // Add notification
+        const mealType = type === 'day' ? 'Day Meal' : 'Night Meal';
+        const action = newStatus ? 'turned ON' : 'turned OFF';
+        const editorName = currentUser.username || 'Unknown';
+        showNotification(
+            `${mealType} ${action} for ${member.name}`,
+            'success',
+            false,
+            {
+                userName: member.name,
+                type: `meal_${type}_${newStatus ? 'on' : 'off'}`,
+                editor: editorName // Adding editor explicitly for clarity
+            }
+        );
+    
         await fetchAllData();
         await renderMembers(); // Re-render the member card after toggle
         await updateDashboard();
@@ -992,7 +1009,6 @@ collapsibleHeaders.forEach(header => {
         }
         updateUserToggleButtons(); // Sync button appearance after toggle
     }
-
     // --- Expense Functions ---
     async function openExpenseModal(expenseId = null) {
         if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
@@ -1357,41 +1373,43 @@ async function deleteExpense(id) {
 
     // --- User Overview ---
     async function updateUserOverview() {
+        if (currentUser.role === 'admin') return; // Skip for admins
+      
         if (!currentUser.member_id) {
-            elements.userName.textContent = currentUser.username;
-            elements.userDeposit.textContent = formatCurrency(0);
-            elements.userBalance.textContent = formatCurrency(0);
-            elements.userBalance.className = 'balance-text';
-            elements.userMeals.textContent = '0';
-            elements.depositHistoryList.innerHTML = '<li>No member data</li>';
-            return;
+          elements.userName.textContent = currentUser.username;
+          elements.userDeposit.textContent = formatCurrency(0);
+          elements.userBalance.textContent = formatCurrency(0);
+          elements.userBalance.className = 'balance-text';
+          elements.userMeals.textContent = '0';
+          elements.depositHistoryList.innerHTML = '<li>No member data</li>';
+          return;
         }
-
+      
         const member = appState.members.find(m => m.id === currentUser.member_id);
         if (!member) return;
-
+      
         const totalDeposit = await calculateTotalDeposit(member.id);
         const totalCost = await calculateTotalCost(member.id);
         const balance = totalDeposit - totalCost;
         const balanceClass = balance >= 0 ? 'positive' : 'negative';
-
+      
         const deposits = appState.deposits.filter(d => d.member_id === member.id);
-
+      
         elements.userName.textContent = member.name;
         elements.userDeposit.textContent = formatCurrency(totalDeposit);
         elements.userBalance.textContent = formatCurrency(balance);
         elements.userBalance.className = `balance-text ${balanceClass}`;
         elements.userMeals.textContent = await calculateTotalMeals(member.id);
-
+      
         elements.depositHistoryList.innerHTML = `
-            <li>Pre-Month: ${formatCurrency(member.pre_month_balance)}</li>
-            ${deposits.map(d => `<li>${d.label}: ${formatCurrency(d.amount)}</li>`).join('')}
+          <li>Pre-Month: ${formatCurrency(member.pre_month_balance)}</li>
+          ${deposits.map(d => `<li>${d.label}: ${formatCurrency(d.amount)}</li>`).join('')}
         `;
-
+      
         if (balance < 0 && currentUser.role === 'user') {
-            showNotification('Warning: Your balance is negative!', 'error');
+          showNotification('Warning: Your balance is negative!', 'error');
         }
-    }
+      }
 
     // --- Summary ---
     async function renderSummary() {
@@ -1434,27 +1452,28 @@ async function deleteExpense(id) {
     }
 
     // --- Notification Log ---
-    async function renderNotificationLog() {
-        if (!appState.notifications || appState.notifications.length === 0) {
-            elements.notificationLogList.innerHTML = '<div class="log-entry">No notifications available.</div>';
-            console.log('No notifications in appState:', appState.notifications);
-        } else {
-            elements.notificationLogList.innerHTML = appState.notifications.map(n => `
-                <div class="log-entry ${n.type}">
-                    <span>${n.message}</span>
-                    <button class="btn danger-btn" data-id="${n.id}">Dismiss</button>
-                </div>
-            `).join('');
-        }
-    
-        // Show "Clear All" button only for admins
-        if (currentUser?.role === 'admin') {
-            elements.clearAllNotificationsBtn.classList.remove('hidden');
-        } else {
-            elements.clearAllNotificationsBtn.classList.add('hidden');
-        }
-    
-        // Individual dismiss buttons
+async function renderNotificationLog() {
+    if (!appState.notifications || appState.notifications.length === 0) {
+        elements.notificationLogList.innerHTML = '<div class="log-entry">No notifications available.</div>';
+        console.log('No notifications in appState:', appState.notifications);
+    } else {
+        elements.notificationLogList.innerHTML = appState.notifications.map(n => `
+            <div class="log-entry ${n.type}">
+                <span>${n.message}</span>
+                ${currentUser?.role === 'admin' ? `<button class="btn danger-btn" data-id="${n.id}">Dismiss</button>` : ''}
+            </div>
+        `).join('');
+    }
+
+    // Show "Clear All" button only for admins
+    if (currentUser?.role === 'admin') {
+        elements.clearAllNotificationsBtn.classList.remove('hidden');
+    } else {
+        elements.clearAllNotificationsBtn.classList.add('hidden');
+    }
+
+    // Individual dismiss buttons (only for admins)
+    if (currentUser?.role === 'admin') {
         elements.notificationLogList.querySelectorAll('.danger-btn[data-id]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = parseInt(btn.dataset.id);
@@ -1463,12 +1482,12 @@ async function deleteExpense(id) {
                 await renderNotificationLog();
             });
         });
-    
-        // Clear all notifications button (admin only)
-        elements.clearAllNotificationsBtn.removeEventListener('click', clearAllNotificationsHandler); // Prevent duplicate listeners
-        elements.clearAllNotificationsBtn.addEventListener('click', clearAllNotificationsHandler);
     }
-    
+
+    // Clear all notifications button (admin only)
+    elements.clearAllNotificationsBtn.removeEventListener('click', clearAllNotificationsHandler); // Prevent duplicate listeners
+    elements.clearAllNotificationsBtn.addEventListener('click', clearAllNotificationsHandler);
+}
     async function clearAllNotificationsHandler() {
         if (currentUser?.role !== 'admin') return;
         if (!confirm('Are you sure you want to clear all notifications?')) return;
