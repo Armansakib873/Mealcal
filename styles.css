@@ -121,12 +121,6 @@ body.dark-mode .danger-btn {
 body.dark-mode .danger-btn:hover {
     background-color: #c53030; /* Darker danger hover */
 }
-
-/* Ensure charts update colors in dark mode (handled in JavaScript via updateCharts) */
-body.dark-mode .chart-legend,
-body.dark-mode .chart-tooltip {
-    color: var(--foreground) !important;
-}
 /* --- Global Reset & Base Styles --- */
 *,
 *::before,
@@ -797,7 +791,7 @@ body.dark-mode #loading-animation {
 .notification.error {
     background-color: rgba(231, 76, 60, 0.1);
     border: 1px solid var(--error);
-    color: var(--error);
+    color: var(--foreground);
     display: block;
 }
 
@@ -1319,7 +1313,7 @@ body.dark-mode #loading-animation {
 }
 
 .notification.success {
-    background-color: var(--accent); /* Success notification background */
+    background-color: var(--foreground); /* Success notification background */
 }
 
 .notification.error {
@@ -2422,5 +2416,3 @@ body.dark-mode #loading-animation {
 
 /* --- Font Import (Nunito Sans) --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
-
-/* okay */
