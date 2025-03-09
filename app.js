@@ -1,14 +1,13 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // --- Loading Elements ---
     const loadingAnimation = document.getElementById('loading-animation');
     const loginPage = document.getElementById('login-page');
     const mainApp = document.getElementById('main-app');
 
-    // Ensure loading animation is visible and content is hidden
-    loadingAnimation.style.display = 'flex';
+    console.log('Starting initialization...');
+    loadingAnimation.style.display = 'flex'; // Show on startup
     loginPage.style.display = 'none';
     mainApp.style.display = 'none';
-
+    
     // --- Supabase Client Initialization ---
     const supabaseUrl = "https://eiqrmxgyyjbndznnbaqv.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcXJteGd5eWpibmR6bm5iYXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1ODk0ODYsImV4cCI6MjA1NjE2NTQ4Nn0.L10Z83pobbfeAId8bCQwxDi83ac37jYum9geSU-htTY";
@@ -1187,63 +1186,6 @@ async function deleteExpense(id) {
         const totalCell = row.querySelector('.total-meals');
         totalCell.textContent = await calculateTotalMeals(memberId);
     }
-
-async function automateMealTracker() {
-    const now = new Date(getLocalTime());
-    console.log(`Checking at: ${now.toLocaleString()}`);
-    if (now.getHours() === 19 && now.getMinutes() === 0) {
-        const today = now.getDate();
-        console.log(`Today’s date (day of month): ${today}`);
-
-        if (!appState.members || appState.members.length === 0) {
-            console.log('No members found in appState!');
-            showNotification('No members to update.', 'error');
-            return;
-        }
-
-        for (const member of appState.members) {
-            const mealCount = (member.day_status ? 1 : 0) + (member.night_status ? 1 : 0);
-            console.log(`Member: ${member.name}, ID: ${member.id}, Meal Count: ${mealCount}`);
-            
-            const existingMeal = appState.meals.find(m => m.member_id === member.id && m.day === today);
-            console.log(`Existing meal for ${member.name} on day ${today}:`, existingMeal);
-
-            try {
-                if (existingMeal) {
-                    const { data, error } = await supabaseClient.from('meals')
-                        .update({ count: mealCount })
-                        .eq('id', existingMeal.id)
-                        .select();
-                    if (error) throw error;
-                    console.log(`Updated meal for ${member.name}:`, data);
-                } else {
-                    const { data, error } = await supabaseClient.from('meals')
-                        .insert([{ member_id: member.id, day: today, count: mealCount }])
-                        .select();
-                    if (error) throw error;
-                    console.log(`Inserted meal for ${member.name}:`, data);
-                }
-            } catch (error) {
-                console.error(`Error updating/inserting meal for ${member.name}:`, error.message);
-                showNotification(`Failed to update meal for ${member.name}: ${error.message}`, 'error');
-            }
-        }
-
-        console.log('Fetching updated data...');
-        await fetchAllData();
-        console.log('Updated appState.meals:', appState.meals);
-
-        console.log('Forcing UI update...');
-        await updateAllViews();
-        await renderMealTracker();
-        console.log('Meal tracker re-rendered.');
-
-        showNotification('Meal tracker updated for today at 7 PM.', 'success');
-    }
-}
-
-// Schedule at 7 PM
-setInterval(automateMealTracker, 60000);
 
     // --- Calculations ---
     async function calculateTotalMeals(memberId) {
