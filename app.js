@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const loadingAnimation = document.getElementById('loading-animation');
     const loginPage = document.getElementById('login-page');
     const mainApp = document.getElementById('main-app');
 
     console.log('Starting initialization...');
-    loadingAnimation.style.display = 'flex'; // Show on startup
     loginPage.style.display = 'none';
     mainApp.style.display = 'none';
     
@@ -107,13 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let expensesChart = null;
     let mealsChart = null;
 
-    // Function to hide loading animation
-    const hideLoading = () => {
-        loadingAnimation.classList.add('hidden');
-        setTimeout(() => {
-            loadingAnimation.style.display = 'none';
-        }, 50); // Match CSS transition duration
-    };
 
 
 // --- Collapsible Sections ---
@@ -660,11 +651,7 @@ collapsibleHeaders.forEach(header => {
 
     // --- Data Fetching ---
     async function fetchAllData() {
-        const loadingAnimation = document.getElementById('loading-animation');
-        loadingAnimation.style.display = 'flex';
-        loadingAnimation.classList.remove('hidden');
-    
-        const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users'];
+    const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users'];
         for (const table of tables) {
             const { data, error } = await supabaseClient.from(table).select('*').order('created_at', { ascending: false });
             if (error) {
@@ -677,11 +664,6 @@ collapsibleHeaders.forEach(header => {
         }
         appState.lastUpdated = Date.now();
         localStorage.setItem('mealsync_cache', JSON.stringify(appState));
-    
-        loadingAnimation.classList.add('hidden');
-        setTimeout(() => {
-            loadingAnimation.style.display = 'none';
-        }, 50);
     }
 
     // --- Member Functions ---
@@ -1187,6 +1169,7 @@ async function deleteExpense(id) {
         totalCell.textContent = await calculateTotalMeals(memberId);
     }
 
+
     // --- Calculations ---
     async function calculateTotalMeals(memberId) {
         const meals = appState.meals.filter(m => m.member_id === memberId);
@@ -1673,8 +1656,6 @@ async function deleteExpense(id) {
     } catch (error) {
         console.error('Initialization failed:', error);
         showNotification('Failed to load the app. Please try again.', 'error', true);
-    } finally {
-        hideLoading();
-    }
+      }
 });
 //pk//
