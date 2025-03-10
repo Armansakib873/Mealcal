@@ -16,6 +16,8 @@
     --secondary: #6c757d; /* Secondary color for buttons, text */
     --accent: #2ecc71; /* Success color for notifications, toggles */
     --error: #e74c3c; /* Danger color for errors, buttons */
+    --not-btn: #407f30; /* Light background */
+    --theme-button: #444444; /* Light button background */
     --background: #ffffff; /* Light background */
     --foreground: #212529; /* Dark text for light mode */
     --light: #ffffff; /* White background/elements */
@@ -39,6 +41,267 @@
     --transition-smooth: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
+
+
+/* --- Sidebar --- */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 150px; /* Adjust as needed */
+    height: 100%;
+    background-color: var(--light); /* Use your theme's background */
+    border-right: 1px solid var(--border);
+    z-index: 1050; /* Higher than header and overlay */
+    transform: translateX(-100%); /* Initially hidden */
+    transition: transform var(--transition-normal) ease-in-out;
+    overflow-y: auto; /* Allow scrolling if content overflows */
+    padding: var(--spacing-md);
+}
+
+.sidebar.sidebar-open {
+    transform: translateX(0);
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--spacing-md);
+}
+
+.sidebar-logo {
+    height: 30px; /* Adjust as needed */
+    margin-right: var(--spacing-sm);
+}
+
+.sidebar-user-info {
+    font-weight: 600;
+    color: var(--foreground);
+    flex-grow: 1; /* Allow it to take available space */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: var(--spacing-md);
+}
+
+.close-sidebar{
+    font-size: 1.5rem;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--secondary);
+    padding: var(--spacing-xs);
+}
+.close-sidebar:hover {
+    color: var(--foreground);
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--foreground);
+    text-decoration: none;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.sidebar-link i {
+    margin-right: var(--spacing-md);
+    width: 20px; /* Fixed width for consistent alignment */
+    text-align: center;
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+    background-color: var(--primary);
+    color: var(--light);
+}
+
+.sidebar-actions {
+    margin-top: auto; /* Push to the bottom */
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+
+/* --- Sidebar Overlay --- */
+#sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+    z-index: 1040; /* Below sidebar, above main content */
+    display: none; /* Initially hidden */
+    transition: opacity var(--transition-normal) ease-in-out;
+    opacity: 0;
+}
+
+#sidebar-overlay.sidebar-open {
+    display: block;
+    opacity: 1;
+}
+
+/* --- Button Updates --- */
+/* .btn {
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast); 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    min-width: 90px;
+    touch-action: manipulation;
+    box-shadow: var(--shadow-sm);
+    font-weight: 600;
+    color: var(--light);
+    background-color: var(--primary);
+    -webkit-tap-highlight-color: transparent;
+} */
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    background-color: var(--primary-hover);
+     color: var(--light); /* Ensure text color remains consistent */
+}
+
+.btn:focus {
+     outline: 2px solid var(--primary); /* Clearer focus style */
+     outline-offset: 2px; /* Prevent overlap with button content */
+     box-shadow: var(--shadow-md); /* Consistent shadow on focus */
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+    background-color: var(--primary);
+}
+
+
+.secondary-btn, .danger-btn{
+    color: var(--light);
+}
+
+/* --- Notification Log Updates --- */
+.notification-log {
+    max-height: 350px;
+    overflow-y: auto;
+    padding: var(--spacing-md) 0;
+    color: var(--foreground);
+}
+
+.notification-log .log-entry {
+    padding: var(--spacing-sm) var(--spacing-md); /* Reduced padding */
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem; /* Slightly smaller font */
+    transition: background-color var(--transition-normal);
+    color: var(--foreground);
+}
+.notification-log-list .log-entry:nth-child(odd) {
+    background-color: var(--dash);
+}
+
+.notification-log .log-entry:last-child {
+    border-bottom: none;
+}
+
+.notification-log .log-entry:hover {
+    background-color: #e9ecef; /* Lighter hover */
+}
+
+/* Add icons to notification types */
+.notification-log .log-entry.error {
+    color: var(--error);
+}
+.notification-log .log-entry.error::before {
+    content: "\f071"; /* Font Awesome exclamation-triangle */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: var(--spacing-sm);
+    color: var(--error);
+}
+
+.notification-log .log-entry.success {
+    color: var(--accent);
+}
+
+.notification-log .log-entry.success::before {
+    content: "\f00c"; /* Font Awesome checkmark */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: var(--spacing-sm);
+    color: var(--accent);
+}
+.notification-log .log-entry button {
+   font-size: 0.8rem;
+
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-around; /*Changed from space-between */
+    margin-top: var(--spacing-md);
+}
+
+
+
+/* Add Sidebar-Specific Mobile Styles */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 80%; /* Sidebar takes up most of the screen */
+        z-index: 1050; /* Ensure it's above other elements */
+    }
+
+    .header-nav {
+        display: none; /* Remove from mobile view */
+    }
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .sidebar.sidebar-open {
+        transform: translateX(0);
+    }
+    .sidebar-overlay {
+        display: none;
+    }
+    .sidebar-overlay.sidebar-open {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+}
+}
+
+
+
+
 
 /* Dark Mode Variables (Override light mode vars for colors only) */
 body.dark-mode {
@@ -92,6 +355,7 @@ body.dark-mode .select-input {
     color: var(--foreground); /* Light text */
     border-color: var(--border); /* Dark border */
 }
+
 
 body.dark-mode .btn:hover,
 body.dark-mode .toggle-btn:hover {
@@ -332,7 +596,7 @@ body.dark-mode .collapsible-content {
 /* --- Header --- */
 .header {
     padding: var(--spacing-sm);
-    height: 80px;
+    height: 60px; /* Reduced header height */
     background: linear-gradient(to right, var(--light), rgba(var(--primary-rgb), 0.05));
     border-bottom: 1px solid var(--border);
     position: sticky;
@@ -341,7 +605,10 @@ body.dark-mode .collapsible-content {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-  }
+    display: flex; /* Make header a flex container */
+    align-items: center; /* Vertically center items */
+    justify-content: space-between; /* Space out logo and date */
+}
   .header.scrolled {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
@@ -367,7 +634,6 @@ body.dark-mode .collapsible-content {
 .header h1 {
     margin: 0;
     margin-top: 10px;
-
     font-size: clamp(1.6rem, 6vw, 1.8rem);
     color: var(--foreground);
     font-weight: 800;
@@ -378,12 +644,16 @@ body.dark-mode .collapsible-content {
     letter-spacing: -0.5px;
 }
 
-.header-nav {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg); /* Larger gap for breathing room */
+.sidename{
+    font-size: clamp(1rem, 3vw, 1rem);
+    color: var(--foreground);
+    font-weight: 400;
+    background: linear-gradient(135deg, var(--foreground), var(--primary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
 }
-
 .date-display,
 .user-status,
 .user-role {
@@ -392,26 +662,27 @@ body.dark-mode .collapsible-content {
     color: var(--foreground);
 }
 
-.nav-buttons {
+/* .nav-buttons {
     display: flex;
     gap: var(--spacing-sm);
-}
+} */
 
-.toggle-head-buttons {
+
+
+/* .toggle-head-buttons {
     display: flex;
-    gap: var(--spacing-md); /* Consistent gap, remove margin-bottom */
-    margin-bottom: 0; /* Reset unnecessary margin */
-}
+    gap: var(--spacing-md);
+    margin-bottom: 0; 
+} */
 
 .theme-toggle-btn,
+#notification-log-btn,
+#sidebar-toggle-theme {
 
-#notification-log-btn {
-    width: 36px; /* Slightly smaller */
-    height: 36px;
-    border-radius: 50%;
-    background: var(--light);
+    border-radius: 10px;
+    background: var(--theme-button);
     border: 1px solid var(--border);
-    color: var(--foreground);
+
     transition: all var(--transition-fast) ease;
 }
 
@@ -452,7 +723,7 @@ body.dark-mode #loading-animation {
 .header-nav {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);  /* Style2 gap */
+    gap: var(--spacing-md);
     transition: max-height var(--transition-normal) ease, opacity var(--transition-normal) ease;
 }
 
@@ -469,10 +740,10 @@ body.dark-mode #loading-animation {
     color: var(--foreground); /* User status text color */
 }
 
-.nav-buttons {
+/* .nav-buttons {
     display: flex;
-    gap: var(--spacing-md); /* Style2 gap */
-}
+    gap: var(--spacing-md);
+} */
 
 /* --- Login Page --- */
 .login-page {
@@ -663,7 +934,7 @@ body.dark-mode #loading-animation {
 
 /* Button Styling */
 .btn {
-    padding: 12px 20px;
+
     font-size: 1rem;
     font-weight: 600;
     border-radius: var(--radius-md);
@@ -1240,31 +1511,40 @@ body.dark-mode #loading-animation {
         color: var(--foreground); /* Meal count value color */
     }
 
+    .meal-count-2{
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
     .meal-count span {
-        font-size: 2rem;       /* Style2 */
+        font-size: 1.5rem;       /* Style2 */
         color: var(--secondary); /* Meal count label color */
     }
 
 /* --- Notification --- */
 .notification {
     position: fixed;
-    top: 80px;
-    right: var(--spacing-md);  /* Style2 spacing */
-     padding: var(--spacing-md) var(--spacing-lg); /* Style2 */
-    border-radius: var(--radius-sm);    /* Style2 radius */
-    background-color: var(--secondary); /* Notification background */
-    color: var(--light); /* Notification text color */
-   font-size: 0.95rem;  /* Style2 size */
+    top: 70px; /* Adjusted top position */
+    right: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-sm);
+    background-color: var(--secondary);
+    color: var(--light);
+   font-size: 0.95rem;
     font-weight: 600;
-    box-shadow: var(--shadow-heavy);  /* Heavier shadow */
+    box-shadow: var(--shadow-heavy);
     z-index: 2000;
     opacity: 0;
     transform: translateY(-15px);
     transition: opacity var(--transition-normal) ease, transform var(--transition-normal) ease;
     display: none;
-     max-width: calc(100% - 40px);  /* Style2 */
-    word-break: break-word;         /* Style2 */
+    max-width: calc(100% - 40px);
+    word-break: break-word;
 }
+
 
 .notification.show {
     opacity: 1;
@@ -1729,7 +2009,7 @@ body.dark-mode #loading-animation {
 }
 
 .secondary-btn {
-    background: var(--secondary); /* Secondary button background */
+    background: var(--not-btn); /* Secondary button background */
     color: var(--light); /* Secondary button text color */
     font-weight: 500;
 }
@@ -1752,7 +2032,7 @@ body.dark-mode #loading-animation {
 .theme-toggle-btn,
 #notification-log-btn {
     background: var(--light); /* Theme toggle/notification button background */
-    color: var(--foreground); /* Theme toggle/notification button text/icon color */
+ /* Theme toggle/notification button text/icon color */
     padding: 0; /* Reset padding */
     border-radius: 50%;
     width: 40px;
@@ -1944,7 +2224,7 @@ body.dark-mode #loading-animation {
     display: flex;
     justify-content: space-between;
     align-items: center;
-      font-size: 0.95rem;                /* Style2 */
+      font-size: 0.8rem;                /* Style2 */
     transition: background-color var(--transition-normal); /* Style2 */
     color: var(--foreground); /* Notification log entry text color */
 }
@@ -1993,19 +2273,12 @@ body.dark-mode #loading-animation {
 
 /* --- Mobile-First Responsive Design --- */
 @media (max-width: 768px) {
-    .header {
-        padding: var(--spacing-sm) var(--spacing-md);
-        display: flex;
-        align-items: center;
-        justify-content: space-between; /* Keep logo on right */
-        position: relative;
-    }
 
-    .menu-toggle {
+    /* .menu-toggle {
         display: block;
-        font-size: 1.5rem; /* Slightly smaller */
-        order: 1; /* Ensure it’s on the left */
-    }
+        font-size: 1.5rem; 
+        order: 1;
+    } */
 
     .mobile-user-info {
         display: block;
@@ -2046,25 +2319,16 @@ body.dark-mode #loading-animation {
     .header-nav.active {
         display: flex;
     }
+    
+#sidebar-logout-btn,
+#sidebar-toggle-theme,
+#sidebar-notification-log-btn{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80% !important;
+}
 
-    .nav-buttons {
-        width: 100%; /* Full width for buttons */
-        flex-direction: column;
-        align-items: center;
-        margin: 0; /* Reset margin */
-        gap: var(--spacing-md);
-    }
-
-    .btn {
-        width: 80%; /* Slightly narrower buttons */
-        padding: var(--spacing-sm) var(--spacing-md);
-    }
-
-    .toggle-head-buttons {
-        flex-direction: row; /* Keep horizontal on mobile */
-        justify-content: center;
-        gap: var(--spacing-md);
-    }
 /* log in greetings */
     .login-page .greetings h1 {
         font-size: clamp(1.8rem, 5vw, 2.5rem);
@@ -2154,6 +2418,32 @@ body.dark-mode #loading-animation {
         display: block; /* Show nav when toggled */
     }
 
+    .date-display {
+        margin-right: var(--spacing-md); /* Add some margin for spacing */
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--foreground);
+    }
+    .menu-toggle {
+        background: none;
+        border: none;
+        color: var(--foreground); /* Toggle color */
+        font-size: 1.75rem;
+        cursor: pointer;
+        display: block;  /* Shown by default */
+        transition: transform var(--transition-fast); /* Style2 speed */
+        -webkit-tap-highlight-color: transparent; /*from style2*/
+        transition: all 0.3s ease;
+    }
+    
+    .menu-toggle:hover {
+        transform: scale(1.1);
+    }
+    .head-menu{
+        display: flex;
+        justify-content: start;
+        align-items: center;
+    }
 
     .notification {
         top: 70px;
@@ -2267,7 +2557,8 @@ body.dark-mode #loading-animation {
     }
 
     .modal-content {
-        max-width: 95%;   /* Almost full width */
+        max-width: 95%;  
+        height: 90vh; /* Almost full width */
         margin: 15px auto;  /* Reduced margin */
         padding: var(--spacing-lg);   /* Reduced padding */
         background: var(--light); /* Modal content background */
@@ -2324,15 +2615,110 @@ body.dark-mode #loading-animation {
         color: var(--foreground); /* Notification log text color */
     }
 
-    .theme-toggle-btn,
-    #notification-log-btn {
-        padding: 0;
-        width: 40px;  /* Consistent size */
-        height: 40px; /* Consistent size */
-        background: var(--light); /* Theme toggle/notification button background */
-        color: var(--foreground); /* Theme toggle/notification button text/icon color */
-        border: 1px solid var(--border); /* Theme toggle/notification button border color */
-    }
+    /* --- Notification Log Updates (Revised) --- */
+.notification-log {
+    max-height: 500px; /* Or whatever height you prefer */
+    overflow-y: auto;
+    padding: var(--spacing-md) 0; /* Consistent padding */
+    color: var(--foreground);
+}
+
+.notification-log .log-entry {
+    padding: var(--spacing-sm) var(--spacing-md); /* Consistent padding */
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    align-items: center; /* Vertically center content */
+    justify-content: space-between; /* Space out icon/text and dismiss button */
+    font-size: 0.9rem;
+    transition: background-color var(--transition-normal);
+    color: var(--foreground);
+}
+
+/* Alternating Row Colors (Optional, but improves readability) */
+.notification-log-list .log-entry:nth-child(odd) {
+    background-color: var(--dash); /* Light background for odd rows */
+}
+
+.notification-log .log-entry:last-child {
+    border-bottom: none; /* No border on the last entry */
+}
+
+.notification-log .log-entry:hover {
+    background-color: #e9ecef; /* Light hover effect */
+}
+
+/* Notification Message Wrapper */
+.notification-log .log-entry .message-wrapper {
+    flex-grow: 1; /* Allow the message to take up available space */
+    margin-right: var(--spacing-md); /* Space between message and button */
+}
+
+/* Styles for Different Notification Types (with Icons) */
+.notification-log .log-entry.error {
+    color: var(--error); /* Red text for errors */
+}
+.notification-log .log-entry.error::before {
+    content: "\f071"; /* Font Awesome exclamation-triangle (error) */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: var(--spacing-sm);
+    color: var(--error); /* Red icon */
+}
+
+.notification-log .log-entry.success {
+    color: var(--accent); /* Green text for success */
+}
+.notification-log .log-entry.success::before {
+    content: "\f00c"; /* Font Awesome checkmark (success) */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: var(--spacing-sm);
+    color: var(--accent); /* Green icon */
+}
+.notification-log .log-entry.info::before {
+     content: "\f129"; /* Font Awesome info-circle (success) */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: var(--spacing-sm);
+    color: var(--foreground);
+}
+
+/* Style for Dismiss Button (Admin Only) */
+.notification-log .log-entry button {
+    padding: var(--spacing-xs) var(--spacing-sm); /* Smaller padding */
+    font-size: 0.8rem;
+    min-width: auto; /* Allow button to be smaller */
+    /* (Rest of your button styles will apply) */
+}
+
+/* Clear All Button (Admin) */
+.modal-actions {
+    display: flex;
+    justify-content: space-around; /* Evenly space buttons */
+    margin-top: var(--spacing-md);
+}
+
+#clear-all-notifications-btn{
+    width: 45%; 
+}
+
+/* Dark Mode Adjustments */
+body.dark-mode .notification-log .log-entry:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* Darker hover */
+}
+
+body.dark-mode .notification-log-list .log-entry:nth-child(odd) {
+    background-color: var(--light); /* Lighter background for odd rows in dark mode*/
+}
+
+body.dark-mode .modal-actions{
+    background-color: var(--light);
+}
+body.dark-mode .notification-log .log-entry.info::before {
+    color: var(--foreground);
+}
+
+
 }
 
 #expenses-table button{
@@ -2346,14 +2732,10 @@ body.dark-mode #loading-animation {
     width: 100px;
 }
 
-.toggle-head-buttons{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    gap: 20px;
-}
+.modal-actions button {
+    padding: 3px 10px; /* Style2 padding */
 
+}
 /* Extra tweaks for very small screens (max-width: 480px) */
 @media (max-width: 480px) {
     body {
@@ -2364,12 +2746,6 @@ body.dark-mode #loading-animation {
     .login-container h1 {
         font-size: 1rem; /* Slightly larger */
         color: var(--foreground); /* Header/login title color */
-    }
-    .btn {
-        padding: var(--spacing-xs) var(--spacing-sm);  /* Reduced padding */
-        font-size: 0.9rem;
-        color: var(--light); /* Button text color */
-        background-color: var(--primary); /* Button background */
     }
     /* Add more specific overrides for very small screens as needed */
 }

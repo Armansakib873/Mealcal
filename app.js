@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentDate: document.getElementById('current-date'),
         notification: document.getElementById('notification'),
         toggleThemeBtn: document.getElementById('toggle-theme'),
+        
         menuToggle: document.querySelector('.menu-toggle'),
         headerNav: document.querySelector('.header-nav'),
         userStatus: document.getElementById('user-status'),
@@ -94,10 +95,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         userSelectContainer: document.getElementById('user-select-container'),
         userSelect: document.getElementById('user-select'),
         clearAllNotificationsBtn: document.getElementById('clear-all-notifications-btn'),
-        mobileUserInfo: document.getElementById('mobile-user-info')
 
+            // ... (Keep existing elements, BUT UPDATE THESE) ...
+    toggleThemeBtn: document.getElementById('sidebar-toggle-theme'), // Updated ID
+    logoutBtn: document.getElementById('sidebar-logout-btn'),    // Updated ID
+    notificationLogBtn: document.getElementById('sidebar-notification-log-btn'), // Updated ID
+    sidebar: document.getElementById('sidebar'), // New
+    sidebarOverlay: document.getElementById('sidebar-overlay'), // New
+    closeSidebarBtn: document.getElementById('close-sidebar'), // New
+    sidebarUserInfo: document.getElementById('sidebar-user-info'), // New
+    // ... (Remove mobileUserInfo if it's no longer used) ...
+     menuToggle: document.querySelector('.menu-toggle'),
+     headerNav: document.querySelector('.header-nav'), // Keep this for now
+};
         
-    };
 
     let editingMemberId = null;
     let editingExpenseId = null;
@@ -105,6 +116,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     let expensesChart = null;
     let mealsChart = null;
 
+// --- Sidebar Toggle Function ---
+function toggleSidebar() {
+    elements.sidebar.classList.toggle('sidebar-open');
+    elements.sidebarOverlay.classList.toggle('sidebar-open');
+}
+
+// --- Touch Event Handlers (for swipe-to-open) ---
+let startX = 0;
+let isSwiping = false;
+const edgeThreshold = 50; // Pixels from the left edge
+const openThreshold = 20;
+
+function handleTouchStart(event) {
+    startX = event.touches[0].clientX;
+    if (startX < edgeThreshold) {
+        isSwiping = true;
+        document.addEventListener('touchmove', handleTouchMove); // Use document
+    }
+}
+
+function handleTouchMove(event) {
+    if (!isSwiping) return;
+    const currentX = event.touches[0].clientX;
+    let deltaX = currentX - startX;
+
+    if (deltaX > openThreshold) {
+        deltaX = Math.min(deltaX, elements.sidebar.offsetWidth);
+        elements.sidebar.style.transform = `translateX(${deltaX - elements.sidebar.offsetWidth}px)`;
+    }
+}
+
+function handleTouchEnd(event) {
+    if (!isSwiping) return;
+    isSwiping = false;
+    document.removeEventListener('touchmove', handleTouchMove); // Remove from document
+
+    const currentX = event.changedTouches[0].clientX;
+    let deltaX = currentX - startX;
+
+    if (deltaX > elements.sidebar.offsetWidth / 2) {
+        elements.sidebar.classList.add('sidebar-open');
+        elements.sidebarOverlay.classList.add('sidebar-open'); // Show overlay
+        elements.sidebar.style.transform = 'translateX(0)';
+    } else {
+        elements.sidebar.classList.remove('sidebar-open');
+        elements.sidebarOverlay.classList.remove('sidebar-open'); // Hide overlay
+        elements.sidebar.style.transform = 'translateX(-100%)';
+    }
+}
 
 
 // --- Collapsible Sections ---
@@ -158,6 +218,7 @@ collapsibleHeaders.forEach(header => {
         }
     });
 });
+
     // --- Utility Functions ---
     function showNotification(message, type = 'success', isLogin = false, details = {}) {
         const target = isLogin ? elements.loginNotification : elements.notification;
@@ -207,14 +268,6 @@ collapsibleHeaders.forEach(header => {
         }
     }
 
-    function updateMobileUserInfo() {
-        if (currentUser) {
-            const role = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
-            elements.mobileUserInfo.textContent = `${currentUser.username} - ${role}`;
-        } else {
-            elements.mobileUserInfo.textContent = 'Guest - None';
-        }
-    }
 
     function formatCurrency(amount, isMealRate = false) {
         return isMealRate ? `৳${amount.toFixed(2)}` : `৳${Math.round(amount)}`;
@@ -330,7 +383,7 @@ collapsibleHeaders.forEach(header => {
     
         await fetchAllData();
         updateUIForRole();
-        updateMobileUserInfo(); // Update mobile info
+        updateSidebarUserInfo(); // Update mobile info
         await updateAllViews();
     }
 
@@ -369,15 +422,26 @@ collapsibleHeaders.forEach(header => {
         currentUser = null;
         sessionStorage.removeItem('mealsync_currentUser');
         localStorage.removeItem('mealsync_auto_login');
-        elements.headerNav.classList.remove('active');
+        // REMOVE: elements.headerNav.classList.remove('active'); // No longer needed
         elements.mainApp.style.display = 'none';
         elements.loginPage.style.display = 'flex';
         elements.loginPage.classList.remove('hidden');
         elements.signupFormContainer.classList.add('hidden');
         elements.loginFormContainer.classList.remove('hidden');
         elements.toggleSignupBtn.textContent = 'Need an account? Sign Up';
-        updateMobileUserInfo();
+        updateSidebarUserInfo(); // Update sidebar
     }
+
+
+    // --- Update updateMobileUserInfo (Now updateSidebarUserInfo) ---
+function updateSidebarUserInfo() { // Renamed function
+    if (currentUser) {
+        const role = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+        elements.sidebarUserInfo.textContent = `${currentUser.username} (${role})`; // Updated element
+    } else {
+        elements.sidebarUserInfo.textContent = 'Guest';
+    }
+}
 
     // --- Auto-Login Check ---
     async function checkAutoLogin() {
@@ -396,7 +460,7 @@ collapsibleHeaders.forEach(header => {
                 elements.mainApp.style.display = 'block';
                 await fetchAllData();
                 updateUIForRole();
-                updateMobileUserInfo(); // Update mobile info
+                updateSidebarUserInfo(); // Update mobile info
                 await updateAllViews();
             }
         }
@@ -408,12 +472,13 @@ collapsibleHeaders.forEach(header => {
         elements.toggleThemeBtn.innerHTML = `<i class="fas fa-${isDark ? 'sun' : 'moon'}"></i>`;
         localStorage.setItem('mealsync_theme', isDark ? 'dark' : 'light');
         if (currentUser) {
-            await supabaseClient.from('user_settings')
-                .update({ theme: isDark ? 'dark' : 'light' })
-                .eq('user_id', currentUser.id);
+          await supabaseClient.from('user_settings')
+            .update({ theme: isDark ? 'dark' : 'light' })
+            .eq('user_id', currentUser.id);
         }
         updateCharts();
-    });
+      });
+
 
     if (localStorage.getItem('mealsync_theme') === 'dark') {
         document.body.classList.add('dark-mode');
@@ -421,34 +486,11 @@ collapsibleHeaders.forEach(header => {
     }
 
     // --- Initial Setup ---
-    elements.currentDate.textContent = new Date().toLocaleDateString('en-US', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
-    elements.cycleDates.textContent = getCycleDates();
+elements.currentDate.textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
+elements.cycleDates.textContent = getCycleDates();
 
-    elements.menuToggle.addEventListener('click', () => {
-        elements.headerNav.classList.toggle('active');
-        const isActive = elements.headerNav.classList.contains('active');
-        elements.menuToggle.innerHTML = `<i class="fas fa-${isActive ? 'times' : 'bars'}"></i>`;
-        elements.headerNav.style.transition = 'max-height 0.3s ease, opacity 0.3s ease';
-        if (isActive) {
-            elements.headerNav.style.maxHeight = '300px'; // Adjust based on content
-            elements.headerNav.style.opacity = '1';
-        } else {
-            elements.headerNav.style.maxHeight = '0';
-            elements.headerNav.style.opacity = '0';
-        }
-    });
-    
-    function updateMobileUserInfo() {
-        if (currentUser) {
-            const role = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
-            elements.mobileUserInfo.textContent = `${currentUser.username} (${role})`;
-            elements.mobileUserInfo.style.maxWidth = '150px'; // Prevent overflow
-        } else {
-            elements.mobileUserInfo.textContent = 'Guest';
-        }
-    }
 
     function updateUIForRole() {
         console.log('Updating UI for role:', currentUser ? currentUser.role : 'No user');
@@ -500,7 +542,7 @@ collapsibleHeaders.forEach(header => {
             }
         });
     
-        updateMobileUserInfo(); // Update mobile info
+        updateSidebarUserInfo(); // Update mobile info
     }
     async function populateMemberSelect(isAdmin) {
         console.log('Populating member select:', appState.members);
@@ -562,6 +604,39 @@ collapsibleHeaders.forEach(header => {
 // --- Event Listeners ---
     elements.addMemberBtn.addEventListener('click', () => openModal(elements.addMemberModal));
     elements.closeAddMemberModal.addEventListener('click', () => closeModal(elements.addMemberModal));
+
+    //   - Add listeners for overlay and close button
+elements.menuToggle.addEventListener('click', toggleSidebar);
+elements.sidebarOverlay.addEventListener('click', toggleSidebar);
+elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
+
+document.addEventListener('touchstart', handleTouchStart);
+document.addEventListener('touchend', handleTouchEnd);
+
+    // NEW: Event Delegation for Sidebar Links and Buttons
+    // Sidebar Link Click Handler (Modified)
+    elements.sidebar.addEventListener('click', (event) => {
+        if (event.target.closest('.sidebar-link')) {
+            const targetSectionId = event.target.closest('.sidebar-link').dataset.section; // Get data-section
+            const targetSection = document.getElementById(targetSectionId);
+
+            if (targetSection) {
+                targetSection.scrollIntoView({ behavior: 'smooth' }); // Smooth scroll
+
+                // Expand the collapsible header if it's collapsed
+                const collapsibleHeader = targetSection.querySelector('.collapsible-header');
+                if (collapsibleHeader && collapsibleHeader.classList.contains('collapsed')) {
+                    collapsibleHeader.click(); // Simulate a click to expand
+                }
+            }
+            toggleSidebar(); // Close the sidebar after navigation, this line already exist
+        }
+         if (event.target.closest('.sidebar-actions button') ) {
+            toggleSidebar(); // Close the sidebar
+        }
+    });
+
+
     elements.addMemberForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await addMember();
@@ -1460,7 +1535,7 @@ async function renderNotificationLog() {
         elements.notificationLogList.innerHTML = appState.notifications.map(n => `
             <div class="log-entry ${n.type}">
                 <span>${n.message}</span>
-                ${currentUser?.role === 'admin' ? `<button class="btn danger-btn" data-id="${n.id}">Dismiss</button>` : ''}
+                ${currentUser?.role === 'admin' ? `<button class="btn danger-btn" data-id="${n.id}">x</button>` : ''}
             </div>
         `).join('');
     }
@@ -1665,16 +1740,16 @@ async function renderNotificationLog() {
             mainApp.style.display = 'block';
             await fetchAllData();
             updateUIForRole();
-            updateMobileUserInfo(); // Initial update
+            updateSidebarUserInfo(); // Initial update
             await updateAllViews();
         } else {
             loginPage.style.display = 'flex';
             mainApp.style.display = 'none';
-            updateMobileUserInfo(); // Initial update for guest
+            updateSidebarUserInfo(); // Initial update for guest
         }
     } catch (error) {
         console.error('Initialization failed:', error);
         showNotification('Failed to load the app. Please try again.', 'error', true);
       }
+    initializeCollapsibleSections(); // Initialize after DOM is loaded and content is potentially updated
 });
-//pk//

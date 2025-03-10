@@ -16,6 +16,39 @@
 </head>
 <body>
 
+    <div id="sidebar" class="sidebar">
+        <nav class="sidebar-nav">
+             <div class="sidebar-header" st>
+                <img src="logo.png" alt="MealSync Logo" class="sidebar-logo">
+                <div class="sidename">
+                <h1>MealSync</h1>
+            </div>
+              
+                 <button id="close-sidebar" class="close-sidebar" aria-label="Close Sidebar">×</button>
+            </div>
+            <!-- Add links to your main app sections here -->
+            <a href="#dashboard-section" data-section="dashboard-section" class="sidebar-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="#user-overview-section" data-section="user-overview" class="sidebar-link"><i class="fas fa-user"></i> Personal Overview</a>
+            <a href="#members-sectio-nav" data-section="members-section" class="sidebar-link"><i class="fas fa-user-friends"></i> Member Details</a>
+            <a href="#summary-section" data-section="summary-section" class="sidebar-link"><i class="fas fa-table"></i> Summary</a>
+            <a href="#meal-tracker-section" data-section="meal-tracker" class="sidebar-link"><i class="fas fa-calendar-alt"></i> Meal Tracker</a>
+            <a href="#expenses-section" data-section="expenses-section" class="sidebar-link"><i class="fas fa-receipt"></i> Expenses</a>
+           <!-- ... other navigation links ... -->
+            <div class="sidebar-actions">
+                <span id="user-status" class="user-status"></span>
+                <span id="user-role" class="user-role"></span>
+                <button id="sidebar-logout-btn" class="btn danger-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                <button id="sidebar-toggle-theme" class="btn theme-toggle-btn" title="Toggle Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                 <button id="sidebar-notification-log-btn" class="btn secondary-btn" title="View Notification Log">
+                    <i class="fas fa-bell"></i>
+                </button>
+            </div>
+        </nav>
+    </div>
+    <div id="sidebar-overlay"></div>
+
 
     <!-- Login Page -->
     <div id="login-page" class="login-page" style="display: none;">
@@ -45,30 +78,20 @@
             <button class="menu-toggle" aria-label="Toggle Menu">
                 <i class="fas fa-bars"></i>
             </button>
-            <span id="mobile-user-info" class="mobile-user-info"></span>
+            <span id="sidebar-user-info" class="sidebar-user-info"></span>
         </div>
+    
 
             <div class="logo-container">
                 <div class="logo-icon">
                 <img src="logo.png" alt="MealSync Logo" class="logo">
                 <h1>MealSync</h1>
             </div>
+
             <nav class="header-nav">
                 <span id="current-date" class="date-display"></span>
-                <span id="user-status" class="user-status"></span>
-                <span id="user-role" class="user-role"></span>
-                <div class="nav-buttons">
-                    <button id="logout-btn" class="btn danger-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
-                </div>
-                <div class="toggle-head-buttons">
-                    <button id="toggle-theme" class="btn theme-toggle-btn" title="Toggle Dark Mode">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <button id="notification-log-btn" class="btn secondary-btn" title="View Notification Log">
-                        <i class="fas fa-bell"></i>
-                    </button>
-                </div>
             </nav>
+
         </header>
 
         <!-- Main Content -->
@@ -109,12 +132,12 @@
             </section>
 
             <!-- Dashboard Section -->
-            <section class="dashboard-section card">
-                <h2 class="collapsible-header">
+            <section class="dashboard-section card" >
+                <h2 class="collapsible-header" id="dashboard-section">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                     <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                 </h2>
-                <div class="collapsible-content">
+                <div class="collapsible-content" >
                     <div class="dashboard-tabs">
                         <button id="stats-tab" class="tab-btn active">Stats</button>
                         <button id="charts-tab" class="tab-btn">Charts</button>
@@ -171,7 +194,7 @@
 
             <!-- User Overview -->
             <section id="user-overview" class="user-overview card">
-                <h2 class="collapsible-header">
+                <h2 class="collapsible-header" id="user-overview-section">
                     <i class="fas fa-user"></i>  Personal Overview
                     <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                 </h2>
@@ -218,7 +241,7 @@
             </section>
 
             <!-- Members Section -->
-            <section class="members-section card">
+            <section class="members-section card" id="members-sectio-nav">
                 <h2 class="collapsible-header">
                     <i class="fas fa-user-friends"></i> Member Details
                     <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
@@ -266,7 +289,7 @@
             </section>
 
             <!-- Meal Tracker Section -->
-            <section class="meal-tracker card">
+            <section class="meal-tracker card" id="meal-tracker-section">
                 <h2 class="collapsible-header">
                     <i class="fas fa-calendar-alt"></i> Meal Tracker
                     <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
@@ -290,7 +313,7 @@
             </section>
 
             <!-- Expenses Section -->
-            <section class="expenses-section card">
+            <section class="expenses-section card" id="expenses-section">
                 <h2 class="collapsible-header">
                     <i class="fas fa-receipt"></i> Expenses
                     <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
