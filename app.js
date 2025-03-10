@@ -122,50 +122,56 @@ function toggleSidebar() {
     elements.sidebarOverlay.classList.toggle('sidebar-open');
 }
 
-// --- Touch Event Handlers (for swipe-to-open) ---
-let startX = 0;
-let isSwiping = false;
-const edgeThreshold = 50; // Pixels from the left edge
-const openThreshold = 20;
+ // --- Touch Event Handlers (REVISED) ---
+ let startX = 0;
+ let isSwiping = false;
+ const edgeThreshold = 50; // Pixels from the left edge
+ const openThreshold = 20; // Minimum swipe distance to *start* opening
 
-function handleTouchStart(event) {
-    startX = event.touches[0].clientX;
-    if (startX < edgeThreshold) {
-        isSwiping = true;
-        document.addEventListener('touchmove', handleTouchMove); // Use document
-    }
-}
+ function handleTouchStart(event) {
+     startX = event.touches[0].clientX;
+     if (startX < edgeThreshold) {
+         isSwiping = true;
+         elements.mainApp.addEventListener('touchmove', handleTouchMove); // Attach to mainApp
+     }
+ }
 
-function handleTouchMove(event) {
-    if (!isSwiping) return;
-    const currentX = event.touches[0].clientX;
-    let deltaX = currentX - startX;
+ function handleTouchMove(event) {
+     if (!isSwiping) return;
+     event.preventDefault(); // PREVENT DEFAULT SCROLLING
 
-    if (deltaX > openThreshold) {
-        deltaX = Math.min(deltaX, elements.sidebar.offsetWidth);
-        elements.sidebar.style.transform = `translateX(${deltaX - elements.sidebar.offsetWidth}px)`;
-    }
-}
+     const currentX = event.touches[0].clientX;
+     let deltaX = currentX - startX;
 
-function handleTouchEnd(event) {
-    if (!isSwiping) return;
-    isSwiping = false;
-    document.removeEventListener('touchmove', handleTouchMove); // Remove from document
+     if (deltaX > openThreshold) {
+         // Cap deltaX to keep sidebar within bounds
+         deltaX = Math.max(0, Math.min(deltaX, elements.sidebar.offsetWidth));
+         elements.sidebar.style.transform = `translateX(${deltaX - elements.sidebar.offsetWidth}px)`;
+     }
+ }
 
-    const currentX = event.changedTouches[0].clientX;
-    let deltaX = currentX - startX;
+  // --- Touch Event Handlers (REVISED) ---
 
-    if (deltaX > elements.sidebar.offsetWidth / 2) {
-        elements.sidebar.classList.add('sidebar-open');
-        elements.sidebarOverlay.classList.add('sidebar-open'); // Show overlay
-        elements.sidebar.style.transform = 'translateX(0)';
-    } else {
-        elements.sidebar.classList.remove('sidebar-open');
-        elements.sidebarOverlay.classList.remove('sidebar-open'); // Hide overlay
-        elements.sidebar.style.transform = 'translateX(-100%)';
-    }
-}
+ function handleTouchEnd(event) {
+     if (!isSwiping) return;
+     isSwiping = false;
+     elements.mainApp.removeEventListener('touchmove', handleTouchMove); // Remove from mainApp
 
+     const currentX = event.changedTouches[0].clientX;
+     let deltaX = currentX - startX;
+
+     // Use a more robust threshold for deciding whether to open/close
+     if (deltaX > elements.sidebar.offsetWidth * 0.3) { // Open if swiped more than 30%
+         elements.sidebar.classList.add('sidebar-open');
+         elements.sidebarOverlay.classList.add('sidebar-open');
+         elements.sidebar.style.transform = 'translateX(0)';
+     } else {
+          // Close
+         elements.sidebar.classList.remove('sidebar-open');
+         elements.sidebarOverlay.classList.remove('sidebar-open');
+         elements.sidebar.style.transform = 'translateX(-100%)';
+     }
+ }
 
 // --- Collapsible Sections ---
 const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
@@ -610,8 +616,7 @@ elements.menuToggle.addEventListener('click', toggleSidebar);
 elements.sidebarOverlay.addEventListener('click', toggleSidebar);
 elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
 
-document.addEventListener('touchstart', handleTouchStart);
-document.addEventListener('touchend', handleTouchEnd);
+
 
     // NEW: Event Delegation for Sidebar Links and Buttons
     // Sidebar Link Click Handler (Modified)
