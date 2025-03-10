@@ -1756,5 +1756,4 @@ async function renderNotificationLog() {
         console.error('Initialization failed:', error);
         showNotification('Failed to load the app. Please try again.', 'error', true);
       }
-    initializeCollapsibleSections(); // Initialize after DOM is loaded and content is potentially updated
 });
