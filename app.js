@@ -122,57 +122,6 @@ function toggleSidebar() {
     elements.sidebarOverlay.classList.toggle('sidebar-open');
 }
 
- // --- Touch Event Handlers (REVISED) ---
- let startX = 0;
- let isSwiping = false;
- const edgeThreshold = 50; // Pixels from the left edge
- const openThreshold = 20; // Minimum swipe distance to *start* opening
-
- function handleTouchStart(event) {
-     startX = event.touches[0].clientX;
-     if (startX < edgeThreshold) {
-         isSwiping = true;
-         elements.mainApp.addEventListener('touchmove', handleTouchMove); // Attach to mainApp
-     }
- }
-
- function handleTouchMove(event) {
-     if (!isSwiping) return;
-     event.preventDefault(); // PREVENT DEFAULT SCROLLING
-
-     const currentX = event.touches[0].clientX;
-     let deltaX = currentX - startX;
-
-     if (deltaX > openThreshold) {
-         // Cap deltaX to keep sidebar within bounds
-         deltaX = Math.max(0, Math.min(deltaX, elements.sidebar.offsetWidth));
-         elements.sidebar.style.transform = `translateX(${deltaX - elements.sidebar.offsetWidth}px)`;
-     }
- }
-
-  // --- Touch Event Handlers (REVISED) ---
-
- function handleTouchEnd(event) {
-     if (!isSwiping) return;
-     isSwiping = false;
-     elements.mainApp.removeEventListener('touchmove', handleTouchMove); // Remove from mainApp
-
-     const currentX = event.changedTouches[0].clientX;
-     let deltaX = currentX - startX;
-
-     // Use a more robust threshold for deciding whether to open/close
-     if (deltaX > elements.sidebar.offsetWidth * 0.3) { // Open if swiped more than 30%
-         elements.sidebar.classList.add('sidebar-open');
-         elements.sidebarOverlay.classList.add('sidebar-open');
-         elements.sidebar.style.transform = 'translateX(0)';
-     } else {
-          // Close
-         elements.sidebar.classList.remove('sidebar-open');
-         elements.sidebarOverlay.classList.remove('sidebar-open');
-         elements.sidebar.style.transform = 'translateX(-100%)';
-     }
- }
-
 // --- Collapsible Sections ---
 const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
 
@@ -498,58 +447,64 @@ elements.currentDate.textContent = new Date().toLocaleDateString('en-US', {
 elements.cycleDates.textContent = getCycleDates();
 
 
-    function updateUIForRole() {
-        console.log('Updating UI for role:', currentUser ? currentUser.role : 'No user');
-        elements.userStatus.textContent = currentUser ? `Logged in as: ${currentUser.username}` : '';
-        elements.userRole.textContent = currentUser ? `Role: ${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` : '';
-        const isAdmin = currentUser?.role === 'admin';
-        const isManager = currentUser?.role === 'manager';
-        const canEdit = isAdmin || isManager;
-    
-        elements.addMemberBtn.classList.toggle('hidden', !isAdmin);
-        elements.addExpenseBtn.classList.toggle('hidden', !canEdit);
-        elements.adminControls.classList.toggle('hidden', !isAdmin);
-        elements.summarySection.classList.toggle('hidden', !canEdit);
-        document.getElementById('user-overview').classList.toggle('hidden', isAdmin); // Add this line
-    
-        elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
-        if (isAdmin || isManager) {
-            if (appState.members && appState.members.length > 0) {
-                populateMemberSelect(isAdmin || isManager);
-            } else {
-                console.warn('No members available in appState for dropdown');
-                elements.memberSelectContainer.classList.add('hidden');
-            }
+function updateUIForRole() {
+    console.log('Updating UI for role:', currentUser ? currentUser.role : 'No user');
+    elements.userStatus.textContent = currentUser ? `Logged in as: ${currentUser.username}` : '';
+    elements.userRole.textContent = currentUser ? `Role: ${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` : '';
+    const isAdmin = currentUser?.role === 'admin';
+    const isManager = currentUser?.role === 'manager';
+    const canEdit = isAdmin || isManager;
+
+    elements.addMemberBtn.classList.toggle('hidden', !isAdmin);
+    elements.addExpenseBtn.classList.toggle('hidden', !canEdit);
+    elements.adminControls.classList.toggle('hidden', !isAdmin);
+    elements.summarySection.classList.toggle('hidden', !canEdit);
+    document.getElementById('user-overview').classList.toggle('hidden', isAdmin); // Add this line
+
+    elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
+    if (isAdmin || isManager) {
+        if (appState.members && appState.members.length > 0) {
+            populateMemberSelect(isAdmin || isManager);
+        } else {
+            console.warn('No members available in appState for dropdown');
+            elements.memberSelectContainer.classList.add('hidden');
         }
-    
-        elements.userSelectContainer.classList.toggle('hidden', !isAdmin);
-        if (isAdmin) {
-            if (appState.users && appState.users.length > 0) {
-                populateUserSelect();
-            } else {
-                console.warn('No users available in appState for dropdown');
-                elements.userSelectContainer.classList.add('hidden');
-            }
-        }
-    
-        document.querySelectorAll('.member-card .actions').forEach(actions => {
-            const memberId = actions.closest('.member-card').dataset.id;
-            if (isAdmin) {
-                actions.innerHTML = `
-                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
-                    <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
-                `;
-            } else if (isManager) {
-                actions.innerHTML = `
-                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
-                `;
-            } else {
-                actions.innerHTML = '';
-            }
-        });
-    
-        updateSidebarUserInfo(); // Update mobile info
     }
+
+    elements.userSelectContainer.classList.toggle('hidden', !isAdmin);
+    if (isAdmin) {
+        if (appState.users && appState.users.length > 0) {
+            populateUserSelect();
+        } else {
+            console.warn('No users available in appState for dropdown');
+            elements.userSelectContainer.classList.add('hidden');
+        }
+    }
+
+    document.querySelectorAll('.member-card .actions').forEach(actions => {
+        const memberId = actions.closest('.member-card').dataset.id;
+        if (isAdmin) {
+            actions.innerHTML = `
+                <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
+            `;
+        } else if (isManager) {
+            actions.innerHTML = `
+                <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+            `;
+        } else {
+            actions.innerHTML = '';
+        }
+    });
+    
+    // --- Button Visibility Logic ---
+    elements.addMemberBtn.style.display = isAdmin ? 'block' : 'none'; // Add Member
+    elements.addExpenseBtn.style.display = canEdit ? 'block' : 'none';  // Add Expense
+    elements.clearAllNotificationsBtn.style.display = isAdmin ? 'block' : 'none'; // Clear All Notifications
+
+
+    updateSidebarUserInfo();
+}
     async function populateMemberSelect(isAdmin) {
         console.log('Populating member select:', appState.members);
         if (!appState.members || appState.members.length === 0) {
@@ -1008,10 +963,14 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
 
             card.innerHTML = `
                 <h3>${member.name}</h3>
-                <div>Total Deposit: ${formatCurrency(totalDeposit)}</div>
-                <div>Balance: <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
-                <div>Total Meals: <span class="total-meals">${totalMeals}</span></div>
-                <div>Total Bazar: ${totalBazar}</div>
+                <div class="card-details">
+                <div>Total Deposit <span class="total-deposit"> ${formatCurrency(totalDeposit)}</span></div>
+               <div>Balance <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
+
+
+                <div>Total Meals <span class="total-meals">${totalMeals}</span></div>
+                <div>Total Bazar<span class="total-bazar"> ${totalBazar}</span></div>
+                </div>
                 <div class="toggles">
                     <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
                     <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>

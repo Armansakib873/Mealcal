@@ -48,7 +48,7 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 150px; /* Adjust as needed */
+    width:350px; /* Adjust as needed */
     height: 100%;
     background-color: var(--light); /* Use your theme's background */
     border-right: 1px solid var(--border);
@@ -197,9 +197,12 @@
 }
 
 
-.secondary-btn, .danger-btn{
+.secondary-btn{
     color: var(--light);
-    width: 30px !important;
+}
+
+.danger-btn{
+    color: var(--light);
 }
 
 /* --- Notification Log Updates --- */
@@ -708,10 +711,10 @@ body.dark-mode #loading-animation {
 .menu-toggle {
     background: none;
     border: none;
-    color: var(--foreground); /* Toggle color */
+    color: var(--foreground); 
     font-size: 1.75rem;
     cursor: pointer;
-    display: none;  /* Hidden by default, shown in media query */
+    display: block;  /* Hidden by default, shown in media query */
     transition: transform var(--transition-fast); /* Style2 speed */
     -webkit-tap-highlight-color: transparent; /*from style2*/
     transition: all 0.3s ease;
@@ -998,6 +1001,7 @@ body.dark-mode #loading-animation {
     font-size: 0.9rem;
     font-weight: 500;
     display: none;
+    background: var(--background);
     animation: slideDown 0.3s ease-out;
 }
 
@@ -1007,14 +1011,14 @@ body.dark-mode #loading-animation {
 }
 
 .notification.success {
-    background-color: rgba(46, 204, 113, 0.1);
+    background-color: var(--background);
     border: 1px solid var(--accent);
     color: var(--accent);
     display: block;
 }
 
 .notification.error {
-    background-color: rgba(231, 76, 60, 0.1);
+    background-color: var(--error);
     border: 1px solid var(--error);
     color: var(--foreground);
     display: block;
@@ -1547,7 +1551,7 @@ body.dark-mode #loading-animation {
 }
 
 .notification.success {
-    background-color: var(--foreground); /* Success notification background */
+    background-color: var(--background); /* Success notification background */
 }
 
 .notification.error {
@@ -1622,23 +1626,8 @@ body.dark-mode #loading-animation {
     margin-bottom: 0;
 }
 
-.balance-text {
-      font-size: 1rem;        /* Style2 */
-    padding: 4px 10px;     /* Style2 */
-    border-radius: var(--radius-sm); /* Style2 */
-     transition: background-color var(--transition-normal), color var(--transition-normal); /* Style2 */
-    font-weight: 600;
-     display: inline-block;    /* Style2 */
-    color: var(--light); /* Balance text color */
-}
 
-.balance-text.positive {
-    background-color: var(--accent); /* Positive balance background */
-}
 
-.balance-text.negative {
-    background-color: var(--error); /* Negative balance background */
-}
 
 .deposit-history {
      background: var(--light); /* Deposit history background */
@@ -1734,81 +1723,164 @@ body.dark-mode #loading-animation {
 /* --- Members Section --- */
 .members-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr;
-
-    /* Style2 responsive */
-    gap: var(--spacing-md);  /* Style2 gap */
-    color: var(--foreground); /* Members grid text color */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-lg);  
+    justify-content: center;
 }
+
 .member-card {
     background: var(--primary);
-    padding: var(--spacing-lg);
+    padding: 25px;
     border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
-    width: 100%;
     align-items: center;
-    flex-wrap: wrap;
+    width: 100%;
+    max-width: 450px;
     gap: var(--spacing-md);
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.06);
-    transform: translateY(0);
-    cursor: pointer;
     color: var(--foreground);
+    text-align: center;
     position: relative;
-    overflow: hidden;
-  }
-  
-  .member-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: linear-gradient(90deg, #21917a, #3ccff0);
-    opacity: 0.8;
-  }
-  
-  
-  .member-card h3 {
-    font-size: 1.85rem;
-    color: var(--foreground);
+}
+
+
+.member-card h3 {
+    font-size: 1.5rem;
     font-weight: 700;
-    margin: var(--spacing-xs) 0;
-    letter-spacing: -0.02em;
-  }
-  
-  .member-card div {
-    font-size: 1.25rem;
-    color: var(--secondary);
-    line-height: 1.5;
-  }
+    color: var(--foreground);
+    margin-bottom: 15px;
+}
 
-
-  
- 
-  .member-card .balance-text {
-    display: inline-block;
-    margin-top: var(--spacing-md);
-    color: #fff;
-    background: linear-gradient(90deg, #04571a, #2e9242);
-    padding: 5px 10px;
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    box-shadow: 0 4px 10px rgba(11, 61, 45, 0.692);
-  }
-  
-  .member-card .toggles {
+.member-card .card-details {
+    width: 100%;
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 1.1rem;
+}
+
+.card-details div {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-weight: 500;
+    align-items: center;
+    padding: 12px 12px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-details span {
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+}
+
+/* Styling for financial data */
+.card-details .balance-text {
+    font-size: 1rem;        /* Style2 */
+    padding: 4px 10px;     /* Style2 */
+    border-radius: var(--radius-sm); /* Style2 */
+    font-weight: 600;
+     display: inline-block;    /* Style2 */
+    color: var(--light);
+    min-width: 80px;
+    box-shadow: 0 3px 10px rgba(11, 61, 45, 0.5);
+}
+
+.balance-text {
+    background: linear-gradient(90deg, #0e5c22, #3abb54) !important;
+}
+
+.overview-item .balance-text {
+    color: var(--light);
+    text-align: center;
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(11, 61, 45, 0.5);
+    min-width: 80px;
+    border-radius: var(--radius-md);
+}
+
+.overview-item .negative{
+    background: linear-gradient(90deg, #983d19, #d44040) !important;
+}
+
+.card-details .negative {
+    background: linear-gradient(90deg, #983d19, #d44040) !important;
+}
+
+.total-deposit, .total-meals, .total-bazar  {
+    background: linear-gradient(90deg, #216c66, #2e7792);
+    color: var(--light);
+    text-align: center;
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(11, 61, 45, 0.5);
+    min-width: 80px;
+}
+
+#user-deposit{
+    background: linear-gradient(90deg, #6b4134ee, #4f355fa9);
+    color: var(--light);
+    text-align: center;
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(11, 61, 45, 0.5);
+    min-width: 80px;
+    border-radius: var(--radius-md);
+}
+
+.total-meals, .total-bazar {
+    background: linear-gradient(90deg, #6b4134ee, #4f355fa9);
+    color: var(--light);
+    text-align: center;
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(11, 61, 45, 0.5);
+    min-width: 80px;
+}
+
+
+
+
+
+/* Toggles */
+.member-card .toggles {
+    display: flex;
+    justify-content: center;
     gap: var(--spacing-md);
     flex-wrap: wrap;
-    margin-top: var(--spacing-md);
-    color: var(--foreground);
+}
+
+
+
+/* Buttons */
+.actions {
+    display: flex;
+    justify-content: space-between;
     width: 100%;
-    justify-content: center;
-  }
+}
+
+.actions .btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.primary-btn {
+    background: #008cba;
+    color: white;
+}
+
+.danger-btn {
+    background: #d9534f;
+    color: white;
+}
+
   
   .member-card .toggle-item {
     padding: 6px 12px;
@@ -1859,9 +1931,6 @@ body.dark-mode #loading-animation {
     box-shadow: 0 4px 10px rgba(71, 118, 230, 0.2);
   }
   
-  .member-card .action-button.primary:hover {
-    box-shadow: 0 6px 15px rgba(71, 118, 230, 0.3);
-  }
   
   @media (prefers-color-scheme: dark) {
     .member-card {
@@ -1878,9 +1947,6 @@ body.dark-mode #loading-animation {
       background: rgba(255, 255, 255, 0.05);
     }
     
-    .member-card .toggle-item:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
     
     .member-card .toggle-item.active {
       background: rgba(71, 118, 230, 0.2);
@@ -1896,10 +1962,6 @@ body.dark-mode #loading-animation {
       border-color: rgba(255, 255, 255, 0.15);
     }
     
-    .member-card .avatar {
-      background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
-      border-color: rgba(255, 255, 255, 0.1);
-    }
   }
 /* --- Tables --- */
 .table-wrapper {
@@ -2093,10 +2155,16 @@ body.dark-mode #loading-animation {
     background: var(--primary); /* Primary button background */
     color: var(--light); /* Primary button text color */
     font-weight: 600;  /* Slightly bolder */
+    width: 100%;
 }
 
 .primary-btn:active {
     background: var(--primary-active); /* Primary button active background */
+}
+
+.login-page .primary-btn{
+    width: 58vw !important;
+    height: 35px !important;
 }
 
 .secondary-btn {
@@ -2130,34 +2198,89 @@ body.dark-mode #loading-animation {
 .theme-toggle-btn {
    background: #e9ecef; /* Theme toggle/notification button active background */
     border-color: #ced4da; /* Theme toggle/notification button active border color */
-    color: var(--foreground); /* Theme toggle/notification button active text/icon color */
+    color: var(--light); /* Theme toggle/notification button active text/icon color */
 }
 
 /* --- Toggle Buttons --- */
-.toggle-btn {
-     padding: var(--spacing-sm) var(--spacing-md);   /* Style2 padding */
-    border-radius: 25px; /* Keep pill shape */
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background-color var(--transition-fast) ease, color var(--transition-fast) ease, border-color var(--transition-fast) ease;  /* Style2 transition */
-    min-width: 70px;
-     border: 2px solid var(--border); /* Toggle button border color */
-    font-weight: 500;
-    color: var(--foreground); /* Toggle button text color */
-    background-color: var(--light); /* Toggle button background */
-}
+    .toggle-btn {
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.25s ease-in-out;
+        min-width: 80px;
+        border: none;
+        font-weight: 600;
+        position: relative;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        letter-spacing: 0.5px;
+        overflow: hidden;
+      }
+      
+      .toggle-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        background: rgba(255, 255, 255, 0.1);
+        pointer-events: none;
+      }
+      
+      .toggle-btn:hover::before {
+        opacity: 1;
+      }
+      
+      .toggle-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      }
+      
+      .toggle-btn.on {
+        background: linear-gradient(135deg, #10e240 0%, #0cb436 50%, #266002 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(12, 180, 54, 0.35);
+      }
+      
+      .toggle-btn.off {
+        background: linear-gradient(135deg, #f8593f 0%, #b42b0c 50%, #8c1e04 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(180, 43, 12, 0.35);
+      }
+      
+      /* Optional: add icon space with a pseudo-element */
+      .toggle-btn.on::after,
+      .toggle-btn.off::after {
+        font-family: "Font Awesome 5 Free", sans-serif; /* If using Font Awesome */
+        display: inline-block;
+        margin-left: 8px;
+        font-weight: 900;
+      }
+      
+      .toggle-btn.on::after {
+        content: "✓"; /* Or use Font Awesome code */
+      }
+      
+      .toggle-btn.off::after {
+        content: "✕"; /* Or use Font Awesome code */
+      }
+      
+      /* Add a subtle bounce animation for state changes */
+      @keyframes toggleBounce {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+      
+      .toggle-btn.on,
+      .toggle-btn.off {
+        animation: toggleBounce 0.3s ease;
+      }
 
-.toggle-btn.on {
-    background: linear-gradient( var(--not-btn), var(--primary)); /* On toggle button background */
-    color: var(--light); /* On toggle button text color */
-
-}
-
-.toggle-btn.off {
-     background: #e9ecef; /* Off toggle button background */
-    color: #6c757d; /* Off toggle button text color */
-    border-color: #e9ecef; /* Off toggle button border color */
-}
 
 .toggle-btn.disabled {
      background: #ced4da; /* Disabled toggle button background */
@@ -2441,6 +2564,7 @@ body.dark-mode #loading-animation {
         gap: 1rem; /* Add spacing between items */
         padding: 1rem; /* Add padding around grid */
         color: var(--foreground);
+        margin: 0;
     }
     
     
@@ -2529,12 +2653,12 @@ body.dark-mode #loading-animation {
     }
 
     .notification {
-        top: 70px;
+        top: 80px;
         right: 10px;
         font-size: 0.9rem;
         padding: var(--spacing-sm) var(--spacing-md);  /* Reduced padding */
-        background-color: var(--secondary); /* Notification background */
-        color: var(--light); /* Notification text color */
+        background-color: var(--background); /* Notification background */
+        color: var(--foreground); /* Notification text color */
     }
 
     .control-group {
@@ -2833,5 +2957,110 @@ body.dark-mode .notification-log .log-entry.info::before {
     /* Add more specific overrides for very small screens as needed */
 }
 
+
+/* --- Notification Log Updates (Revised - Ensure these are correct) --- */
+.notification-log {
+    max-height: 350px; /* Or whatever height you prefer */
+    overflow-y: auto;
+    padding: var(--spacing-md) 0; /* Consistent padding */
+    color: var(--foreground);
+}
+
+.notification-log .log-entry {
+    padding: var(--spacing-sm) var(--spacing-md); /* Consistent padding */
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    align-items: center; /* Vertically center content */
+    justify-content: space-between; /* Space out icon/text and dismiss button */
+    font-size: 0.9rem;
+    transition: background-color var(--transition-normal);
+    color: var(--foreground);
+}
+
+/* Alternating Row Colors (Optional, but improves readability) */
+.notification-log-list .log-entry:nth-child(odd) {
+    background-color: var(--dash); /* Light background for odd rows */
+}
+
+.notification-log .log-entry:last-child {
+    border-bottom: none; /* No border on the last entry */
+}
+
+.notification-log .log-entry:hover {
+    background-color: #e9ecef; /* Lighter hover effect */
+}
+
+/* Notification Message Wrapper */
+.notification-log .log-entry .message-wrapper {
+    flex-grow: 1; /* Allow the message to take up available space */
+    margin-right: var(--spacing-md); /* Space between message and button */
+    word-wrap: break-word; /* Wrap long lines */
+}
+
+/* Styles for Different Notification Types (with Icons) */
+.notification-log .log-entry.error {
+    color: var(--error); /* Red text for errors */
+}
+.notification-log .log-entry.error::before {
+    content: "\f071"; /* Font Awesome exclamation-triangle (error) */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: var(--spacing-sm);
+    color: var(--error); /* Red icon */
+}
+
+.notification-log .log-entry.success {
+    color: var(--accent); /* Green text for success */
+}
+.notification-log .log-entry.success::before {
+    content: "\f00c"; /* Font Awesome checkmark (success) */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: var(--spacing-sm);
+    color: var(--accent); /* Green icon */
+}
+
+/*Default icon*/
+.notification-log .log-entry.info::before {
+     content: "\f129"; /* Font Awesome info-circle (success) */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: var(--spacing-sm);
+    color: var(--foreground);
+}
+
+/* Style for Dismiss Button (Admin Only) */
+.notification-log .log-entry button {
+    padding: var(--spacing-xs) var(--spacing-sm); /* Smaller padding */
+    font-size: 0.8rem;
+    min-width: auto; /* Allow button to be smaller */
+     /* Ensure these classes are applied in the JavaScript */
+}
+
+/* Clear All Button (Admin) */
+.modal-actions {
+    display: flex;
+    justify-content: space-around; /* Evenly space buttons */
+    margin-top: var(--spacing-md);
+}
+
+#clear-all-notifications-btn{
+    width: 40%; 
+    padding: 10px !important;/* Adjust width as needed */
+    /* (Rest of your button styles will apply) */
+}
+
+
+.btn.danger-btn {
+    background-color: #e53e3e !important; /* Red for danger */
+    color: white;
+    padding-bottom : 7px !important;
+     width: auto; /*Let width be auto */
+}
+
+
+
 /* --- Font Import (Nunito Sans) --- */
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
+
+
