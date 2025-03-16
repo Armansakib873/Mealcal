@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         expenses: [],
         notifications: [],
         users: [],
+        meal_plans: [], // New property
         lastUpdated: null
     };
     // --- DOM Elements ---
@@ -34,6 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentDate: document.getElementById('current-date'),
         notification: document.getElementById('notification'),
         toggleThemeBtn: document.getElementById('toggle-theme'),
+
+        mealPlannerSection: document.getElementById('meal-planner-section'),
+    mealPlannerTableBody: document.querySelector('#meal-planner-table tbody'),
+    todayMealCard: document.getElementById('today-meal-card'), // New or update existing
         
         menuToggle: document.querySelector('.menu-toggle'),
         headerNav: document.querySelector('.header-nav'),
@@ -688,7 +693,7 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
 
     // --- Data Fetching ---
     async function fetchAllData() {
-    const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users'];
+        const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users', 'meal_plans'];
         for (const table of tables) {
             const { data, error } = await supabaseClient.from(table).select('*').order('created_at', { ascending: false });
             if (error) {
@@ -697,12 +702,11 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
                 continue;
             }
             appState[table] = data;
-            console.log(`Fetched ${table}:`, data); // Debug log
+            console.log(`Fetched ${table}:`, data);
         }
         appState.lastUpdated = Date.now();
         localStorage.setItem('mealsync_cache', JSON.stringify(appState));
     }
-
     // --- Member Functions ---
     async function addMember() {
         if (currentUser?.role !== 'admin') return;
@@ -1356,6 +1360,24 @@ async function deleteExpense(id) {
         elements.todayNightCount.textContent = appState.members.filter(m => m.night_status).length;
         elements.totalMeals.textContent = totalMealsCount;
         elements.mealRate.textContent = formatCurrency(mealRate, true);
+
+        await updateTodayMealCard(); // Add this
+    }
+
+    async function updateTodayMealCard() {
+        const today = new Date().toLocaleString('en-US', { weekday: 'long' }); // e.g., "Sunday"
+        const plan = appState.meal_plans.find(p => p.day_name === today) || { day_meal: 'Not set', night_meal: 'Not set' };
+        if (elements.todayMealCard) {
+            elements.todayMealCard.innerHTML = `
+                <h3>Today's Meal</h3>
+                <p>Day: ${plan.day_meal || 'Not set'}</p>
+                <p>Night: ${plan.night_meal || 'Not set'}</p>
+            `;
+        } else {
+            // Fallback to existing elements if no specific card
+            elements.todayDayCount.textContent = `${appState.members.filter(m => m.day_status).length} (${plan.day_meal || 'Not set'})`;
+            elements.todayNightCount.textContent = `${appState.members.filter(m => m.night_status).length} (${plan.night_meal || 'Not set'})`;
+        }
     }
 
     async function updateCharts() {
@@ -1568,6 +1590,72 @@ async function deleteExpense(id) {
         setInterval(updateToggleRestrictions, 60000); // Check every minute
     }
 
+
+
+    async function fetchMealPlans() {
+        const { data, error } = await supabaseClient
+            .from('meal_plans')
+            .select('*')
+            .order('id', { ascending: true }); // Consistent order: Sunday to Saturday
+        if (error) {
+            console.error('Error fetching meal plans:', error.message);
+            showNotification('Failed to load meal plans.', 'error');
+            return;
+        }
+        appState.meal_plans = data;
+        console.log('Fetched meal plans:', data);
+    }
+
+    async function renderMealPlanner() {
+        const tbody = elements.mealPlannerTableBody;
+        tbody.innerHTML = '';
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+    
+        // Ensure all days exist in appState.meal_plans
+        days.forEach(async (day) => {
+            let plan = appState.meal_plans.find(p => p.day_name === day);
+            if (!plan) {
+                // Insert default if missing
+                const { data, error } = await supabaseClient
+                    .from('meal_plans')
+                    .insert([{ day_name: day, day_meal: '', night_meal: '' }])
+                    .select()
+                    .single();
+                if (!error) {
+                    appState.meal_plans.push(data);
+                    plan = data;
+                }
+            }
+    
+            const row = document.createElement('tr');
+            row.dataset.day = day;
+            row.innerHTML = `
+                <td>${day}</td>
+                <td><input type="text" class="day-meal" value="${plan.day_meal || ''}" ${canEdit ? '' : 'disabled'}</td>
+                <td><input type="text" class="night-meal" value="${plan.night_meal || ''}" ${canEdit ? '' : 'disabled'}</td>
+            `;
+            tbody.appendChild(row);
+    
+            if (canEdit) {
+                const inputs = row.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.addEventListener('change', async () => {
+                        const field = input.classList.contains('day-meal') ? 'day_meal' : 'night_meal';
+                        const newValue = input.value.trim();
+                        await supabaseClient
+                            .from('meal_plans')
+                            .update({ [field]: newValue, updated_at: new Date().toISOString() })
+                            .eq('day_name', day);
+                        plan[field] = newValue;
+                        showNotification(`${day} ${field.replace('_', ' ')} updated to "${newValue}"`, 'success');
+                        await updateTodayMealCard(); // Update dashboard
+                    });
+                });
+            }
+        });
+    }
+
     // --- Populate Expense Select ---
     async function populateExpenseSelect() {
         if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
@@ -1762,8 +1850,8 @@ async function renderNotificationLog() {
         await renderMealTracker();
         await renderExpenses();
         await renderNotificationLog();
-
-        // Ensure dropdowns are visible and populated
+        await renderMealPlanner(); // Add this
+    
         const isAdmin = currentUser.role === 'admin';
         const isManager = currentUser.role === 'manager';
         if (isAdmin || isManager) {
@@ -1779,24 +1867,25 @@ async function renderNotificationLog() {
             }
         }
     }
-
     try {
         await createAuthForms();
         await checkAutoLogin();
         if (currentUser) {
             loginPage.style.display = 'none';
             mainApp.style.display = 'block';
-            await fetchAllData();
+            await fetchAllData();           // Updated to include meal_plans
             updateUIForRole();
-            updateSidebarUserInfo(); // Initial update
-            await updateAllViews();
+            updateSidebarUserInfo();
+            await updateAllViews();         // Includes meal planner
+            syncTogglesWithMealToggle();
+            startRestrictionCheck();
         } else {
             loginPage.style.display = 'flex';
             mainApp.style.display = 'none';
-            updateSidebarUserInfo(); // Initial update for guest
+            updateSidebarUserInfo();
         }
     } catch (error) {
         console.error('Initialization failed:', error);
         showNotification('Failed to load the app. Please try again.', 'error', true);
-      }
+    }
 });
