@@ -1025,6 +1025,10 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
             sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
         }
     
+        // Update appState
+        const memberIndex = appState.members.findIndex(m => m.id === member.id);
+        appState.members[memberIndex][statusKey] = newStatus;
+    
         // Add notification
         const mealType = type === 'day' ? 'Day Meal' : 'Night Meal';
         const action = newStatus ? 'turned ON' : 'turned OFF';
@@ -1036,17 +1040,18 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
             {
                 userName: member.name,
                 type: `meal_${type}_${newStatus ? 'on' : 'off'}`,
-                editor: editorName // Adding editor explicitly for clarity
+                editor: editorName
             }
         );
     
-        await fetchAllData();
-        await renderMembers(); // Re-render the member card after toggle
+        // Update UI
+        await renderMembers(); // Re-render member card
+        await renderSummary(); // Re-render summary table
         await updateDashboard();
         if (currentUser.member_id === member.id) {
             await updateUserOverview();
         }
-        updateUserToggleButtons(); // Sync button appearance after toggle
+        updateUserToggleButtons(); // Sync button appearance
     }
     // --- Expense Functions ---
     async function openExpenseModal(expenseId = null) {
@@ -1454,7 +1459,10 @@ async function deleteExpense(id) {
     async function renderSummary() {
         elements.summaryTableBody.innerHTML = '';
         if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
-
+    
+        // Update table header if needed (assuming it’s static in HTML)
+        // If dynamic, ensure thead includes: <th>Day</th><th>Night</th> after <th>Name</th>
+    
         for (const member of appState.members) {
             const totalMeals = await calculateTotalMeals(member.id);
             const totalDeposit = await calculateTotalDeposit(member.id);
@@ -1464,10 +1472,16 @@ async function deleteExpense(id) {
             const totalBazar = await calculateTotalBazar(member.id);
             const memberDeposits = appState.deposits.filter(d => d.member_id === member.id);
             const depositMap = Object.fromEntries(memberDeposits.map(d => [d.label, d.amount]));
-
+    
+            const isAllowed = isToggleTimeAllowed() || currentUser.role !== 'user'; // Admins/managers bypass time restriction
+            const toggleClass = isAllowed ? '' : 'restricted';
+    
             const row = document.createElement('tr');
+            row.dataset.memberId = member.id;
             row.innerHTML = `
                 <td>${member.name}</td>
+                <td><button class="toggle-btn day-toggle ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-state="${member.day_status ? 'on' : 'off'}" data-type="day">Day ${member.day_status ? 'On' : 'Off'}</button></td>
+                <td><button class="toggle-btn night-toggle ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-state="${member.night_status ? 'on' : 'off'}" data-type="night">Night ${member.night_status ? 'On' : 'Off'}</button></td>
                 <td>${totalMeals}</td>
                 <td>${formatCurrency(totalCost)}</td>
                 <td>${formatCurrency(totalDeposit)}</td>
@@ -1482,6 +1496,76 @@ async function deleteExpense(id) {
             `;
             elements.summaryTableBody.appendChild(row);
         }
+    
+        // Add event listeners to toggles
+        initializeToggleListeners();
+    }
+
+
+    function initializeToggleListeners() {
+        document.querySelectorAll('#summary-table .toggle-btn').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                if (!toggle.classList.contains('restricted')) {
+                    const memberId = parseInt(toggle.closest('tr').dataset.memberId);
+                    const member = appState.members.find(m => m.id === memberId);
+                    const type = toggle.dataset.type;
+                    toggleMealStatus(member, type); // Reuse existing function
+                }
+            });
+        });
+    }
+
+
+    function syncTogglesWithMealToggle() {
+        const mealToggle = document.querySelector('#meal-toggle'); // Add this to your dashboard HTML
+        if (!mealToggle) return;
+    
+        mealToggle.addEventListener('click', async () => {
+            const isOn = mealToggle.classList.contains('on');
+            const updates = appState.members.map(member => ({
+                id: member.id,
+                day_status: isOn,
+                night_status: isOn
+            }));
+    
+            // Update Supabase
+            await supabaseClient.from('members')
+                .upsert(updates, { onConflict: 'id' });
+    
+            // Update appState
+            appState.members.forEach(member => {
+                member.day_status = isOn;
+                member.night_status = isOn;
+            });
+    
+            // Notify
+            showNotification(`All meals turned ${isOn ? 'ON' : 'OFF'}`, 'success', false, {
+                type: `meal_all_${isOn ? 'on' : 'off'}`,
+                editor: currentUser.username
+            });
+    
+            // Refresh UI
+            await renderSummary();
+            await renderMembers();
+            await updateDashboard();
+        });
+    }
+
+
+    function isRestrictedPeriod() {
+        return !isToggleTimeAllowed(); // Reuse your existing 8 PM to 6 PM logic
+    }
+    
+    function updateToggleRestrictions() {
+        const restricted = isRestrictedPeriod() && currentUser.role === 'user'; // Admins/managers bypass
+        document.querySelectorAll('#summary-table .toggle-btn').forEach(toggle => {
+            toggle.classList.toggle('restricted', restricted);
+        });
+    }
+    
+    function startRestrictionCheck() {
+        updateToggleRestrictions();
+        setInterval(updateToggleRestrictions, 60000); // Check every minute
     }
 
     // --- Populate Expense Select ---
