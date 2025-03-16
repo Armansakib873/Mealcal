@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         notifications: [],
         users: [],
         meal_plans: [], // New property
+        messages: [],
         lastUpdated: null
     };
     // --- DOM Elements ---
@@ -40,6 +41,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     mealPlannerTableBody: document.querySelector('#meal-planner-table tbody'),
     todayMealCard: document.getElementById('today-meal-card'), // New or update existing
         
+    chatToggleBtn: document.getElementById('chat-toggle-btn'),
+    chatPopup: document.getElementById('chat-popup'),
+    chatCloseBtn: document.getElementById('chat-close-btn'),
+    chatMessages: document.getElementById('chat-messages'),
+    chatInput: document.getElementById('chat-input'),
+    sendMessageBtn: document.getElementById('send-message-btn'),
+    resetMessagesBtn: document.getElementById('reset-messages-btn'),
+
+
         menuToggle: document.querySelector('.menu-toggle'),
         headerNav: document.querySelector('.header-nav'),
         userStatus: document.getElementById('user-status'),
@@ -233,9 +243,35 @@ collapsibleHeaders.forEach(header => {
         return isMealRate ? `৳${amount.toFixed(2)}` : `৳${Math.round(amount)}`;
     }
 
-    function formatDate(dateStr) {
-        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    function formatDateOnly(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            day: 'numeric',       // "2"
+            month: 'short',       // "Mar"
+            year: 'numeric'       // "2025"
+        }).replace(/(\d+) (\w+) (\d+)/, '$1 $2, $3'); // Ensure "2 Mar, 2025"
     }
+
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        // Optionally log for debugging
+        console.log('Raw UTC:', dateString);
+        
+        // Adjust to your local timezone (UTC+6)
+        const localDate = new Date(date.getTime() + (6 * 60 * 60 * 1000)); // Add 6 hours
+        
+        return localDate.toLocaleString('en-US', {
+            day: 'numeric',       // "2"
+            month: 'short',       // "Mar"
+            year: 'numeric',      // "2025"
+            hour: 'numeric',      // "1"
+            minute: '2-digit',    // "28"
+            hour12: true          // "AM/PM"
+        }).replace(/(\d+) (\w+) (\d+) (\d+:\d+ .M)/, '$1 $2, $3, $4'); // "2 Mar, 2025, 1:28 AM"
+    }
+
 
     function isToggleTimeAllowed() {
         const now = new Date();
@@ -693,7 +729,7 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
 
     // --- Data Fetching ---
     async function fetchAllData() {
-        const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users', 'meal_plans'];
+        const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users', 'meal_plans', 'messages'];
         for (const table of tables) {
             const { data, error } = await supabaseClient.from(table).select('*').order('created_at', { ascending: false });
             if (error) {
@@ -707,6 +743,7 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
         appState.lastUpdated = Date.now();
         localStorage.setItem('mealsync_cache', JSON.stringify(appState));
     }
+
     // --- Member Functions ---
     async function addMember() {
         if (currentUser?.role !== 'admin') return;
@@ -1149,27 +1186,27 @@ async function deleteExpense(id) {
 }
 
 
-    async function renderExpenses() {
-        elements.expensesTableBody.innerHTML = '';
-        for (const expense of appState.expenses) {
-            const member = appState.members.find(m => m.id === expense.member_id);
-            const row = document.createElement('tr');
-            row.dataset.id = expense.id;
-            row.innerHTML = `
-                <td>${formatDate(expense.date)}</td>
-                <td>${member ? member.name : 'Unknown'}</td>
-                <td>${formatCurrency(expense.amount)}</td>
-                <td>${(currentUser.can_edit || currentUser.role === 'admin' || currentUser.role === 'manager') ? `
-                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i></button>
-                    <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i></button>` : ''}</td>
-            `;
-            if (currentUser.can_edit || currentUser.role === 'admin' || currentUser.role === 'manager') {
-                row.querySelector('.edit-btn').addEventListener('click', () => openExpenseModal(expense.id));
-                row.querySelector('.delete-btn').addEventListener('click', () => deleteExpense(expense.id));
-            }
-            elements.expensesTableBody.appendChild(row);
+async function renderExpenses() {
+    elements.expensesTableBody.innerHTML = '';
+    for (const expense of appState.expenses) {
+        const member = appState.members.find(m => m.id === expense.member_id);
+        const row = document.createElement('tr');
+        row.dataset.id = expense.id;
+        row.innerHTML = `
+            <td>${formatDateOnly(expense.date)}</td>
+            <td>${member ? member.name : 'Unknown'}</td>
+            <td>${formatCurrency(expense.amount)}</td>
+            <td>${(currentUser.can_edit || currentUser.role === 'admin' || currentUser.role === 'manager') ? `
+                <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i></button>
+                <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i></button>` : ''}</td>
+        `;
+        if (currentUser.can_edit || currentUser.role === 'admin' || currentUser.role === 'manager') {
+            row.querySelector('.edit-btn').addEventListener('click', () => openExpenseModal(expense.id));
+            row.querySelector('.delete-btn').addEventListener('click', () => deleteExpense(expense.id));
         }
+        elements.expensesTableBody.appendChild(row);
     }
+}
 
     // --- Meal Tracker ---
     async function renderMealTracker() {
@@ -1655,6 +1692,135 @@ async function deleteExpense(id) {
             }
         });
     }
+//messages section
+
+async function renderMessages() {
+    if (!currentUser) return;
+    elements.chatMessages.innerHTML = '';
+    
+    const messages = appState.messages
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    
+    let lastSenderId = null;
+    
+    messages.forEach(msg => {
+        const sender = appState.users.find(u => u.id === msg.sender_id)?.username || 'Unknown';
+        const isSelf = msg.sender_id === currentUser.id;
+        const sameAsPrevious = msg.sender_id === lastSenderId;
+        
+        // Create new message container
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('chat-message');
+        if (isSelf) messageDiv.classList.add('sent');
+        else messageDiv.classList.add('received');
+        
+        // Always include sender name, formatting depends on message type
+        const contentHTML = `
+            <div class="message-header">
+                <span class="message-sender">${sender}</span>
+            </div>
+            <div class="message-body">${msg.content}</div>
+             <span class="message-timestamp">${formatDate(msg.created_at)}</span>
+        `;
+        
+        messageDiv.innerHTML = contentHTML;
+        elements.chatMessages.appendChild(messageDiv);
+        
+        lastSenderId = msg.sender_id;
+    });
+    
+    // Scroll to bottom
+    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+}
+
+async function sendMessage() {
+    const content = elements.chatInput.value.trim();
+    if (!content) {
+        showNotification('Enter a message.', 'error');
+        return;
+    }
+
+    const { data, error } = await supabaseClient
+        .from('messages')
+        .insert([{ sender_id: currentUser.id, content }])
+        .select()
+        .single();
+    if (error) {
+        console.error('Error sending message:', error.message);
+        showNotification('Failed to send message.', 'error');
+        return;
+    }
+
+    appState.messages.push(data);
+    elements.chatInput.value = '';
+    await renderMessages();
+    showNotification('Message sent!', 'success');
+}
+function setupMessageSubscription() {
+    const channel = supabaseClient
+        .channel('public:messages')
+        .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'messages' 
+        }, payload => {
+            console.log('New message received:', payload.new); // Debug
+            appState.messages.push(payload.new);
+            if (!elements.chatPopup.classList.contains('open')) {
+                const sender = appState.users.find(u => u.id === payload.new.sender_id)?.username || 'Unknown';
+                showNotification(`New message from ${sender}: ${payload.new.content}`, 'info');
+            }
+            renderMessages();
+        })
+        .on('postgres_changes', { 
+            event: 'DELETE', 
+            schema: 'public', 
+            table: 'messages' 
+        }, () => {
+            console.log('Messages deleted'); // Debug
+            appState.messages = [];
+            renderMessages();
+        })
+        .subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('Subscribed to group chat');
+            } else if (err) {
+                console.error('Subscription error:', err);
+            }
+        });
+
+    // Ensure subscription persists
+    return channel;
+}
+function toggleChatPopup() {
+    elements.chatPopup.classList.toggle('hidden');
+    if (!elements.chatPopup.classList.contains('hidden')) {
+        renderMessages();
+    }
+}
+
+
+async function resetMessages() {
+    if (currentUser?.role !== 'admin') {
+        showNotification('Only admins can reset messages.', 'error');
+        return;
+    }
+
+    const { error } = await supabaseClient
+        .from('messages')
+        .delete()
+        .neq('id', 0); // Deletes all rows (Supabase requires a condition)
+    if (error) {
+        console.error('Error resetting messages:', error.message);
+        showNotification('Failed to reset messages.', 'error');
+        return;
+    }
+
+    appState.messages = [];
+    await renderMessages();
+    showNotification('All messages have been reset.', 'success');
+}
+
 
     // --- Populate Expense Select ---
     async function populateExpenseSelect() {
@@ -1850,7 +2016,7 @@ async function renderNotificationLog() {
         await renderMealTracker();
         await renderExpenses();
         await renderNotificationLog();
-        await renderMealPlanner(); // Add this
+        await renderMealPlanner();
     
         const isAdmin = currentUser.role === 'admin';
         const isManager = currentUser.role === 'manager';
@@ -1867,18 +2033,31 @@ async function renderNotificationLog() {
             }
         }
     }
+
     try {
         await createAuthForms();
         await checkAutoLogin();
         if (currentUser) {
             loginPage.style.display = 'none';
             mainApp.style.display = 'block';
-            await fetchAllData();           // Updated to include meal_plans
+            await fetchAllData();
             updateUIForRole();
             updateSidebarUserInfo();
-            await updateAllViews();         // Includes meal planner
+            await updateAllViews();
             syncTogglesWithMealToggle();
             startRestrictionCheck();
+            setupMessageSubscription(); // Should already be here
+            elements.chatToggleBtn.addEventListener('click', toggleChatPopup);
+            elements.chatCloseBtn.addEventListener('click', toggleChatPopup);
+            elements.sendMessageBtn.addEventListener('click', sendMessage);
+            elements.chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+            elements.resetMessagesBtn.addEventListener('click', async () => {
+                if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
+                    await resetMessages();
+                }
+            });
         } else {
             loginPage.style.display = 'flex';
             mainApp.style.display = 'none';

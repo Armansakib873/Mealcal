@@ -124,6 +124,7 @@
                         <h3>Grant Editing Access</h3>
                         <!-- Dynamic user toggles -->
                     </div>
+
                     <h3>Account settings</h3>
                     <div id="user-select-container" class="user-select-container hidden">
                         <select id="user-select" class="select-input">
@@ -134,6 +135,8 @@
                         <!-- Dynamic password inputs -->
                     </div>
                     <h3>Data Control</h3>
+                    
+                    <button id="reset-messages-btn" class="btn danger hidden">Reset Messages</button>
                     <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-sync-alt"></i> Reset Month</button>
                     <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Data</button>
                     <select id="export-format" class="select-input">
@@ -142,6 +145,7 @@
                     </select>
                 </div>
             </section>
+
 
             <!-- Dashboard Section -->
             <section class="dashboard-section card" >
@@ -331,6 +335,7 @@
                 </div>
             </section>
 
+            
             <!-- Meal Tracker Section -->
             <section class="meal-tracker card" id="meal-tracker-section">
                 <h2 class="collapsible-header">
@@ -476,7 +481,26 @@
             </div>
         </div>
 
+        
+        <!-- chat -->
+
+        <button id="chat-toggle-btn" class="chat-toggle-btn">
+            <i class="fas fa-comments"></i>
+        </button>
+        <div id="chat-popup" class="chat-popup hidden">
+            <div class="chat-header">
+                <h3>Group Chat</h3>
+                <button id="chat-close-btn" class="btn-close">✕</button>
+            </div>
+            <div id="chat-messages" class="chat-box"></div>
+            <div class="chat-input">
+                <input type="text" id="chat-input" placeholder="Type a message..." />
+                <button id="send-message-btn" class="chat-btn">Send</button>
+            </div>
+        </div>
+
 
     <script src="app.js"></script>
 </body>
+
 </html>
