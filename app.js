@@ -964,12 +964,12 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
             card.innerHTML = `
                 <h3>${member.name}</h3>
                 <div class="card-details">
-                <div>Total Deposit <span class="total-deposit"> ${formatCurrency(totalDeposit)}</span></div>
+                <div>Deposit <span class="total-deposit"> ${formatCurrency(totalDeposit)}</span></div>
                <div>Balance <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
 
 
-                <div>Total Meals <span class="total-meals">${totalMeals}</span></div>
-                <div>Total Bazar<span class="total-bazar"> ${totalBazar}</span></div>
+                <div>Meals <span class="total-meals">${totalMeals}</span></div>
+                <div>Bazar<span class="total-bazar"> ${totalBazar}</span></div>
                 </div>
                 <div class="toggles">
                     <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
@@ -1151,8 +1151,8 @@ async function deleteExpense(id) {
                 <td>${member ? member.name : 'Unknown'}</td>
                 <td>${formatCurrency(expense.amount)}</td>
                 <td>${(currentUser.can_edit || currentUser.role === 'admin' || currentUser.role === 'manager') ? `
-                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
-                    <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>` : ''}</td>
+                    <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i></button>
+                    <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i></button>` : ''}</td>
             `;
             if (currentUser.can_edit || currentUser.role === 'admin' || currentUser.role === 'manager') {
                 row.querySelector('.edit-btn').addEventListener('click', () => openExpenseModal(expense.id));

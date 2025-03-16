@@ -895,6 +895,15 @@ body.dark-mode #loading-animation {
     gap: var(--spacing-md);
 }
 
+
+.login-footer{
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+}
+
 /* Input Fields Styling */
 .input-wrapper {
     position: relative;
@@ -1650,7 +1659,8 @@ body.dark-mode #loading-animation {
 }
 .deposit-history li {
     padding: var(--spacing-sm) 0;      /* Style2 */
-    font-size: 0.9rem;                /* Style2 */
+    font-size: 0.9rem; 
+    font-weight: bold;               /* Style2 */
     border-bottom: 1px dashed var(--border); /* Deposit history border color */
      transition: background-color var(--transition-normal); /* Style2 */
     display: flex;                  /* Style2 */
@@ -1659,7 +1669,7 @@ body.dark-mode #loading-animation {
     color: var(--foreground); /* Deposit history list item color */
 }
 .deposit-history li:last-child {
-     border-bottom: none;  /* Style2 */
+     border-bottom: none;
 }
 
 .deposit-history li:active {
@@ -1729,14 +1739,12 @@ body.dark-mode #loading-animation {
 }
 
 .member-card {
-    background: var(--primary);
     padding: 25px;
     border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 450px;
     gap: var(--spacing-md);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.06);
@@ -1764,7 +1772,7 @@ body.dark-mode #loading-animation {
 
 .card-details div {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-evenly;
     width: 100%;
     font-weight: 500;
     align-items: center;
@@ -1978,7 +1986,7 @@ body.dark-mode #loading-animation {
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: 0.6rem;
     background-color: var(--light); /* Table background */
     color: var(--foreground); /* Table text color */
 }
@@ -1989,16 +1997,19 @@ body.dark-mode #loading-animation {
     text-align: left;
     border-bottom: 1px solid var(--border); /* Table cell border color */
     white-space: nowrap;
+    text-align: center;
     transition: background-color var(--transition-normal); /* Style2 transition */
     color: var(--foreground); /* Table cell text color */
 }
 
 .data-table th {
-    background: var(--light); /* Table header background */
+    background: var(--dash); /* Table header background */
     color: var(--foreground); /* Table header text color */
     font-weight: 600;
     font-size: 0.95rem;    /* Style2 size */
     position: sticky;
+
+
     top: 0;
     z-index: 10;
     text-transform: uppercase;
@@ -2015,7 +2026,7 @@ body.dark-mode #loading-animation {
 #meal-table td:first-child {
     position: sticky;
     left: 0;
-    background: var(--light); /* Sticky column background */
+    background-color: var(--light);
     color: var(--foreground); /* Sticky column text color */
     z-index: 11;
     min-width: 130px;         /* Style2 width */
@@ -2023,10 +2034,14 @@ body.dark-mode #loading-animation {
     font-weight: 500;
 }
 
-#meal-table td:first-child {
-    background: var(--light); /* Sticky column background */
-    color: var(--foreground); /* Sticky column text color */
+
+
+#meal-table th:hover,
+#meal-table td:hover{
+    background: rgb(214, 214, 214); /* Table hover background (light mode) */
+    color: var(--foreground); /* Table hover text color */
 }
+
 
 #meal-table tr:active td:first-child {
     background: rgb(207, 229, 247); /* Sticky column active background */
@@ -2061,6 +2076,7 @@ body.dark-mode #loading-animation {
     border: 1px solid var(--border); /* Input border color */
     border-radius: var(--radius-sm); /* Style2 radius */
     font-size: 0.95rem; /* Style2 size */
+    text-align: center;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast); /* Style2 transitions */
     color: var(--foreground); /* Input text color */
     background-color: var(--light); /* Input background */
@@ -2163,7 +2179,7 @@ body.dark-mode #loading-animation {
 }
 
 .login-page .primary-btn{
-    width: 58vw !important;
+    width: 80% !important;
     height: 35px !important;
 }
 
@@ -2570,26 +2586,42 @@ body.dark-mode #loading-animation {
     
 
     .data-table {
-        font-size: 0.85rem; /* Smaller font */
+        font-size: 0.9rem; /* Slightly larger font for better readability */
         background-color: var(--light); /* Table background */
         color: var(--foreground); /* Table text color */
+        border-collapse: collapse; /* Ensures proper border rendering */
+        width: 100%; /* Make table take full width */
     }
-
+    
     .data-table th,
     .data-table td {
-        padding: var(--spacing-sm) var(--spacing-xs); /* Reduced padding */
-        border-bottom: 1px solid var(--border); /* Table cell border color */
-        white-space: normal; /* Allow wrapping */
-        color: var(--foreground); /* Table cell text color */
+        padding: 2px 20px; /* Balanced padding */
+        border-bottom: 1px solid var(--border); /* Table cell border */
+        white-space: normal; /* Allow text wrapping */
+        color: var(--foreground); /* Table text color */
+        text-align: left; /* Align text for better readability */
+    }
+    
+    /* Header row */
+    .data-table thead th {
+        background: var(--primary-light); /* Light primary color for header */
+        font-weight: bold;
+        text-transform: uppercase; /* Improve header visibility */
+        border-bottom: 2px solid var(--border-dark); /* Thicker bottom border */
+    }
+    
+    /* Alternating row colors for better readability */
+    .data-table tbody tr:nth-child(even) {
+        background-color: rgba(235, 235, 235, 0.464); /* Alternate row color */
     }
 
-    #meal-table th:first-child,
-    #meal-table td:first-child {
-        min-width: 100px; /* Smaller min-width */
-        background: var(--light); /* Sticky column background */
-        color: var(--foreground); /* Sticky column text color */
-        border-right: 2px solid var(--border); /* Sticky column border color */
+    /* Hover effect for better interaction */
+    .data-table tbody tr:hover {
+        background-color: rgba(46, 55, 55, 0.226); /* Subtle hover effect */
+        border: 1.2px solid #008bbaa0 ;
+        transition: background 0.8s ease-in-out;
     }
+
 
     #summary-table th{
         font-size: 0.7rem;
@@ -2794,6 +2826,11 @@ body.dark-mode #loading-animation {
     }
 
 
+    .card-details div {
+        justify-content: space-between;
+    }
+
+
     .stat-box {
         min-height: 100px;      /* Smaller height */
         padding: var(--spacing-md); /* Reduced padding */
@@ -2939,8 +2976,10 @@ body.dark-mode .notification-log .log-entry.info::before {
     width: 100px;
 }
 
-.modal-actions button {
-    padding: 3px 10px; /* Style2 padding */
+
+
+.modal-actions button { 
+    padding: 3px 10px; 
 
 }
 /* Extra tweaks for very small screens (max-width: 480px) */
