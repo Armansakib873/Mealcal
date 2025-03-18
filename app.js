@@ -2028,8 +2028,13 @@ async function renderNotificationLog() {
         }
     }
 
-// Move this outside the try block, right after elements are defined
-elements.chatToggleBtn?.addEventListener('click', toggleChatPopup); // Optional chaining to avoid errors if null
+// Move these outside the try block, right after elements are defined
+elements.chatToggleBtn?.addEventListener('click', toggleChatPopup);
+elements.chatCloseBtn?.addEventListener('click', toggleChatPopup);
+elements.sendMessageBtn?.addEventListener('click', sendMessage);
+elements.chatInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
 
 try {
     await createAuthForms();
@@ -2044,13 +2049,7 @@ try {
         syncTogglesWithMealToggle();
         startRestrictionCheck();
         setupMessageSubscription();
-        // Remove this line since it's now outside
-        // elements.chatToggleBtn.addEventListener('click', toggleChatPopup);
-        elements.chatCloseBtn.addEventListener('click', toggleChatPopup);
-        elements.sendMessageBtn.addEventListener('click', sendMessage);
-        elements.chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
+     
         elements.resetMessagesBtn.addEventListener('click', async () => {
             if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
                 await resetMessages();
