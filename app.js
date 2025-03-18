@@ -1696,7 +1696,7 @@ async function renderExpenses() {
 
 async function renderMessages() {
     if (!currentUser) return;
-    elements.chatMessages.innerHTML = '';
+    elements.chatMessages.innerHTML = ''; // Clear existing messages
     
     const messages = appState.messages
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -1733,18 +1733,23 @@ async function renderMessages() {
     elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
 }
 
+let isSending = false;
+
 async function sendMessage() {
-    const content = elements.chatInput.value.trim();
-    if (!content) {
-        showNotification('Enter a message.', 'error');
+    if (isSending || !elements.chatInput.value.trim()) {
+        showNotification('Message already sending or empty.', 'error');
         return;
     }
 
+    isSending = true;
+    const content = elements.chatInput.value.trim();
     const { data, error } = await supabaseClient
         .from('messages')
         .insert([{ sender_id: currentUser.id, content }])
         .select()
         .single();
+    isSending = false;
+
     if (error) {
         console.error('Error sending message:', error.message);
         showNotification('Failed to send message.', 'error');
@@ -1756,30 +1761,21 @@ async function sendMessage() {
     await renderMessages();
     showNotification('Message sent!', 'success');
 }
+
 function setupMessageSubscription() {
     const channel = supabaseClient
         .channel('public:messages')
-        .on('postgres_changes', { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'messages' 
-        }, payload => {
-            console.log('New message received:', payload.new); // Debug
-            appState.messages.push(payload.new);
-            if (!elements.chatPopup.classList.contains('open')) {
-                const sender = appState.users.find(u => u.id === payload.new.sender_id)?.username || 'Unknown';
-                showNotification(`New message from ${sender}: ${payload.new.content}`, 'info');
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+            console.log('New message received:', payload.new);
+            // Check if message already exists in appState by ID
+            if (!appState.messages.some(msg => msg.id === payload.new.id)) {
+                appState.messages.push(payload.new);
+                if (!elements.chatPopup.classList.contains('open')) {
+                    const sender = appState.users.find(u => u.id === payload.new.sender_id)?.username || 'Unknown';
+                    showNotification(`New message from ${sender}: ${payload.new.content}`, 'info');
+                }
+                renderMessages();
             }
-            renderMessages();
-        })
-        .on('postgres_changes', { 
-            event: 'DELETE', 
-            schema: 'public', 
-            table: 'messages' 
-        }, () => {
-            console.log('Messages deleted'); // Debug
-            appState.messages = [];
-            renderMessages();
         })
         .subscribe((status, err) => {
             if (status === 'SUBSCRIBED') {
@@ -1788,8 +1784,6 @@ function setupMessageSubscription() {
                 console.error('Subscription error:', err);
             }
         });
-
-    // Ensure subscription persists
     return channel;
 }
 function toggleChatPopup() {
@@ -2034,37 +2028,41 @@ async function renderNotificationLog() {
         }
     }
 
-    try {
-        await createAuthForms();
-        await checkAutoLogin();
-        if (currentUser) {
-            loginPage.style.display = 'none';
-            mainApp.style.display = 'block';
-            await fetchAllData();
-            updateUIForRole();
-            updateSidebarUserInfo();
-            await updateAllViews();
-            syncTogglesWithMealToggle();
-            startRestrictionCheck();
-            setupMessageSubscription(); // Should already be here
-            elements.chatToggleBtn.addEventListener('click', toggleChatPopup);
-            elements.chatCloseBtn.addEventListener('click', toggleChatPopup);
-            elements.sendMessageBtn.addEventListener('click', sendMessage);
-            elements.chatInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') sendMessage();
-            });
-            elements.resetMessagesBtn.addEventListener('click', async () => {
-                if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
-                    await resetMessages();
-                }
-            });
-        } else {
-            loginPage.style.display = 'flex';
-            mainApp.style.display = 'none';
-            updateSidebarUserInfo();
-        }
-    } catch (error) {
-        console.error('Initialization failed:', error);
-        showNotification('Failed to load the app. Please try again.', 'error', true);
+// Move this outside the try block, right after elements are defined
+elements.chatToggleBtn?.addEventListener('click', toggleChatPopup); // Optional chaining to avoid errors if null
+
+try {
+    await createAuthForms();
+    await checkAutoLogin();
+    if (currentUser) {
+        loginPage.style.display = 'none';
+        mainApp.style.display = 'block';
+        await fetchAllData();
+        updateUIForRole();
+        updateSidebarUserInfo();
+        await updateAllViews();
+        syncTogglesWithMealToggle();
+        startRestrictionCheck();
+        setupMessageSubscription();
+        // Remove this line since it's now outside
+        // elements.chatToggleBtn.addEventListener('click', toggleChatPopup);
+        elements.chatCloseBtn.addEventListener('click', toggleChatPopup);
+        elements.sendMessageBtn.addEventListener('click', sendMessage);
+        elements.chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        elements.resetMessagesBtn.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
+                await resetMessages();
+            }
+        });
+    } else {
+        loginPage.style.display = 'flex';
+        mainApp.style.display = 'none';
+        updateSidebarUserInfo();
     }
+} catch (error) {
+    console.error('Initialization failed:', error);
+    showNotification('Failed to load the app. Please try again.', 'error', true);
+}
 });
