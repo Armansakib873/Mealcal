@@ -1698,7 +1698,7 @@ async function sendMessage() {
 }
 
 function setupMessageSubscription() {
-    const channel = supabaseClient
+    let channel = supabaseClient
         .channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
             console.log('New message received:', payload.new);
@@ -1709,7 +1709,7 @@ function setupMessageSubscription() {
                     const sender = appState.users.find(u => u.id === payload.new.sender_id)?.username || 'Unknown';
                     showNotification(`New message from ${sender}: ${payload.new.content}`, 'info');
                 }
-                renderMessages();
+                renderMessages(); // Call renderMessages immediately
             }
         })
         .subscribe((status, err) => {
@@ -1717,17 +1717,35 @@ function setupMessageSubscription() {
                 console.log('Subscribed to group chat');
             } else if (err) {
                 console.error('Subscription error:', err);
+                // Attempt to resubscribe after a delay
+                setTimeout(() => {
+                    console.log('Reattempting subscription...');
+                    channel.unsubscribe();
+                    setupMessageSubscription(); // Recursive call to reconnect
+                }, 1000); // Retry after 1 second
             }
         });
+
     return channel;
 }
+
+// Add lifecycle event listener to handle visibility changes (e.g., mobile background/foreground)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && (!channel || channel.state === 'CLOSED')) {
+        console.log('App became visible, re-establishing subscription...');
+        setupMessageSubscription(); // Re-establish subscription when app is visible
+    }
+});
+
+
+// Replace the existing toggleChatPopup function
 function toggleChatPopup() {
     elements.chatPopup.classList.toggle('hidden');
+    renderMessages(); // Render messages regardless of state to ensure latest updates
     if (!elements.chatPopup.classList.contains('hidden')) {
-        renderMessages();
+        elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight; // Scroll to bottom when opened
     }
 }
-
 
 async function resetMessages() {
     if (currentUser?.role !== 'admin') {
