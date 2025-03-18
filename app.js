@@ -1670,6 +1670,68 @@ async function renderMessages() {
 
 let isSending = false;
 
+
+// Add this after the renderMessages function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Replace renderMessages calls with debounced version
+const debouncedRenderMessages = debounce(renderMessages, 100); // 100ms debounce
+
+// Update the subscription to use debouncedRenderMessages
+function setupMessageSubscription() {
+    let channel = supabaseClient
+        .channel('public:messages')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+            console.log('New message received:', payload.new);
+            if (!appState.messages.some(msg => msg.id === payload.new.id)) {
+                appState.messages.push(payload.new);
+                if (!elements.chatPopup.classList.contains('open')) {
+                    const sender = appState.users.find(u => u.id === payload.new.sender_id)?.username || 'Unknown';
+                    showNotification(`New message from ${sender}: ${payload.new.content}`, 'info');
+                }
+                debouncedRenderMessages(); // Use debounced version
+            }
+        })
+        .subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('Subscribed to group chat');
+            } else if (err) {
+                console.error('Subscription error:', err);
+                setTimeout(() => {
+                    console.log('Reattempting subscription...');
+                    channel.unsubscribe();
+                    setupMessageSubscription();
+                }, 1000);
+            }
+        });
+
+    return channel;
+}
+
+
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 async function sendMessage() {
     if (isSending || !elements.chatInput.value.trim()) {
         showNotification('Message already sending or empty.', 'error');
@@ -1696,20 +1758,19 @@ async function sendMessage() {
     await renderMessages();
     showNotification('Message sent!', 'success');
 }
-
+// Update the subscription to use debouncedRenderMessages
 function setupMessageSubscription() {
     let channel = supabaseClient
         .channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
             console.log('New message received:', payload.new);
-            // Check if message already exists in appState by ID
             if (!appState.messages.some(msg => msg.id === payload.new.id)) {
                 appState.messages.push(payload.new);
                 if (!elements.chatPopup.classList.contains('open')) {
                     const sender = appState.users.find(u => u.id === payload.new.sender_id)?.username || 'Unknown';
                     showNotification(`New message from ${sender}: ${payload.new.content}`, 'info');
                 }
-                renderMessages(); // Call renderMessages immediately
+                debouncedRenderMessages(); // Use debounced version
             }
         })
         .subscribe((status, err) => {
@@ -1717,33 +1778,23 @@ function setupMessageSubscription() {
                 console.log('Subscribed to group chat');
             } else if (err) {
                 console.error('Subscription error:', err);
-                // Attempt to resubscribe after a delay
                 setTimeout(() => {
                     console.log('Reattempting subscription...');
                     channel.unsubscribe();
-                    setupMessageSubscription(); // Recursive call to reconnect
-                }, 1000); // Retry after 1 second
+                    setupMessageSubscription();
+                }, 1000);
             }
         });
 
     return channel;
 }
 
-// Add lifecycle event listener to handle visibility changes (e.g., mobile background/foreground)
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && (!channel || channel.state === 'CLOSED')) {
-        console.log('App became visible, re-establishing subscription...');
-        setupMessageSubscription(); // Re-establish subscription when app is visible
-    }
-});
-
-
-// Replace the existing toggleChatPopup function
+// Update toggleChatPopup to use debouncedRenderMessages
 function toggleChatPopup() {
     elements.chatPopup.classList.toggle('hidden');
-    renderMessages(); // Render messages regardless of state to ensure latest updates
+    debouncedRenderMessages(); // Use debounced version
     if (!elements.chatPopup.classList.contains('hidden')) {
-        elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight; // Scroll to bottom when opened
+        elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
     }
 }
 
@@ -1989,6 +2040,7 @@ elements.chatInput?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
 });
 
+// Replace the setupMessageSubscription call in the try block
 try {
     await createAuthForms();
     await checkAutoLogin();
@@ -2001,8 +2053,9 @@ try {
         await updateAllViews();
         syncTogglesWithMealToggle();
         startRestrictionCheck();
-        setupMessageSubscription();
-     
+        // Store the channel and ensure it’s initialized
+        window.chatChannel = setupMessageSubscription(); // Store globally to allow reconnection
+
         elements.resetMessagesBtn.addEventListener('click', async () => {
             if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
                 await resetMessages();
