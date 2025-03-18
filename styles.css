@@ -285,7 +285,10 @@ a:active {
     margin-left: auto;
     display: flex;
     align-items: center;
+    color: var(--primary);
+    font-size: 1.4rem;
 }
+
 
 .collapsible-header .toggle-icon i {
     transition: transform var(--transition-smooth);
@@ -1147,30 +1150,36 @@ body.dark-mode #loading-animation {
 
 .meal-count-box .meal-count {
     display: flex;
+
     justify-content: space-between;
     gap: var(--spacing-md);
     font-size: 0.85rem;
     margin-top: var(--spacing-sm);
 }
+
+
 .meal-count div {
     flex: 1;
     text-align: center;
 }
 
-.meal-count p {
-    font-size: 1.1rem;
-    margin-top: var(--spacing-xs);
-    font-weight: 600;
-    color: var(--foreground);
+.day-meal {
+    padding: 10px;
+    background-color: #f6f5e87c;
+    border-radius: var(--radius-lg);
+    transition: background-color var(--transition-fast);
+
+}
+.night-meal {
+
+    background-color: #91f7c237;
+    padding: 10px;
+    border-radius: var(--radius-lg);
+    transition: background-color var(--transition-fast);
 }
 
-.meal-count-2{
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
+
+\
 
 .meal-count span {
     font-size: 1.5rem;
@@ -1443,6 +1452,9 @@ body.dark-mode #loading-animation {
 
 .balance-text {
     background: linear-gradient(90deg, #0e5c22, #3abb54) !important;
+    padding: 5px 10px;
+    border-radius: var(--radius-md);
+    color: var(--light);
 }
 
 .overview-item .balance-text {
@@ -1482,13 +1494,14 @@ body.dark-mode #loading-animation {
 }
 
 .total-meals, .total-bazar {
-    background: linear-gradient(90deg, #6b4134ee, #4f355fa9);
+    background: linear-gradient(90deg, #9a604fee, #3e1956a9);
     color: var(--light);
     text-align: center;
     font-weight: 600;
     box-shadow: 0 3px 10px rgba(11, 61, 45, 0.5);
     min-width: 80px;
 }
+
 
 .member-card .toggles {
     display: flex;
@@ -1607,6 +1620,10 @@ body.dark-mode #loading-animation {
     color: var(--foreground);
 }
 
+.data-table .total-meals{
+    color: var(--light);
+}
+
 .data-table th,
 .data-table td {
     padding: var(--spacing-md) var(--spacing-sm);
@@ -1628,6 +1645,7 @@ body.dark-mode #loading-animation {
     z-index: 10;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    text-align: center !important; /* Center-align text */
 }
 
 .data-table tr:active td {
@@ -1678,32 +1696,94 @@ body.dark-mode #loading-animation {
 #summary-table tr:active td:first-child {
     background: rgb(207, 229, 247);
 }
+/* Enable horizontal scrolling */
+.meal-plan {
+    position: relative; /* Added for positioning context */
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto; /* Enables horizontal scrolling */
+    margin-bottom: 1rem; /* Add some bottom margin */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
 
+/* Make sure table doesn't shrink */
+#meal-planner-table {
+    min-width: 100%;
+    width: auto; /* Allow table to expand based on content */
+    border-collapse: collapse;
+    table-layout: fixed; /* Creates more predictable column widths */
+}
 
-/* --- meal plan --- */
+/* Improved table styling */
+#meal-planner-table th,
+#meal-planner-table td {
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+}
 
+#meal-planner-table th {
+    background-color: #f7fafc;
+    position: sticky; /* Make headers sticky */
+    top: 0;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+/* Ensure inputs are fully visible and consistent */
 #meal-planner-table input[type="text"] {
     width: 100%;
-    padding: var(--spacing-sm);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    background: var(--input-bg);
-    color: var(--foreground);
+    min-width: 150px;
+    box-sizing: border-box;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
 }
 
-#meal-planner-table input[type="text"]:disabled {
-    background: #e9ecef;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
+/* Responsive design improvements */
 @media (max-width: 768px) {
-    #meal-planner-table input[type="text"] {
-        font-size: 0.85rem;
-        padding: 4px 8px;
+    .meal-plan {
+        margin-left: -1rem; /* Extend beyond container if needed */
+        margin-right: -1rem;
+        width: calc(100% + 2rem);
+        padding: 0 1rem;
+    }
+    
+    #meal-planner-table {
+        min-width: 700px; /* Adjusted for better mobile viewing */
+    }
+    
+    /* Allow vertical scrolling for very large tables */
+    .meal-plan {
+        max-height: 80vh;
+        overflow-y: auto;
     }
 }
 
+/* Visual indicator for scrollable area */
+.meal-plan::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 20px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.9));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+/* Only show gradient when content is scrollable */
+.meal-plan.is-scrollable::after {
+    opacity: 1;
+}
+
+/* Add some animation to the scroll */
+.meal-plan {
+    scroll-behavior: smooth;
+}
 
 /* --- message --- */
 
@@ -2684,6 +2764,21 @@ body.dark-mode #loading-animation {
         color: var(--foreground);
     }
 
+    .stat-box .meal-count p {
+        font-size: 1rem;
+        margin-top: var(--spacing-xs);
+        font-weight: 600;
+        color: var(--foreground);
+    }
+
+    .stat-box span {
+        font-size: 1.2rem;
+        color: rgb(40, 39, 39);
+        margin-top: var(--spacing-xs);
+    }
+
+ 
+
     .overview-grid {
         grid-template-columns: 1fr;
         color: var(--foreground);
@@ -2717,6 +2812,7 @@ body.dark-mode #loading-animation {
     .data-table thead th {
         background: var(--primary-light);
         font-weight: bold;
+
         text-transform: uppercase;
         border-bottom: 2px solid var(--border-dark);
     }

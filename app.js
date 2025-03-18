@@ -70,9 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         totalMeals: document.getElementById('total-meals'),
         mealRate: document.getElementById('meal-rate'),
         statsTab: document.getElementById('stats-tab'),
-        chartsTab: document.getElementById('charts-tab'),
         statsContent: document.getElementById('stats-content'),
-        chartsContent: document.getElementById('charts-content'),
         userName: document.getElementById('user-name'),
         userDeposit: document.getElementById('user-deposit'),
         userBalance: document.getElementById('user-balance'),
@@ -472,7 +470,6 @@ function updateSidebarUserInfo() { // Renamed function
             .update({ theme: isDark ? 'dark' : 'light' })
             .eq('user_id', currentUser.id);
         }
-        updateCharts();
       });
 
 
@@ -679,19 +676,8 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
 
     elements.statsTab.addEventListener('click', () => {
         elements.statsTab.classList.add('active');
-        elements.chartsTab.classList.remove('active');
         elements.statsContent.classList.remove('hidden');
-        elements.chartsContent.classList.add('hidden');
     });
-
-    elements.chartsTab.addEventListener('click', () => {
-        elements.statsTab.classList.remove('active');
-        elements.chartsTab.classList.add('active');
-        elements.statsContent.classList.add('hidden');
-        elements.chartsContent.classList.remove('hidden');
-        updateCharts();
-    });
-
     elements.exportDataBtn.addEventListener('click', exportData);
     elements.resetMonthBtn.addEventListener('click', resetMonth);
 
@@ -1411,9 +1397,9 @@ async function renderExpenses() {
         const plan = appState.meal_plans.find(p => p.day_name === today) || { day_meal: 'Not set', night_meal: 'Not set' };
         if (elements.todayMealCard) {
             elements.todayMealCard.innerHTML = `
-                <h3>Today's Meal</h3>
-                <p>Day: ${plan.day_meal || 'Not set'}</p>
-                <p>Night: ${plan.night_meal || 'Not set'}</p>
+                <h3>Today's Meal Plan</h3>
+                <p>Day ${plan.day_meal || 'Not set'}</p>
+                <p>Night ${plan.night_meal || 'Not set'}</p>
             `;
         } else {
             // Fallback to existing elements if no specific card
@@ -1422,62 +1408,6 @@ async function renderExpenses() {
         }
     }
 
-    async function updateCharts() {
-        const isDark = document.body.classList.contains('dark-mode');
-        const expenseData = appState.members.map(member => ({
-            label: member.name,
-            value: appState.expenses.filter(e => e.member_id === member.id).reduce((sum, e) => sum + e.amount, 0)
-        }));
-
-        const mealData = await Promise.all(appState.members.map(async member => ({
-            label: member.name,
-            value: await calculateTotalMeals(member.id)
-        })));
-
-        if (expensesChart) expensesChart.destroy();
-        if (mealsChart) mealsChart.destroy();
-
-        expensesChart = new Chart(document.getElementById('expenses-chart'), {
-            type: 'pie',
-            data: {
-                labels: expenseData.map(d => d.label),
-                datasets: [{
-                    data: expenseData.map(d => d.value),
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { labels: { color: isDark ? '#e2e8f0' : '#2d3748' } },
-                    tooltip: { enabled: true }
-                }
-            }
-        });
-
-        mealsChart = new Chart(document.getElementById('meals-chart'), {
-            type: 'bar',
-            data: {
-                labels: mealData.map(d => d.label),
-                datasets: [{
-                    label: 'Total Meals',
-                    data: mealData.map(d => d.value),
-                    backgroundColor: '#36A2EB'
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true, ticks: { color: isDark ? '#e2e8f0' : '#2d3748' } },
-                    x: { ticks: { color: isDark ? '#e2e8f0' : '#2d3748' } }
-                },
-                plugins: {
-                    legend: { labels: { color: isDark ? '#e2e8f0' : '#2d3748' } },
-                    tooltip: { enabled: true }
-                }
-            }
-        });
-    }
 
     // --- User Overview ---
     async function updateUserOverview() {

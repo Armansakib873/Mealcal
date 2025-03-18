@@ -156,38 +156,28 @@
                 <div class="collapsible-content" >
                     <div class="dashboard-tabs">
                         <button id="stats-tab" class="tab-btn active">Stats</button>
-                        <button id="charts-tab" class="tab-btn">Charts</button>
                     </div>
                     <div id="stats-content" class="tab-content">
                         <div class="dashboard-grid">
-                            <div class="stat-box">
-                                <i class="fas fa-wallet"></i>
-                                <h3>Total Deposits</h3>
-                                <p id="total-deposits">৳0</p>
-                            </div>
-                            <div class="stat-box">
-                                <i class="fas fa-shopping-cart"></i>
-                                <h3>Total Expenditure</h3>
-                                <p id="total-expenditure">৳0</p>
+
+                            <div class="stat-box meal-count-box">
+                                <i class="fas fa-utensils"></i>
+                                <h3>Today's Meal Plan</h3>
+                                <div class="meal-count">
+                                    <div class="day-meal">
+                                        <span>Day</span>
+                                        <p id="today-day-count"></p>
+                                    </div>
+                                    <div class="night-meal">
+                                        <span>Night</span>
+                                        <p id="today-night-count"></p>
+                                    </div>
+                                </div>
                             </div>
                             <div class="stat-box" id="current-balance-box">
                                 <i class="fas fa-balance-scale"></i>
                                 <h3>Current Balance</h3>
                                 <p id="current-balance">৳0</p>
-                            </div>
-                            <div class="stat-box meal-count-box">
-                                <i class="fas fa-utensils"></i>
-                                <h3>Today's Meals</h3>
-                                <div class="meal-count">
-                                    <div>
-                                        <span>Day:</span>
-                                        <p id="today-day-count">0</p>
-                                    </div>
-                                    <div>
-                                        <span>Night:</span>
-                                        <p id="today-night-count">0</p>
-                                    </div>
-                                </div>
                             </div>
                             <div class="stat-box">
                                 <i class="fas fa-chart-pie"></i>
@@ -199,6 +189,19 @@
                                 <h3>Meal Rate</h3>
                                 <p id="meal-rate">৳0.00</p>
                             </div>
+                            <div class="stat-box">
+                                <i class="fas fa-wallet"></i>
+                                <h3>Total Deposits</h3>
+                                <p id="total-deposits">৳0</p>
+                            </div>
+                            <div class="stat-box">
+                                <i class="fas fa-shopping-cart"></i>
+                                <h3>Total Expenditure</h3>
+                                <p id="total-expenditure">৳0</p>
+                            </div>
+
+
+
                         </div>
                     </div>
                     <div id="charts-content" class="tab-content hidden">
@@ -317,17 +320,18 @@
         <!-- Meal planner Section -->
 
             <section id="meal-planner-section" class="section card">
-                <div class="collapsible-header">
-                    <h2><i class="fas fa-utensils"></i> Weekly Meal Planner</h2>
+                 
+                    <h2 class="collapsible-header"><i class="fas fa-utensils"></i>Meal Planner
                     <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </div>
-                <div class="collapsible-content expanded">
+                </h2>
+                
+                <div class="collapsible-content expanded meal-plan">
                     <table id="meal-planner-table" class="data-table">
                         <thead>
                             <tr>
+                                <th>Weekday</th>
                                 <th>Day</th>
-                                <th>Day Meal</th>
-                                <th>Night Meal</th>
+                                <th>Night</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -338,10 +342,14 @@
             
             <!-- Meal Tracker Section -->
             <section class="meal-tracker card" id="meal-tracker-section">
+              
                 <h2 class="collapsible-header">
                     <i class="fas fa-calendar-alt"></i> Meal Tracker
-                    <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
-                </h2>
+                    
+                <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+            </h2>
+
+
                 <div class="collapsible-content">
                     <div class="cycle-display">
                         <span id="cycle-dates">Current Cycle: [Dynamic Dates]</span> <!-- Replaced month selector -->
