@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let editingMemberId = null;
     let editingExpenseId = null;
-    const depositLabels = ['1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
+    const depositLabels = ['1st', '2nd', '3rd', '4th', '5th'];
     let expensesChart = null;
     let mealsChart = null;
 
@@ -711,13 +711,19 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
     }
 
     function addDepositField(container) {
+        const existingFields = container.querySelectorAll('.form-group').length; // Count existing fields
+        if (existingFields >= 5) {
+            showNotification('Maximum of 5 deposit fields allowed.', 'error');
+            return;
+        }
+    
         const existingLabels = Array.from(container.querySelectorAll('input')).map(input => input.dataset.label);
         const nextLabel = depositLabels.find(label => !existingLabels.includes(label));
         if (!nextLabel) {
-            showNotification('Maximum deposit fields reached.', 'error');
+            showNotification('No more deposit fields available.', 'error');
             return;
         }
-
+    
         const div = document.createElement('div');
         div.className = 'form-group';
         div.innerHTML = `
@@ -726,7 +732,6 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
         `;
         container.appendChild(div);
     }
-
     // --- Data Fetching ---
     async function fetchAllData() {
         const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users', 'meal_plans', 'messages'];

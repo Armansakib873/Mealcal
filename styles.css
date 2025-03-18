@@ -2357,7 +2357,7 @@ body.dark-mode #loading-animation {
 }
 
 .modal-form button {
-    margin-left: 25px;
+
     height: 40px;
 }
 
@@ -2367,6 +2367,7 @@ body.dark-mode #loading-animation {
     gap: var(--spacing-sm);
     color: var(--foreground);
 }
+
 
 .form-group label {
     font-size: 1rem;
@@ -2887,7 +2888,6 @@ body.dark-mode #loading-animation {
 
     .modal-content {
         max-width: 95%;
-        height: 80vh;
         margin: 15px auto;
         padding: var(--spacing-lg);
         background: var(--light);
