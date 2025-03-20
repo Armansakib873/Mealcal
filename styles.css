@@ -809,6 +809,44 @@ body.dark-mode #loading-animation {
     display: none;
 }
 
+
+
+/* --- announcement --- */
+
+.announcement-modal {
+    max-width: 500px;
+}
+.announcement-messages {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+.announcement-item {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+.announcement-item .date {
+    font-size: 0.9em;
+    color: #666;
+}
+.announcements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.announcement-card {
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #fff;
+}
+.announcement-card.editing .actions {
+    display: flex;
+    gap: 10px;
+}
+
+
+
 .main-app {
     display: none;
     padding: 0;
@@ -2389,6 +2427,9 @@ body.dark-mode #loading-animation {
     overflow-y: auto; /* Allow scrolling within the modal if content overflows */
     backdrop-filter: blur(5px); /* Add a blur effect (optional, modern browsers) */
 }
+
+
+
 
 .modal-content {
     background: var(--light); /* Background color (light mode) */

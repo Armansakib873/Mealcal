@@ -21,15 +21,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         expenses: [],
         notifications: [],
         users: [],
-        meal_plans: [], // New property
+        meal_plans: [],
         messages: [],
-        lastUpdated: null
+        lastUpdated: null,
+        user_settings: [],
+        announcements: [],
+        user_announcement_views: [],
+        hasShownNegativeBalanceWarning: false,
+        hasShownThresholdWarning: {},
+        isAnnouncementPopupOpen: false // New flag
     };
 
 
-    // Track negative balance state
-    let lastKnownBalanceState = sessionStorage.getItem('mealsync_lastBalanceState') || 'positive'; // 'positive' or 'negative'
-    let negativeBalanceNotified = JSON.parse(sessionStorage.getItem('mealsync_negativeBalanceNotified')) || false;
     // --- DOM Elements ---
     const elements = {
         loginPage: document.getElementById('login-page'),
@@ -125,7 +128,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ... (Remove mobileUserInfo if it's no longer used) ...
      menuToggle: document.querySelector('.menu-toggle'),
      headerNav: document.querySelector('.header-nav'), // Keep this for now
+     createAnnouncementBtn: document.getElementById('create-announcement-btn'),
+     announcementPopup: document.getElementById('announcement-popup'),
+     announcementMessages: document.getElementById('announcement-messages'),
+     closeAnnouncementPopup: document.getElementById('close-announcement-popup'),
+     createAnnouncementModal: document.getElementById('create-announcement-modal'),
+     createAnnouncementForm: document.getElementById('create-announcement-form'),
+     closeCreateAnnouncementModal: document.getElementById('close-create-announcement-modal'),
+     viewAnnouncementsBtn: document.getElementById('view-announcements-btn'),
+    announcementsViewPopup: document.getElementById('announcements-view-popup'),
+    announcementsViewList: document.getElementById('announcements-view-list'),
+    closeAnnouncementsView: document.getElementById('close-announcements-view')
 };
+
         
 
     let editingMemberId = null;
@@ -193,84 +208,53 @@ collapsibleHeaders.forEach(header => {
 });
 
     // --- Utility Functions ---
-   // Replace the existing showNotification function
-function showNotification(message, type = 'success', isLogin = false, details = {}) {
-    const target = isLogin ? elements.loginNotification : elements.notification;
-    const timestamp = new Date().toLocaleString('en-US', { 
-        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
-    });
-    const editorName = details.editor || (currentUser?.username || 'System');
-    const fullMessage = `${message} on ${timestamp} by Editor: ${editorName}`;
-
-    // Create a notification object
-    const notification = { message: fullMessage, type };
-
-    // Add to queue (initialize queue if it doesn't exist)
-    if (!target.notificationQueue) {
-        target.notificationQueue = [];
-    }
-    target.notificationQueue.push(notification);
-
-    // If a notification is already being displayed, wait for it to finish
-    if (target.isDisplaying) return;
-
-    // Display notifications from the queue
-    const displayNextNotification = () => {
-        if (target.notificationQueue.length === 0) {
-            target.isDisplaying = false;
-            target.style.display = 'none';
-            return;
-        }
-
-        target.isDisplaying = true;
-        const { message, type } = target.notificationQueue.shift(); // Get the next notification
-
-        target.textContent = message;
+    function showNotification(message, type = 'success', isLogin = false, details = {}) {
+        const target = isLogin ? elements.loginNotification : elements.notification;
+        const timestamp = new Date().toLocaleString('en-US', { 
+            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
+        const editorName = details.editor || (currentUser?.username || 'System'); // Use details.editor if provided
+        const fullMessage = `${message} on ${timestamp} by Editor: ${editorName}`;
+    
+        target.textContent = fullMessage;
         target.className = `notification ${type}`;
         target.style.display = 'block';
         setTimeout(() => target.classList.add('show'), 10);
         setTimeout(() => {
             target.classList.remove('show');
-            setTimeout(() => {
-                displayNextNotification(); // Display the next notification in the queue
-            }, 300);
+            setTimeout(() => target.style.display = 'none', 300);
         }, 5000);
-    };
-
-    // Start displaying notifications
-    displayNextNotification();
-
-    // Handle important notifications for logging (unchanged)
-    const importantTypes = [
-        'deposit_added', 'deposit_edited', 'deposit_deleted',
-        'expense_added', 'expense_edited', 'expense_deleted',
-        'manager_access_granted', 'manager_access_revoked',
-        'meal_day_on', 'meal_day_off', 'meal_night_on', 'meal_night_off'
-    ];
-
-    if (!isLogin && importantTypes.includes(details.type)) {
-        const notificationData = { 
-            message: fullMessage, 
-            type, 
-            timestamp: new Date().toISOString(),
-            related_user: details.userName || null,
-            amount: details.amount || null,
-            action_type: details.type || null
-        };
-        console.log('Attempting to insert notification:', notificationData);
-        supabaseClient.from('notifications')
-            .insert([notificationData])
-            .then(({ data, error }) => {
-                if (error) {
-                    console.error('Failed to insert notification:', error.message);
-                } else {
-                    console.log('Notification inserted successfully:', data);
-                    renderNotificationLog();
-                }
-            })
-            .catch(error => console.error('Unexpected error inserting notification:', error));
+    
+        const importantTypes = [
+            'deposit_added', 'deposit_edited', 'deposit_deleted',
+            'expense_added', 'expense_edited', 'expense_deleted',
+            'manager_access_granted', 'manager_access_revoked',
+            'meal_day_on', 'meal_day_off', 'meal_night_on', 'meal_night_off'
+        ];
+    
+        if (!isLogin && importantTypes.includes(details.type)) {
+            const notificationData = { 
+                message: fullMessage, 
+                type, 
+                timestamp: new Date().toISOString(),
+                related_user: details.userName || null,
+                amount: details.amount || null,
+                action_type: details.type || null
+            };
+            console.log('Attempting to insert notification:', notificationData);
+            supabaseClient.from('notifications')
+                .insert([notificationData])
+                .then(({ data, error }) => {
+                    if (error) {
+                        console.error('Failed to insert notification:', error.message);
+                    } else {
+                        console.log('Notification inserted successfully:', data);
+                        renderNotificationLog(); // Update log immediately
+                    }
+                })
+                .catch(error => console.error('Unexpected error inserting notification:', error));
+        }
     }
-}
 
 
     function formatCurrency(amount, isMealRate = false) {
@@ -413,8 +397,14 @@ function showNotification(message, type = 'success', isLogin = false, details = 
     
         await fetchAllData();
         updateUIForRole();
-        updateSidebarUserInfo(); // Update mobile info
+        updateSidebarUserInfo();
         await updateAllViews();
+        const today = new Date().toISOString().split('T')[0];
+        const hasViewedToday = appState.user_announcement_views.some(v => 
+            v.user_id === currentUser.id && 
+            new Date(v.viewed_at).toISOString().split('T')[0] === today
+        );
+        if (!hasViewedToday) await showAnnouncementPopup();
     }
 
     async function signup() {
@@ -490,8 +480,14 @@ function updateSidebarUserInfo() { // Renamed function
                 elements.mainApp.style.display = 'block';
                 await fetchAllData();
                 updateUIForRole();
-                updateSidebarUserInfo(); // Update mobile info
+                updateSidebarUserInfo();
                 await updateAllViews();
+                const today = new Date().toISOString().split('T')[0];
+                const hasViewedToday = appState.user_announcement_views.some(v => 
+                    v.user_id === currentUser.id && 
+                    new Date(v.viewed_at).toISOString().split('T')[0] === today
+                );
+                if (!hasViewedToday) await showAnnouncementPopup();
             }
         }
     }
@@ -579,30 +575,30 @@ function updateUIForRole() {
 
     updateSidebarUserInfo();
 }
-    async function populateMemberSelect(isAdmin) {
-        console.log('Populating member select:', appState.members);
-        if (!appState.members || appState.members.length === 0) {
-            elements.memberSelect.innerHTML = '<option value="">No members available</option>';
-            return;
-        }
-
-        const members = appState.members;
-        elements.memberSelect.innerHTML = members.map(m => `
-            <option value="${m.id}">${m.name}</option>
-        `).join('');
-
-        // Set default selection
-        if (isAdmin) {
-            elements.memberSelect.value = members[0]?.id || '';
-        } else if (isManager) {
-            elements.memberSelect.value = currentUser.member_id || '';
-        }
-
-        // Remove existing event listener to prevent duplicates
-        elements.memberSelect.removeEventListener('change', handleMemberSelectChange);
-        // Add event listener to update member card on selection change
-        elements.memberSelect.addEventListener('change', handleMemberSelectChange);
+async function populateMemberSelect(isAdmin, isManager) {
+    console.log('Populating member select:', appState.members);
+    if (!appState.members || appState.members.length === 0) {
+        elements.memberSelect.innerHTML = '<option value="">No members available</option>';
+        return;
     }
+
+    const members = appState.members;
+    elements.memberSelect.innerHTML = members.map(m => `
+        <option value="${m.id}">${m.name}</option>
+    `).join('');
+
+    // Set default selection
+    if (isAdmin) {
+        elements.memberSelect.value = members[0]?.id || '';
+    } else if (isManager) {
+        elements.memberSelect.value = currentUser.member_id || '';
+    }
+
+    // Remove existing event listener to prevent duplicates
+    elements.memberSelect.removeEventListener('change', handleMemberSelectChange);
+    // Add event listener to update member card on selection change
+    elements.memberSelect.addEventListener('change', handleMemberSelectChange);
+}
 
     async function populateUserSelect() {
         console.log('Populating user select:', appState.users);
@@ -650,23 +646,26 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
     // NEW: Event Delegation for Sidebar Links and Buttons
     // Sidebar Link Click Handler (Modified)
     elements.sidebar.addEventListener('click', (event) => {
-        if (event.target.closest('.sidebar-link')) {
-            const targetSectionId = event.target.closest('.sidebar-link').dataset.section; // Get data-section
-            const targetSection = document.getElementById(targetSectionId);
-
-            if (targetSection) {
-                targetSection.scrollIntoView({ behavior: 'smooth' }); // Smooth scroll
-
-                // Expand the collapsible header if it's collapsed
-                const collapsibleHeader = targetSection.querySelector('.collapsible-header');
-                if (collapsibleHeader && collapsibleHeader.classList.contains('collapsed')) {
-                    collapsibleHeader.click(); // Simulate a click to expand
+        const target = event.target.closest('.sidebar-link');
+        if (target) {
+            if (target.id === 'view-announcements-btn') {
+                showAnnouncementsViewPopup();
+                toggleSidebar(); // Explicitly collapse sidebar
+            } else {
+                const targetSectionId = target.dataset.section;
+                const targetSection = document.getElementById(targetSectionId);
+                if (targetSection) {
+                    targetSection.scrollIntoView({ behavior: 'smooth' });
+                    const collapsibleHeader = targetSection.querySelector('.collapsible-header');
+                    if (collapsibleHeader && collapsibleHeader.classList.contains('collapsed')) {
+                        collapsibleHeader.click();
+                    }
                 }
+                toggleSidebar();
             }
-            toggleSidebar(); // Close the sidebar after navigation, this line already exist
         }
-         if (event.target.closest('.sidebar-actions button') ) {
-            toggleSidebar(); // Close the sidebar
+        if (event.target.closest('.sidebar-actions button') || event.target.id === 'create-announcement-btn') {
+            toggleSidebar();
         }
     });
 
@@ -756,20 +755,236 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
     }
     // --- Data Fetching ---
     async function fetchAllData() {
-        const tables = ['members', 'deposits', 'meals', 'expenses', 'notifications', 'users', 'meal_plans', 'messages'];
-        for (const table of tables) {
-            const { data, error } = await supabaseClient.from(table).select('*').order('created_at', { ascending: false });
+        const tables = {
+            'members': 'created_at',
+            'deposits': 'created_at',
+            'meals': 'created_at',
+            'expenses': 'created_at',
+            'notifications': 'created_at',
+            'users': 'created_at',
+            'meal_plans': 'created_at',
+            'messages': 'created_at',
+            'announcements': 'created_at',
+            'user_announcement_views': 'viewed_at'
+        };
+    
+        for (const [table, sortColumn] of Object.entries(tables)) {
+            const { data, error } = await supabaseClient
+                .from(table)
+                .select('*')
+                .order(sortColumn, { ascending: false });
             if (error) {
                 console.error(`Error fetching ${table}:`, error.message);
                 showNotification(`Error fetching ${table}: ${error.message}`, 'error');
                 continue;
             }
             appState[table] = data;
-            console.log(`Fetched ${table}:`, data);
         }
         appState.lastUpdated = Date.now();
         localStorage.setItem('mealsync_cache', JSON.stringify(appState));
     }
+
+
+
+    // --- announcements ---
+    async function showAnnouncementPopup() {
+        const today = new Date().toISOString().split('T')[0];
+        const unseenAnnouncements = appState.announcements.filter(a => {
+            const viewed = appState.user_announcement_views.find(v => 
+                v.user_id === currentUser.id && 
+                v.announcement_id === a.id && 
+                new Date(v.viewed_at).toISOString().split('T')[0] === today
+            );
+            return !viewed;
+        });
+    
+        if (unseenAnnouncements.length === 0) return;
+    
+        // Mark as viewed first
+        const viewEntries = unseenAnnouncements.map(a => ({
+            user_id: currentUser.id,
+            announcement_id: a.id,
+            viewed_at: new Date().toISOString()
+        }));
+        const { data, error } = await supabaseClient
+            .from('user_announcement_views')
+            .insert(viewEntries)
+            .select();
+        if (error) {
+            console.error('Error marking announcements as viewed:', error.message);
+            showNotification('Failed to record announcement view.', 'error');
+            return;
+        }
+        appState.user_announcement_views.push(...data);
+    
+        // Then show popup
+        elements.announcementMessages.innerHTML = unseenAnnouncements.map(a => {
+            const announcer = appState.users.find(u => u.id === a.announcer_id)?.username || 'Unknown';
+            return `
+                <div class="announcement-item">
+                    <p><strong>${announcer}:</strong> ${a.message}</p>
+                    <div class="date">${formatDate(a.created_at)}</div>
+                </div>
+            `;
+        }).join('');
+    
+        appState.isAnnouncementPopupOpen = true;
+        elements.announcementPopup.style.display = 'block';
+    
+        const closeOnClickOutside = (e) => {
+            if (!elements.announcementPopup.querySelector('.modal-content').contains(e.target)) {
+                elements.announcementPopup.style.display = 'none';
+                appState.isAnnouncementPopupOpen = false;
+                document.removeEventListener('click', closeOnClickOutside);
+                if (currentUser.role === 'user') {
+                    updateUserOverview();
+                }
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeOnClickOutside), 0);
+    }
+
+// Update existing close button listener
+elements.closeAnnouncementPopup.addEventListener('click', () => {
+    elements.announcementPopup.style.display = 'none';
+    appState.isAnnouncementPopupOpen = false;
+    if (currentUser.role === 'user') {
+        updateUserOverview(); // Trigger balance check
+    }
+});
+
+
+
+    elements.createAnnouncementBtn.addEventListener('click', () => {
+        elements.createAnnouncementModal.style.display = 'block';
+    });
+    
+    elements.closeCreateAnnouncementModal.addEventListener('click', () => {
+        elements.createAnnouncementModal.style.display = 'none';
+        elements.createAnnouncementForm.reset();
+    });
+    
+    elements.createAnnouncementForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = document.getElementById('announcement-message').value.trim();
+        if (!message) {
+            showNotification('Please enter an announcement message.', 'error');
+            return;
+        }
+    
+        const { data, error } = await supabaseClient.from('announcements')
+            .insert([{ message, announcer_id: currentUser.id }])
+            .select()
+            .single();
+        if (error) {
+            showNotification('Failed to create announcement: ' + error.message, 'error');
+            return;
+        }
+    
+        appState.announcements.unshift(data);
+        showNotification('Announcement created successfully!', 'success');
+        elements.createAnnouncementModal.style.display = 'none';
+        elements.createAnnouncementForm.reset();
+    });
+
+    
+    async function showAnnouncementsViewPopup() {
+        const canEdit = currentUser.role === 'admin' || currentUser.role === 'manager';
+        elements.announcementsViewList.innerHTML = appState.announcements.map(a => {
+            const announcer = appState.users.find(u => u.id === a.announcer_id)?.username || 'Unknown';
+            const isEditable = canEdit || a.announcer_id === currentUser.id;
+            return `
+                <div class="announcement-item" data-id="${a.id}">
+                    <p><strong>${announcer}:</strong> <span class="message">${a.message}</span></p>
+                    <div class="date">${formatDate(a.created_at)}</div>
+                    ${isEditable ? `
+                    <div class="actions">
+                        <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                    </div>` : ''}
+                </div>
+            `;
+        }).join('');
+    
+        elements.announcementsViewPopup.style.display = 'block';
+    
+        // Add close button listener
+        elements.closeAnnouncementsView.addEventListener('click', () => {
+            elements.announcementsViewPopup.style.display = 'none';
+        }, { once: true }); // Use once to avoid duplicate listeners
+    
+        // Add click-outside listener
+        const closeOnClickOutside = (e) => {
+            if (!elements.announcementsViewPopup.querySelector('.modal-content').contains(e.target)) {
+                elements.announcementsViewPopup.style.display = 'none';
+                document.removeEventListener('click', closeOnClickOutside);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeOnClickOutside), 0);
+    
+        // Add edit/delete listeners
+        elements.announcementsViewList.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.closest('.announcement-item').dataset.id);
+                editAnnouncement(id);
+            });
+        });
+        elements.announcementsViewList.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.closest('.announcement-item').dataset.id);
+                deleteAnnouncement(id);
+            });
+        });
+    }
+    
+    async function editAnnouncement(id) {
+        const announcement = appState.announcements.find(a => a.id === id);
+        const item = elements.announcementsViewList.querySelector(`.announcement-item[data-id="${id}"]`);
+        item.innerHTML = `
+            <div class="form-group">
+                <label>Message:</label>
+                <textarea class="input-field" rows="3">${announcement.message}</textarea>
+            </div>
+            <div class="actions">
+                <button class="btn primary-btn save-btn"><i class="fas fa-save"></i> Save</button>
+                <button class="btn secondary-btn cancel-btn"><i class="fas fa-times"></i> Cancel</button>
+            </div>
+        `;
+    
+        item.querySelector('.save-btn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newMessage = item.querySelector('textarea').value.trim();
+            if (!newMessage) {
+                showNotification('Message cannot be empty.', 'error');
+                return;
+            }
+            await supabaseClient.from('announcements')
+                .update({ message: newMessage, updated_at: new Date().toISOString() })
+                .eq('id', id);
+            announcement.message = newMessage;
+            showNotification('Announcement updated successfully!', 'success');
+            showAnnouncementsViewPopup();
+        });
+    
+        item.querySelector('.cancel-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            showAnnouncementsViewPopup();
+        });
+    }
+    
+    async function deleteAnnouncement(id) {
+        if (!confirm('Are you sure you want to delete this announcement?')) return;
+        await supabaseClient.from('announcements').delete().eq('id', id);
+        await supabaseClient.from('user_announcement_views').delete().eq('announcement_id', id);
+        appState.announcements = appState.announcements.filter(a => a.id !== id);
+        await fetchAllData();
+        showNotification('Announcement deleted successfully!', 'success');
+        showAnnouncementsViewPopup();
+    }
+
+
 
     // --- Member Functions ---
     async function addMember() {
@@ -824,16 +1039,19 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
             label,
             amount
         }));
-        if (depositEntries.length > 0) {
-            await supabaseClient.from('deposits').insert(depositEntries);
-            depositEntries.forEach(entry => {
-                showNotification(`${name} deposits BDT ${entry.amount} added`, 'success', false, {
-                    userName: name,
-                    amount: entry.amount,
-                    type: 'deposit_added'
-                });
-            });
-        }
+
+
+   if (depositEntries.length > 0) {
+    await supabaseClient.from('deposits').insert(depositEntries);
+    depositEntries.forEach(entry => {
+        showNotification(`${name} deposits BDT ${entry.amount} added`, 'success', false, {
+            userName: name,
+            amount: entry.amount,
+            type: 'deposit_added'
+        });
+    });
+    appState.hasShownNegativeBalanceWarning = false; // Reset flag
+}
     
         await fetchAllData();
         await updateAllViews();
@@ -1001,19 +1219,17 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
         elements.membersList.innerHTML = '';
         const isAdmin = currentUser?.role === 'admin';
         const isManager = currentUser?.role === 'manager';
-
+    
         let visibleMembers;
         if (isAdmin || isManager) {
-            // For admins/managers, show only the member selected in the dropdown
             const selectedMemberId = parseInt(elements.memberSelect?.value) || (isManager ? currentUser.member_id : appState.members[0]?.id);
             visibleMembers = appState.members.filter(m => m.id === selectedMemberId);
         } else {
-            // For users, show only their own member card
             visibleMembers = appState.members.filter(m => m.id === currentUser.member_id);
         }
-
-        const isToggleAllowed = isToggleTimeAllowed(); // Check time for toggle state
-
+    
+        const isToggleAllowed = isToggleTimeAllowed();
+    
         for (const member of visibleMembers) {
             const totalMeals = await calculateTotalMeals(member.id);
             const totalDeposit = await calculateTotalDeposit(member.id);
@@ -1021,21 +1237,19 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
             const balance = totalDeposit - totalCost;
             const balanceClass = balance >= 0 ? 'positive' : 'negative';
             const totalBazar = await calculateTotalBazar(member.id);
-
+    
             const card = document.createElement('div');
             card.className = 'member-card';
             card.dataset.id = member.id;
-
+    
             const isOwnCard = currentUser.role === 'user' && member.id === currentUser.member_id;
             const toggleClass = isOwnCard ? `user-toggle ${isToggleAllowed ? '' : 'disabled'}` : '';
-
+    
             card.innerHTML = `
                 <h3>${member.name}</h3>
                 <div class="card-details">
                 <div>Deposit <span class="total-deposit"> ${formatCurrency(totalDeposit)}</span></div>
-               <div>Balance <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
-
-
+                <div>Balance <span class="balance-text ${balanceClass}">${formatCurrency(balance)}</span></div>
                 <div>Meals <span class="total-meals">${totalMeals}</span></div>
                 <div>Bazar<span class="total-bazar"> ${totalBazar}</span></div>
                 </div>
@@ -1053,28 +1267,32 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
                     `}
                 </div>` : ''}
             `;
-
-            if (balance < 0 && currentUser.role === 'user') {
+    
+            // Show negative balance warning only if not already shown
+            if (balance < 0 && currentUser.role === 'user' && !appState.hasShownNegativeBalanceWarning && !appState.isAnnouncementPopupOpen) {
                 showNotification('Warning: Your balance is negative!', 'error');
+                appState.hasShownNegativeBalanceWarning = true;
             }
-
+    
             const toggleButtons = card.querySelectorAll('.toggle-btn');
             toggleButtons.forEach(btn => {
                 btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
             });
-
+    
             if (isAdmin) {
                 card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
                 card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));
             } else if (isManager) {
                 card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
             }
-
+    
             elements.membersList.appendChild(card);
         }
         await populateExpenseSelect();
-        updateUserToggleButtons(); // Ensure buttons are updated after initial render
+        updateUserToggleButtons();
     }
+
+
 
     async function toggleMealStatus(member, type) {
         if (currentUser.role === 'user' && !isToggleTimeAllowed()) {
@@ -1163,6 +1381,7 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
         amount,
         type: 'expense_added'
     });
+    appState.hasShownNegativeBalanceWarning = false; // Reset flag
     closeModal(elements.expenseModal);
 }
 
@@ -1448,42 +1667,44 @@ async function renderExpenses() {
     // --- User Overview ---
     async function updateUserOverview() {
         if (currentUser.role === 'admin') return; // Skip for admins
-      
+    
         if (!currentUser.member_id) {
-          elements.userName.textContent = currentUser.username;
-          elements.userDeposit.textContent = formatCurrency(0);
-          elements.userBalance.textContent = formatCurrency(0);
-          elements.userBalance.className = 'balance-text';
-          elements.userMeals.textContent = '0';
-          elements.depositHistoryList.innerHTML = '<li>No member data</li>';
-          return;
+            elements.userName.textContent = currentUser.username;
+            elements.userDeposit.textContent = formatCurrency(0);
+            elements.userBalance.textContent = formatCurrency(0);
+            elements.userBalance.className = 'balance-text';
+            elements.userMeals.textContent = '0';
+            elements.depositHistoryList.innerHTML = '<li>No member data</li>';
+            return;
         }
-      
+    
         const member = appState.members.find(m => m.id === currentUser.member_id);
         if (!member) return;
-      
+    
         const totalDeposit = await calculateTotalDeposit(member.id);
         const totalCost = await calculateTotalCost(member.id);
         const balance = totalDeposit - totalCost;
         const balanceClass = balance >= 0 ? 'positive' : 'negative';
-      
+    
         const deposits = appState.deposits.filter(d => d.member_id === member.id);
-      
+    
         elements.userName.textContent = member.name;
         elements.userDeposit.textContent = formatCurrency(totalDeposit);
         elements.userBalance.textContent = formatCurrency(balance);
         elements.userBalance.className = `balance-text ${balanceClass}`;
         elements.userMeals.textContent = await calculateTotalMeals(member.id);
-      
+    
         elements.depositHistoryList.innerHTML = `
-          <li>Pre-Month: ${formatCurrency(member.pre_month_balance)}</li>
-          ${deposits.map(d => `<li>${d.label}: ${formatCurrency(d.amount)}</li>`).join('')}
+            <li>Pre-Month: ${formatCurrency(member.pre_month_balance)}</li>
+            ${deposits.map(d => `<li>${d.label}: ${formatCurrency(d.amount)}</li>`).join('')}
         `;
-      
-        if (balance < 0 && currentUser.role === 'user') {
-          showNotification('Warning: Your balance is negative!', 'error');
+    
+        // Show negative balance warning only if not already shown and user is not admin/manager
+        if (balance < 0 && currentUser.role === 'user' && !appState.hasShownNegativeBalanceWarning && !appState.isAnnouncementPopupOpen) {
+            showNotification('Warning: Your balance is negative!', 'error');
+            appState.hasShownNegativeBalanceWarning = true;
         }
-      }
+    }
 
     // --- Summary ---
     async function renderSummary() {
@@ -1975,6 +2196,7 @@ async function renderNotificationLog() {
         await fetchAllData();
         await updateAllViews();
         showNotification('Month reset successfully! All notifications cleared.', 'success');
+        appState.hasShownNegativeBalanceWarning = false; // Reset flag
     }
 
     // --- Targeted Updates ---
@@ -2057,7 +2279,7 @@ async function renderNotificationLog() {
         if (isAdmin || isManager) {
             elements.memberSelectContainer.classList.remove('hidden');
             if (appState.members && appState.members.length > 0) {
-                populateMemberSelect(isAdmin);
+                populateMemberSelect(isAdmin, isManager); // Pass both parameters
             }
         }
         if (isAdmin) {
@@ -2089,14 +2311,15 @@ try {
         await updateAllViews();
         syncTogglesWithMealToggle();
         startRestrictionCheck();
-        // Store the channel and ensure it’s initialized
-        window.chatChannel = setupMessageSubscription(); // Store globally to allow reconnection
+        window.chatChannel = setupMessageSubscription();
 
-        elements.resetMessagesBtn.addEventListener('click', async () => {
+        elements.resetMessagesBtn?.addEventListener('click', async () => {
             if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
                 await resetMessages();
             }
         });
+
+        await showAnnouncementPopup(); // Trigger popup after everything loads
     } else {
         loginPage.style.display = 'flex';
         mainApp.style.display = 'none';

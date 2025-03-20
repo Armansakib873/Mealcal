@@ -37,13 +37,18 @@
             <div class="sidebar-actions">
                 <span id="user-status" class="user-status"></span>
                 <span id="user-role" class="user-role"></span>
-                <button id="sidebar-logout-btn" class="btn danger-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+
+                <a href="#" class="sidebar-link" id="view-announcements-btn">View Announcements</a>
+                <button id="create-announcement-btn" class="btn primary-btn"><i class="fas fa-plus"></i> Make Announcement</button>
+              
                 <button id="sidebar-toggle-theme" class="btn theme-toggle-btn" title="Toggle Dark Mode">
                     <i class="fas fa-moon"></i>
                 </button>
                  <button id="sidebar-notification-log-btn" class="btn secondary-btn" title="View Notification Log">
                     <i class="fas fa-bell"></i>
                 </button>
+
+                <button id="sidebar-logout-btn" class="btn danger-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
         </nav>
     </div>
@@ -391,6 +396,40 @@
                     </div>
                 </div>
             </section>
+
+            <div id="announcement-popup" class="modal">
+                <div class="modal-content announcement-modal">
+                    <h2><i class="fas fa-bullhorn"></i> Announcements</h2>
+                    <div id="announcement-messages" class="announcement-messages"></div>
+                    <button id="close-announcement-popup" class="btn secondary-btn"><i class="fas fa-times"></i> Close</button>
+                </div>
+            </div>
+
+
+            <div id="create-announcement-modal" class="modal">
+                <div class="modal-content">
+                    <span class="modal-close" id="close-create-announcement-modal">×</span>
+                    <h2><i class="fas fa-bullhorn"></i> Create Announcement</h2>
+                    <form id="create-announcement-form" class="modal-form">
+                        <div class="form-group">
+                            <label for="announcement-message">Message:</label>
+                            <textarea id="announcement-message" class="input-field" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Announce</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="announcements-view-popup" class="modal">
+                <div class="modal-content announcement-modal">
+                    <h2><i class="fas fa-bullhorn"></i> All Announcements</h2>
+                    <div id="announcements-view-list" class="announcement-messages"></div>
+                    <button id="close-announcements-view" class="btn secondary-btn"><i class="fas fa-times"></i> Close</button>
+                </div>
+            </div>
+
+
+
         </main>
 
         <!-- Modals -->
