@@ -815,7 +815,7 @@ body.dark-mode #loading-animation {
 
 .announcement-modal {
     max-width: 500px;
-    z-index: 1001;
+    z-index: 10001;
 }
 .announcement-messages {
     max-height: 300px;
