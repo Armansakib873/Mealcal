@@ -863,6 +863,7 @@ elements.closeAnnouncementPopup.addEventListener('click', () => {
     }
 });
 
+document.getElementById('clear-all-announcements-btn').addEventListener('click', clearAllAnnouncements);
 
 
     elements.createAnnouncementBtn.addEventListener('click', () => {
@@ -917,11 +918,27 @@ elements.closeAnnouncementPopup.addEventListener('click', () => {
         }).join('');
     
         elements.announcementsViewPopup.style.display = 'block';
+
+        
+
     
         // Add close button listener
         elements.closeAnnouncementsView.addEventListener('click', () => {
             elements.announcementsViewPopup.style.display = 'none';
         }, { once: true }); // Use once to avoid duplicate listeners
+
+
+            // Show "Clear All" button only if the user is admin or manager
+    const clearAllBtn = document.getElementById('clear-all-announcements-btn');
+    if (currentUser.role === 'admin' || currentUser.role === 'manager') {
+        clearAllBtn.classList.remove('hidden'); // Show the button
+    } else {
+        clearAllBtn.classList.add('hidden'); // Hide the button
+    }
+
+    // Ensure event listener is added only once
+    clearAllBtn.removeEventListener('click', clearAllAnnouncements);
+    clearAllBtn.addEventListener('click', clearAllAnnouncements);
     
         // Add click-outside listener
         const closeOnClickOutside = (e) => {
@@ -930,6 +947,8 @@ elements.closeAnnouncementPopup.addEventListener('click', () => {
                 document.removeEventListener('click', closeOnClickOutside);
             }
         };
+
+
         setTimeout(() => document.addEventListener('click', closeOnClickOutside), 0);
     
         // Add edit/delete listeners
@@ -993,6 +1012,31 @@ elements.closeAnnouncementPopup.addEventListener('click', () => {
         showNotification('Announcement deleted successfully!', 'success');
         showAnnouncementsViewPopup();
     }
+
+
+    async function clearAllAnnouncements() {
+        if (!confirm("Are you sure you want to delete all announcements?")) return;
+    
+        try {
+            // Delete all announcements from the database
+            await supabaseClient.from('announcements').delete().neq('id', 0);
+    
+            // Clear the announcements in appState
+            appState.announcements = [];
+    
+            // Remove user announcement views
+            await supabaseClient.from('user_announcement_views').delete().neq('id', 0);
+            appState.user_announcement_views = [];
+    
+            // Refresh UI
+            showAnnouncementsViewPopup();
+            showNotification('All announcements cleared!', 'success');
+        } catch (error) {
+            console.error("Failed to clear announcements:", error);
+            showNotification('Failed to clear announcements!', 'error');
+        }
+    }
+    
 
 
 

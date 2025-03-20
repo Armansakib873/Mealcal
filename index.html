@@ -54,6 +54,10 @@
     </div>
     <div id="sidebar-overlay"></div>
 
+    <div id="loader" class="loader">
+        <img src="logo.png" alt="MealSync Loader" class="loader-icon">
+    </div>
+
 
     <!-- Login Page -->
     <div id="login-page" class="login-page" style="display: none;">
@@ -425,6 +429,11 @@
                     <h2><i class="fas fa-bullhorn"></i> All Announcements</h2>
                     <div id="announcements-view-list" class="announcement-messages"></div>
                     <button id="close-announcements-view" class="btn secondary-btn"><i class="fas fa-times"></i> Close</button>
+                    <button id="clear-all-announcements-btn" class="btn danger-btn hidden">
+                        <i class="fas fa-trash-alt"></i> Clear All
+                    </button>
+                    
+                    
                 </div>
             </div>
 
@@ -548,6 +557,46 @@
 
 
     <script src="app.js"></script>
+    <script>
+        // Show loader on page load/refresh
+// Show loader on page load/refresh
+document.addEventListener('DOMContentLoaded', () => {
+    const loader = document.getElementById('loader');
+    const mainApp = document.querySelector('.main-app');
+    const loginPage = document.querySelector('.login-page');
+
+    // Add loading class to apply blur
+    mainApp.classList.add('loading');
+    loginPage.classList.add('loading');
+
+    // Simulate app loading (replace with actual app init logic if needed)
+    setTimeout(() => {
+        loader.classList.add('hidden'); // Fade out loader
+        mainApp.classList.remove('loading'); // Remove blur from app
+        loginPage.classList.remove('loading'); // Remove blur from login
+    }, 2500); // Matches animation duration (2s)
+});
+
+// Optional: Show loader on refresh (if using a refresh button/event)
+function showLoaderOnRefresh() {
+    const loader = document.getElementById('loader');
+    const mainApp = document.querySelector('.main-app');
+    const loginPage = document.querySelector('.login-page');
+
+    loader.classList.remove('hidden'); // Show loader
+    mainApp.classList.add('loading'); // Blur app
+    loginPage.classList.add('loading'); // Blur login
+
+    setTimeout(() => {
+        loader.classList.add('hidden'); // Fade out loader
+        mainApp.classList.remove('loading'); // Remove blur
+        loginPage.classList.remove('loading'); // Remove blur
+    }, 2000);
+}
+
+// Example: Tie to a refresh button (if you have one)
+document.getElementById('refresh-btn')?.addEventListener('click', showLoaderOnRefresh);
+    </script>
 </body>
 
 </html>
