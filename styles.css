@@ -7,7 +7,7 @@
     --primary-rgb: 67, 97, 238;
     --light-rgb: 255, 255, 255;
     --foreground-rgb: 33, 37, 41;
-    --primary: #06b1b4;
+    --primary: #057274;
     --primary-active: #dde256;
     --secondary: #6c757d;
     --accent: #2ecc71;
@@ -18,7 +18,7 @@
     --foreground: #212529;
     --light: #ffffff;
     --border: #e2e8f0;
-    --dash: #d4f4ff;
+    --dash: #dddecbc7;
     --shadow-light: rgba(0, 0, 0, 0.1);
     --shadow-medium: rgba(0, 0, 0, 0.1);
     --shadow-heavy: rgba(0, 0, 0, 0.15);
@@ -433,12 +433,27 @@ body.dark-mode .loader-icon {
     gap: var(--spacing-sm);
 }
 
-.header .logo {
-    height: 36px;
-    margin-right: var(--spacing-sm);
+/* Default scaling animation */
+@keyframes scaleUpDown {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.07);
+    }
 }
 
-.header .logo-icon {
+.header .logo , .sidebar-logo{
+    height: 36px;
+    margin-right: var(--spacing-sm);
+    cursor: pointer; /* Makes it clear that it's interactive */
+    transition: transform 0.3s ease-in-out;
+    animation: scaleUpDown 1.5s infinite ease-in-out;
+}
+
+
+
+.header .logo-icon , .sidebar-logo {
     display: flex;
     align-items: center;
     height: clamp(40px, 15vw, 60px);
@@ -890,17 +905,33 @@ body.dark-mode #loading-animation {
     z-index: 10001;
 }
 .announcement-messages {
+    font-size: 1rem;
     max-height: 300px;
     overflow-y: auto;
     margin-bottom: 15px;
 }
 .announcement-item {
+    background-color: #f4edd7b4;
+    border-radius: 20px;
+    color: rgb(226, 228, 198);
+    margin: 10px;
+    text-align: center;
+
+    /* Inset shadow for depth effect */
+    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.3), 
+                inset -3px -3px 6px rgba(255, 255, 255, 0.2);
     padding: 10px;
     border-bottom: 1px solid #ddd;
 }
 .announcement-item .date {
     font-size: 0.9em;
     color: #666;
+}
+
+.announcement-item .message{
+    font-size: 1.7em;
+    color: #014447;
+    font-weight: 700;
 }
 .announcements-list {
     display: flex;
@@ -1296,21 +1327,39 @@ body.dark-mode #loading-animation {
 .day-meal, .night-meal {
     padding: 12px;
     border-radius: var(--radius-lg);
-    background: linear-gradient(145deg, #f8f7e164, #fefdf5);
+    background: linear-gradient(145deg, #e1f8f064, #dfeef2);
     box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
                 inset -3px -3px 6px rgba(255, 255, 255, 0.5);
     transition: transform 0.2s ease-in-out;
 }
 
 .night-meal {
-    background: linear-gradient(145deg, #a0f5d2b3, #65656590);
+    background: linear-gradient(145deg, #0142271a, #65656590);
 }
 
 .meal-count span {
+
     font-size: 1.5rem;
     color: var(--secondary);
     font-weight: bold;
 }
+
+.m-count {
+    background-color: #3d6244b4;
+    border-radius: 20px;
+    color: rgb(226, 228, 198);
+    font-size: 1.6rem;
+    font-weight: 600;
+    padding: 0px 50px;
+    text-align: center;
+    display: inline-block;
+    min-width: 50px;
+
+    /* Inset shadow for depth effect */
+    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.3), 
+                inset -3px -3px 6px rgba(255, 255, 255, 0.2);
+}
+
 
 /* Slight depth effect */
 .day-meal:active, .night-meal:active {
@@ -2384,21 +2433,20 @@ body.dark-mode #loading-animation {
 
 /* --- Toggle Buttons --- */
 .toggle-btn {
-    padding: 8px 16px;
-    border-radius: 25px;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.25s ease-in-out;
-    min-width: 80px;
     border: none;
-    font-weight: 600;
-    position: relative;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border-radius: 25px;
+    padding: 10px 20px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    outline: none;
+    display: inline-block;
+    min-width: 80px;
     text-align: center;
-    letter-spacing: 0.5px;
-    overflow: hidden;
 }
-
 .toggle-btn::before {
     content: '';
     position: absolute;
@@ -2422,16 +2470,22 @@ body.dark-mode #loading-animation {
     transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
 }
 
+/* ON State */
 .toggle-btn.on {
-    background: linear-gradient(135deg, #10e240 0%, #0cb436 50%, #266002 100%);
+    background: linear-gradient(135deg, #000000ac 0%, #0cb436 50%, #266002 100%);
     color: white;
-    box-shadow: 0 2px 8px rgba(12, 180, 54, 0.35);
+    box-shadow: 0 4px 10px rgba(12, 180, 54, 0.5), 
+                inset 2px 2px 5px rgba(255, 255, 255, 0.2), 
+                inset -2px -2px 5px rgba(0, 0, 0, 0.3);
 }
 
+/* OFF State */
 .toggle-btn.off {
     background: linear-gradient(135deg, #f8593f 0%, #b42b0c 50%, #8c1e04 100%);
     color: white;
-    box-shadow: 0 2px 8px rgba(180, 43, 12, 0.35);
+    box-shadow: 0 4px 10px rgba(180, 43, 12, 0.5), 
+                inset 2px 2px 5px rgba(255, 255, 255, 0.2), 
+                inset -2px -2px 5px rgba(0, 0, 0, 0.3);
 }
 
 

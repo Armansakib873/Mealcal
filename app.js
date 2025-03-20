@@ -223,7 +223,7 @@ collapsibleHeaders.forEach(header => {
         setTimeout(() => {
             target.classList.remove('show');
             setTimeout(() => target.style.display = 'none', 300);
-        }, 5000);
+        }, 3000);
     
         const importantTypes = [
             'deposit_added', 'deposit_edited', 'deposit_deleted',
@@ -906,7 +906,8 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
             const isEditable = canEdit || a.announcer_id === currentUser.id;
             return `
                 <div class="announcement-item" data-id="${a.id}">
-                    <p><strong>${announcer}:</strong> <span class="message">${a.message}</span></p>
+                    <p><strong>${announcer}:</strong> </p>
+                    <div><span class="message">${a.message}</span></div>
                     <div class="date">${formatDate(a.created_at)}</div>
                     ${isEditable ? `
                     <div class="actions">
@@ -1712,8 +1713,10 @@ async function renderExpenses() {
             `;
         } else {
             // Fallback to existing elements if no specific card
-            elements.todayDayCount.textContent = `${appState.members.filter(m => m.day_status).length} (${plan.day_meal || 'Not set'})`;
-            elements.todayNightCount.textContent = `${appState.members.filter(m => m.night_status).length} (${plan.night_meal || 'Not set'})`;
+            elements.todayDayCount.innerHTML = `<div class="m-count">${appState.members.filter(m => m.day_status).length}</div> (${plan.day_meal || 'Not set'})`;
+            elements.todayNightCount.innerHTML = `<div class="m-count">${appState.members.filter(m => m.night_status).length}</div> (${plan.night_meal || 'Not set'})`;
+            
+            
         }
     }
 
