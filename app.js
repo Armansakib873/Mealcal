@@ -25,6 +25,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         messages: [],
         lastUpdated: null
     };
+
+
+    // Track negative balance state
+    let lastKnownBalanceState = sessionStorage.getItem('mealsync_lastBalanceState') || 'positive'; // 'positive' or 'negative'
+    let negativeBalanceNotified = JSON.parse(sessionStorage.getItem('mealsync_negativeBalanceNotified')) || false;
     // --- DOM Elements ---
     const elements = {
         loginPage: document.getElementById('login-page'),
@@ -188,53 +193,84 @@ collapsibleHeaders.forEach(header => {
 });
 
     // --- Utility Functions ---
-    function showNotification(message, type = 'success', isLogin = false, details = {}) {
-        const target = isLogin ? elements.loginNotification : elements.notification;
-        const timestamp = new Date().toLocaleString('en-US', { 
-            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
-        });
-        const editorName = details.editor || (currentUser?.username || 'System'); // Use details.editor if provided
-        const fullMessage = `${message} on ${timestamp} by Editor: ${editorName}`;
-    
-        target.textContent = fullMessage;
+   // Replace the existing showNotification function
+function showNotification(message, type = 'success', isLogin = false, details = {}) {
+    const target = isLogin ? elements.loginNotification : elements.notification;
+    const timestamp = new Date().toLocaleString('en-US', { 
+        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
+    const editorName = details.editor || (currentUser?.username || 'System');
+    const fullMessage = `${message} on ${timestamp} by Editor: ${editorName}`;
+
+    // Create a notification object
+    const notification = { message: fullMessage, type };
+
+    // Add to queue (initialize queue if it doesn't exist)
+    if (!target.notificationQueue) {
+        target.notificationQueue = [];
+    }
+    target.notificationQueue.push(notification);
+
+    // If a notification is already being displayed, wait for it to finish
+    if (target.isDisplaying) return;
+
+    // Display notifications from the queue
+    const displayNextNotification = () => {
+        if (target.notificationQueue.length === 0) {
+            target.isDisplaying = false;
+            target.style.display = 'none';
+            return;
+        }
+
+        target.isDisplaying = true;
+        const { message, type } = target.notificationQueue.shift(); // Get the next notification
+
+        target.textContent = message;
         target.className = `notification ${type}`;
         target.style.display = 'block';
         setTimeout(() => target.classList.add('show'), 10);
         setTimeout(() => {
             target.classList.remove('show');
-            setTimeout(() => target.style.display = 'none', 300);
+            setTimeout(() => {
+                displayNextNotification(); // Display the next notification in the queue
+            }, 300);
         }, 5000);
-    
-        const importantTypes = [
-            'deposit_added', 'deposit_edited', 'deposit_deleted',
-            'expense_added', 'expense_edited', 'expense_deleted',
-            'manager_access_granted', 'manager_access_revoked',
-            'meal_day_on', 'meal_day_off', 'meal_night_on', 'meal_night_off'
-        ];
-    
-        if (!isLogin && importantTypes.includes(details.type)) {
-            const notificationData = { 
-                message: fullMessage, 
-                type, 
-                timestamp: new Date().toISOString(),
-                related_user: details.userName || null,
-                amount: details.amount || null,
-                action_type: details.type || null
-            };
-            console.log('Attempting to insert notification:', notificationData);
-            supabaseClient.from('notifications')
-                .insert([notificationData])
-                .then(({ data, error }) => {
-                    if (error) {
-                        console.error('Failed to insert notification:', error.message);
-                    } else {
-                        console.log('Notification inserted successfully:', data);
-                        renderNotificationLog(); // Update log immediately
-                    }
-                })
-                .catch(error => console.error('Unexpected error inserting notification:', error));
-        }
+    };
+
+    // Start displaying notifications
+    displayNextNotification();
+
+    // Handle important notifications for logging (unchanged)
+    const importantTypes = [
+        'deposit_added', 'deposit_edited', 'deposit_deleted',
+        'expense_added', 'expense_edited', 'expense_deleted',
+        'manager_access_granted', 'manager_access_revoked',
+        'meal_day_on', 'meal_day_off', 'meal_night_on', 'meal_night_off'
+    ];
+
+    if (!isLogin && importantTypes.includes(details.type)) {
+        const notificationData = { 
+            message: fullMessage, 
+            type, 
+            timestamp: new Date().toISOString(),
+            related_user: details.userName || null,
+            amount: details.amount || null,
+            action_type: details.type || null
+        };
+        console.log('Attempting to insert notification:', notificationData);
+        supabaseClient.from('notifications')
+            .insert([notificationData])
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error('Failed to insert notification:', error.message);
+                } else {
+                    console.log('Notification inserted successfully:', data);
+                    renderNotificationLog();
+                }
+            })
+            .catch(error => console.error('Unexpected error inserting notification:', error));
     }
+}
 
 
     function formatCurrency(amount, isMealRate = false) {
