@@ -852,8 +852,14 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
 elements.closeAnnouncementPopup.addEventListener('click', () => {
     elements.announcementPopup.style.display = 'none';
     appState.isAnnouncementPopupOpen = false;
-    if (currentUser.role === 'user') {
-        updateUserOverview(); // Trigger balance check
+
+    // Now trigger balance warning if needed
+    if (appState.showBalanceWarningAfterPopup) {
+        setTimeout(() => {
+            showNotification('Warning: Your balance is negative!', 'error');
+            appState.hasShownNegativeBalanceWarning = true;
+            appState.showBalanceWarningAfterPopup = false;
+        }, 500); // Add slight delay for smoother transition
     }
 });
 
@@ -1703,11 +1709,16 @@ async function renderExpenses() {
             ${deposits.map(d => `<li>${d.label}: ${formatCurrency(d.amount)}</li>`).join('')}
         `;
     
-        // Show negative balance warning only if not already shown and user is not admin/manager
-        if (balance < 0 && currentUser.role === 'user' && !appState.hasShownNegativeBalanceWarning && !appState.isAnnouncementPopupOpen) {
-            showNotification('Warning: Your balance is negative!', 'error');
-            appState.hasShownNegativeBalanceWarning = true;
+        if (balance < 0 && currentUser.role === 'user' && !appState.hasShownNegativeBalanceWarning) {
+            if (appState.isAnnouncementPopupOpen) {
+                // Delay the warning until the announcement is closed
+                appState.showBalanceWarningAfterPopup = true;
+            } else {
+                showNotification('Warning: Your balance is negative!', 'error');
+                appState.hasShownNegativeBalanceWarning = true;
+            }
         }
+        
     }
 
     // --- Summary ---
