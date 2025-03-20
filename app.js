@@ -399,6 +399,10 @@ collapsibleHeaders.forEach(header => {
         updateUIForRole();
         updateSidebarUserInfo();
         await updateAllViews();
+        
+        // Trigger the announcement popup right after login
+        await showAnnouncementPopup();
+        
         const today = new Date().toISOString().split('T')[0];
         const hasViewedToday = appState.user_announcement_views.some(v => 
             v.user_id === currentUser.id && 
