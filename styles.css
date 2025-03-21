@@ -1890,11 +1890,12 @@ body.dark-mode #loading-animation {
 .meal-plan {
     padding: var(--spacing-md);
     position: relative; /* Added for positioning context */
-    width: 100%;
+    width: 90vw;
     max-width: 100%;
     overflow-x: auto; /* Enables horizontal scrolling */
     margin-bottom: 1rem; /* Add some bottom margin */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+
 }
 
 
@@ -1934,12 +1935,10 @@ body.dark-mode #loading-animation {
     font-size: 0.875rem;
 }
 
+
 /* Responsive design improvements */
 @media (max-width: 768px) {
     .meal-plan {
-        margin-left: -1rem; /* Extend beyond container if needed */
-        margin-right: -1rem;
-        width: calc(100% + 2rem);
         padding: 0 1rem;
     }
     

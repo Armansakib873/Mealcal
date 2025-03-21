@@ -811,9 +811,10 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
             viewed_at: new Date().toISOString()
         }));
         const { data, error } = await supabaseClient
-            .from('user_announcement_views')
-            .insert(viewEntries)
-            .select();
+        .from('user_announcement_views')
+        .upsert(viewEntries, { onConflict: ['user_id', 'announcement_id'] }) // Prevent duplicate errors
+        .select();
+    
         if (error) {
             console.error('Error marking announcements as viewed:', error.message);
             showNotification('Failed to record announcement view.', 'error');
