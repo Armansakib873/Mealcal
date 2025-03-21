@@ -19,6 +19,8 @@
     --light: #ffffff;
     --border: #e2e8f0;
     --dash: #dddecbc7;
+    --dash-2: rgba(179, 166, 149, 0.501);
+    --dash-3: rgba(247, 245, 212, 0.556);
     --shadow-light: rgba(0, 0, 0, 0.1);
     --shadow-medium: rgba(0, 0, 0, 0.1);
     --shadow-heavy: rgba(0, 0, 0, 0.15);
@@ -1584,6 +1586,8 @@ body.dark-mode #loading-animation {
     color: var(--foreground);
     text-align: center;
     position: relative;
+
+    
 }
 
 .member-card h3 {
@@ -1754,9 +1758,14 @@ body.dark-mode #loading-animation {
 
 @media (prefers-color-scheme: dark) {
     .member-card {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(255, 255, 255, 0.07);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(100deg, var(--dash-3), var(--dash-2));
+        border-radius: 12px;
+        padding: 15px;
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.3), 
+                    inset -4px -4px 8px rgba(255, 255, 255, 0.1), 
+                    0 6px 12px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .member-card .info-row {
@@ -1879,6 +1888,7 @@ body.dark-mode #loading-animation {
 }
 /* Enable horizontal scrolling */
 .meal-plan {
+    padding: var(--spacing-md);
     position: relative; /* Added for positioning context */
     width: 100%;
     max-width: 100%;
@@ -1886,6 +1896,8 @@ body.dark-mode #loading-animation {
     margin-bottom: 1rem; /* Add some bottom margin */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
+
+
 
 /* Make sure table doesn't shrink */
 #meal-planner-table {
@@ -2198,6 +2210,16 @@ body.dark-mode #loading-animation {
     box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
 }
 
+
+#summary-table .negative {
+    background: linear-gradient(90deg, #983d19, #d44040) !important;
+    color: var(--light); /* White text for contrast */
+    font-weight: 600;
+    padding: 5px 10px; /* Match overview-item styling */
+    border-radius: var(--radius-md);
+    box-shadow: 0 3px 10px rgba(152, 61, 25, 0.5); /* Shadow consistent with overview */
+}
+
 /* Ensure sender name is always visible */
 .message-sender {
     font-weight: bold;
@@ -2281,8 +2303,8 @@ body.dark-mode #loading-animation {
 #summary-table .day-toggle.off,
 #summary-table .night-toggle.off {
     background: linear-gradient(135deg, #f8593f, #b42b0c, #8c1e04);
-    color: white;
-    box-shadow: 0 2px 6px rgba(180, 43, 12, 0.35);
+    color: rgba(250, 250, 250, 0.742);
+    box-shadow:  0 2px 6px rgba(180, 43, 12, 0.35);
 }
 
 #summary-table .toggle-btn.restricted {
@@ -2311,6 +2333,7 @@ body.dark-mode #loading-animation {
     #summary-table .toggle-btn {
         padding: 4px 8px;
         font-size: 0.75rem;
+        font-weight: 300;
         min-width: 50px;
     }
 }
