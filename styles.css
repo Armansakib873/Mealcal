@@ -19,7 +19,7 @@
     --light: #ffffff;
     --border: #e2e8f0;
     --dash: #dddecbc7;
-    --dash-2: rgba(179, 166, 149, 0.501);
+    --dash-2: #b9baa9c7;
     --dash-3: rgba(247, 245, 212, 0.556);
     --shadow-light: rgba(0, 0, 0, 0.1);
     --shadow-medium: rgba(0, 0, 0, 0.1);
@@ -345,7 +345,6 @@ body.dark-mode .loader-icon {
     top: 0;
     z-index: 1;
 }
-
 .collapsible-header > *:first-child {
     display: flex;
     align-items: center;
@@ -383,22 +382,23 @@ body.dark-mode .loader-icon {
 
 .collapsible-content {
     overflow: hidden;
-    max-height: 0;
+    height: 0; /* Replace max-height with height */
     opacity: 0;
     transform: scaleY(0.95);
     transform-origin: top;
-    padding: 0 var(--spacing-md);
+    padding: 0 var(--spacing-md); /* Static padding when collapsed */
     background-color: var(--light);
     border-bottom: none;
-    transition: max-height var(--transition-smooth), opacity var(--transition-smooth), transform var(--transition-smooth), padding var(--transition-smooth);
+    transition: height var(--transition-smooth), opacity var(--transition-smooth), transform var(--transition-smooth); /* Remove padding from transition */
 }
 
 .collapsible-content.expanded {
-    max-height: 200vh;
+    height: auto; /* Will be overridden by JS with exact height */
     opacity: 1;
     transform: scaleY(1);
-    padding: var(--spacing-md);
+    padding: var(--spacing-md); /* Static padding when expanded */
     border-bottom: 1px solid var(--border);
+    margin: 10px;
 }
 
 .collapsible-content p {
@@ -1314,7 +1314,7 @@ body.dark-mode #loading-animation {
 
 .meal-count-box .meal-count {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     gap: var(--spacing-md);
     font-size: 0.85rem;
     margin-top: var(--spacing-sm);
@@ -1758,7 +1758,7 @@ body.dark-mode #loading-animation {
 
 @media (prefers-color-scheme: dark) {
     .member-card {
-        background: linear-gradient(100deg, var(--dash-3), var(--dash-2));
+        background: linear-gradient(100deg, var(--dash), var(--dash-2));
         border-radius: 12px;
         padding: 15px;
         transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
@@ -2494,17 +2494,19 @@ body.dark-mode #loading-animation {
 
 /* ON State */
 .toggle-btn.on {
-    background: linear-gradient(135deg, #000000ac 0%, #0cb436 50%, #266002 100%);
-    color: white;
-    box-shadow: 0 4px 10px rgba(12, 180, 54, 0.5), 
+    background: linear-gradient(135deg, #000000ac 0%, #257d35b4 50%, #3d6244b4 100%);
+    color: rgb(226, 228, 198);
+    box-shadow: 0 4px 10px rgba(6, 105, 31, 0.496), 
                 inset 2px 2px 5px rgba(255, 255, 255, 0.2), 
                 inset -2px -2px 5px rgba(0, 0, 0, 0.3);
 }
 
+
+
 /* OFF State */
 .toggle-btn.off {
     background: linear-gradient(135deg, #f8593f 0%, #b42b0c 50%, #8c1e04 100%);
-    color: white;
+    color: rgb(226, 228, 198);
     box-shadow: 0 4px 10px rgba(180, 43, 12, 0.5), 
                 inset 2px 2px 5px rgba(255, 255, 255, 0.2), 
                 inset -2px -2px 5px rgba(0, 0, 0, 0.3);

@@ -1020,25 +1020,45 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
         if (!confirm("Are you sure you want to delete all announcements?")) return;
     
         try {
-            // Delete all announcements from the database
-            await supabaseClient.from('announcements').delete().neq('id', 0);
+            // Check user role
+            if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+                showNotification('Only admins or managers can clear announcements.', 'error');
+                return;
+            }
     
-            // Clear the announcements in appState
+            // Step 1: Delete all user_announcement_views first (dependent table)
+            const { error: viewError } = await supabaseClient
+                .from('user_announcement_views')
+                .delete()
+                .neq('id', 0); // Match all rows
+    
+            if (viewError) {
+                throw new Error(`Failed to delete announcement views: ${viewError.message}`);
+            }
+    
+            // Step 2: Delete all announcements (now safe to do)
+            const { error: announceError } = await supabaseClient
+                .from('announcements')
+                .delete()
+                .neq('id', 0); // Match all rows
+    
+            if (announceError) {
+                throw new Error(`Failed to delete announcements: ${announceError.message}`);
+            }
+    
+            // Update appState
+            appState.user_announcement_views = [];
             appState.announcements = [];
     
-            // Remove user announcement views
-            await supabaseClient.from('user_announcement_views').delete().neq('id', 0);
-            appState.user_announcement_views = [];
-    
             // Refresh UI
+            await fetchAllData(); // Ensure full sync with database
             showAnnouncementsViewPopup();
-            showNotification('All announcements cleared!', 'success');
+            showNotification('All announcements cleared successfully!', 'success');
         } catch (error) {
-            console.error("Failed to clear announcements:", error);
-            showNotification('Failed to clear announcements!', 'error');
+            console.error('Clear announcements error:', error.message);
+            showNotification(`Failed to clear announcements: ${error.message}`, 'error');
         }
     }
-    
 
 
 
