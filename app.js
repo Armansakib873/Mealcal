@@ -300,24 +300,49 @@ collapsibleHeaders.forEach(header => {
     }
 
 
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        // Optionally log for debugging
-        console.log('Raw UTC:', dateString);
-        
-        // Adjust to your local timezone (UTC+6)
-        const localDate = new Date(date.getTime() + (6 * 60 * 60 * 1000)); // Add 6 hours
-        
-        return localDate.toLocaleString('en-US', {
-            day: 'numeric',       // "2"
-            month: 'short',       // "Mar"
-            year: 'numeric',      // "2025"
-            hour: 'numeric',      // "1"
-            minute: '2-digit',    // "28"
-            hour12: true          // "AM/PM"
-        }).replace(/(\d+) (\w+) (\d+) (\d+:\d+ .M)/, '$1 $2, $3, $4'); // "2 Mar, 2025, 1:28 AM"
-    }
+// General-purpose date formatting (used for announcements and notifications)
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    console.log('Raw UTC (formatDate):', dateString); // Debug
 
+    const options = {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Use the user's local timezone
+        day: 'numeric',       // "2"
+        month: 'short',       // "Mar"
+        year: 'numeric',      // "2025"
+        hour: 'numeric',      // "1"
+        minute: '2-digit',    // "28"
+        hour12: true          // "AM/PM"
+    };
+    
+    const formattedDate = date.toLocaleString('en-US', options);
+    console.log('Formatted Date (formatDate):', formattedDate); // Debug
+
+    return formattedDate.replace(/(\d+) (\w+) (\d+) (\d+:\d+ .M)/, '$1 $2, $3, $4'); // "2 Mar, 2025, 1:28 AM"
+}
+
+// Chat-specific date formatting (adds 6-hour offset for UTC+6)
+function formatChatDate(dateString) {
+    const date = new Date(dateString);
+    console.log('Raw UTC (formatChatDate):', dateString); // Debug
+
+    // Add 6 hours to convert from UTC to UTC+6
+    const localDate = new Date(date.getTime() + (6 * 60 * 60 * 1000)); // 6 hours in milliseconds
+
+    const options = {
+        day: 'numeric',       // "2"
+        month: 'short',       // "Mar"
+        year: 'numeric',      // "2025"
+        hour: 'numeric',      // "1"
+        minute: '2-digit',    // "28"
+        hour12: true          // "AM/PM"
+    };
+    
+    const formattedDate = localDate.toLocaleString('en-US', options);
+    console.log('Formatted Date (formatChatDate):', formattedDate); // Debug
+
+    return formattedDate.replace(/(\d+) (\w+) (\d+) (\d+:\d+ .M)/, '$1 $2, $3, $4'); // "2 Mar, 2025, 1:28 AM"
+}
 
     function isToggleTimeAllowed() {
         const now = new Date();
@@ -875,9 +900,9 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
             viewed_at: new Date().toISOString()
         }));
         const { data, error } = await supabaseClient
-        .from('user_announcement_views')
-        .upsert(viewEntries, { onConflict: ['user_id', 'announcement_id'] }) // Prevent duplicate errors
-        .select();
+            .from('user_announcement_views')
+            .upsert(viewEntries, { onConflict: ['user_id', 'announcement_id'] })
+            .select();
     
         if (error) {
             console.error('Error marking announcements as viewed:', error.message);
@@ -885,6 +910,12 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
             return;
         }
         appState.user_announcement_views.push(...data);
+    
+        // Debug the announcement timestamps
+        unseenAnnouncements.forEach(a => {
+            console.log('Announcement created_at (raw):', a.created_at);
+            console.log('Formatted announcement date:', formatDate(a.created_at));
+        });
     
         // Then show popup
         elements.announcementMessages.innerHTML = unseenAnnouncements.map(a => {
@@ -912,7 +943,6 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
         };
         setTimeout(() => document.addEventListener('click', closeOnClickOutside), 0);
     }
-
 // Update existing close button listener
 elements.closeAnnouncementPopup.addEventListener('click', () => {
     elements.announcementPopup.style.display = 'none';
@@ -2146,19 +2176,20 @@ async function renderMessages() {
         const isSelf = msg.sender_id === currentUser.id;
         const sameAsPrevious = msg.sender_id === lastSenderId;
         
-        // Create new message container
+        console.log('Message created_at (raw):', msg.created_at); // Debug
+        console.log('Formatted message timestamp:', formatChatDate(msg.created_at)); // Debug
+        
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('chat-message');
         if (isSelf) messageDiv.classList.add('sent');
         else messageDiv.classList.add('received');
         
-        // Always include sender name, formatting depends on message type
         const contentHTML = `
             <div class="message-header">
                 <span class="message-sender">${sender}</span>
             </div>
             <div class="message-body">${msg.content}</div>
-             <span class="message-timestamp">${formatDate(msg.created_at)}</span>
+            <span class="message-timestamp">${formatChatDate(msg.created_at)}</span>
         `;
         
         messageDiv.innerHTML = contentHTML;
@@ -2167,10 +2198,8 @@ async function renderMessages() {
         lastSenderId = msg.sender_id;
     });
     
-    // Scroll to bottom
     elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
 }
-
 let isSending = false;
 
 
