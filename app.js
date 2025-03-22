@@ -2655,13 +2655,16 @@ try {
         await fetchAllData();
         updateUIForRole();
         updateSidebarUserInfo();
-        debouncedUpdateAllViews();
+        debouncedUpdateAllViews(); // Debounced to avoid blocking
         await updateMealToggleCard();
         syncTogglesWithMealToggle();
         startRestrictionCheck();
+        
+        // Set up real-time subscriptions (single call)
         window.chatChannel = setupMessageSubscription();
-        window.realtimeChannels = setupRealtimeSubscriptions(); // Only this call remains
+        window.realtimeChannels = setupRealtimeSubscriptions(); // Consolidated subscriptions
 
+        // Add reset messages listener
         elements.resetMessagesBtn?.addEventListener('click', async () => {
             if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
                 await resetMessages();
