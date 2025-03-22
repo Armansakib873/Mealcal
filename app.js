@@ -223,14 +223,34 @@ collapsibleHeaders.forEach(header => {
     // --- Utility Functions ---
     function showNotification(message, type = 'success', isLogin = false, details = {}) {
         const target = isLogin ? elements.loginNotification : elements.notification;
-        const timestamp = new Date().toLocaleString('en-US', { 
-            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
-        });
-        const editorName = details.editor || (currentUser?.username || 'System'); // Use details.editor if provided
-        const fullMessage = `${message} on ${timestamp} by Editor: ${editorName}`;
+        const timestamp = formatDate(new Date().toISOString()); // Already using formatDate
+        const editorName = details.editor || (currentUser?.username || 'System');
     
-        target.textContent = fullMessage;
-        target.className = `notification ${type}`;
+        // Define icons for each notification type
+        const icons = {
+            success: '✅',
+            error: '⚠️',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+        const icon = icons[type] || 'ℹ️'; // Default to info icon if type is unknown
+    
+        // Construct the new HTML structure
+        const notificationHTML = `
+            <div class="notification-icon">${icon}</div>
+            <div class="notification-content">
+                <div class="notification-message">${message}</div>
+                <div class="notification-meta">
+                    <span class="notification-timestamp">${timestamp}</span>
+                    <span class="notification-separator">•</span>
+                    <span class="notification-editor">Editor: ${editorName}</span>
+                </div>
+            </div>
+        `;
+    
+        // Apply the HTML and styling
+        target.innerHTML = notificationHTML;
+        target.className = `notification ${type}`; // Apply the type class (success, error, etc.)
         target.style.display = 'block';
         setTimeout(() => target.classList.add('show'), 10);
         setTimeout(() => {
@@ -238,6 +258,7 @@ collapsibleHeaders.forEach(header => {
             setTimeout(() => target.style.display = 'none', 300);
         }, 3000);
     
+        // Handle logging important notifications to the database
         const importantTypes = [
             'deposit_added', 'deposit_edited', 'deposit_deleted',
             'expense_added', 'expense_edited', 'expense_deleted',
@@ -247,7 +268,7 @@ collapsibleHeaders.forEach(header => {
     
         if (!isLogin && importantTypes.includes(details.type)) {
             const notificationData = { 
-                message: fullMessage, 
+                message: `${message} by Editor: ${editorName}`, // Simplified message for the log
                 type, 
                 timestamp: new Date().toISOString(),
                 related_user: details.userName || null,
@@ -262,13 +283,12 @@ collapsibleHeaders.forEach(header => {
                         console.error('Failed to insert notification:', error.message);
                     } else {
                         console.log('Notification inserted successfully:', data);
-                        renderNotificationLog(); // Update log immediately
+                        renderNotificationLog();
                     }
                 })
                 .catch(error => console.error('Unexpected error inserting notification:', error));
         }
     }
-
 
     function showLoader() {
         const loader = document.getElementById('loader');
@@ -343,6 +363,27 @@ function formatChatDate(dateString) {
 
     return formattedDate.replace(/(\d+) (\w+) (\d+) (\d+:\d+ .M)/, '$1 $2, $3, $4'); // "2 Mar, 2025, 1:28 AM"
 }
+
+
+function formatDateForNotificationLog(dateString) {
+    const date = new Date(dateString);  // Assume timestamp is in UTC
+
+    // Convert from UTC to Bangladesh Time (UTC+6)
+    const localDate = new Date(date.getTime() + (6 * 60 * 60 * 1000)); 
+
+    const options = {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    };
+
+    return localDate.toLocaleString('en-US', options)
+        .replace(/(\w+)\s(\d+),\s(\d+)\s(\d+:\d+\s[AP]M)/, '$1 $2, $3, $4');
+}
+
 
     function isToggleTimeAllowed() {
         const now = new Date();
@@ -2459,42 +2500,62 @@ async function resetMessages() {
     }
 
     // --- Notification Log ---
-async function renderNotificationLog() {
-    if (!appState.notifications || appState.notifications.length === 0) {
-        elements.notificationLogList.innerHTML = '<div class="log-entry">No notifications available.</div>';
-        console.log('No notifications in appState:', appState.notifications);
-    } else {
-        elements.notificationLogList.innerHTML = appState.notifications.map(n => `
-            <div class="log-entry ${n.type}">
-                <span>${n.message}</span>
-                ${currentUser?.role === 'admin' ? `<button class="btn danger-btn" data-id="${n.id}">x</button>` : ''}
-            </div>
-        `).join('');
-    }
+    async function renderNotificationLog() {
+        if (!appState.notifications || appState.notifications.length === 0) {
+            elements.notificationLogList.innerHTML = '<div class="log-entry no-notifications">No notifications available.</div>';
+            console.log('No notifications in appState:', appState.notifications);
 
-    // Show "Clear All" button only for admins
-    if (currentUser?.role === 'admin') {
-        elements.clearAllNotificationsBtn.classList.remove('hidden');
-    } else {
-        elements.clearAllNotificationsBtn.classList.add('hidden');
-    }
+        } else {
+            elements.notificationLogList.innerHTML = appState.notifications.map(n => {
+                // Extract the message and editor from the stored message
+                const messageParts = n.message.split(' by Editor: ');
+                const messageText = messageParts[0]; // e.g., "Night Meal turned OFF for Raiyan"
+                const editorName = messageParts[1] || 'Unknown'; // e.g., "Raiyan"
+    
+                // Use the new formatting function
+                const formattedTimestamp = formatDateForNotificationLog(n.timestamp);
 
-    // Individual dismiss buttons (only for admins)
-    if (currentUser?.role === 'admin') {
-        elements.notificationLogList.querySelectorAll('.danger-btn[data-id]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = parseInt(btn.dataset.id);
-                await supabaseClient.from('notifications').delete().eq('id', id);
-                await fetchAllData();
-                await renderNotificationLog();
+
+    
+                // Create the structured HTML for the log entry
+                return `
+                    <div class="log-entry ${n.type}">
+                        <div class="message-wrapper">
+                            <span class="notification-message">${messageText}</span>
+                            <div class="notification-meta">
+                                <span class="notification-timestamp">${formattedTimestamp}</span>
+                                <span class="notification-editor">by Editor: ${editorName}</span>
+                            </div>
+                        </div>
+                        ${currentUser?.role === 'admin' ? `<button class="btn danger-btn" data-id="${n.id}">x</button>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+    
+        // Show "Clear All" button only for admins
+        if (currentUser?.role === 'admin') {
+            elements.clearAllNotificationsBtn.classList.remove('hidden');
+        } else {
+            elements.clearAllNotificationsBtn.classList.add('hidden');
+        }
+    
+        // Individual dismiss buttons (only for admins)
+        if (currentUser?.role === 'admin') {
+            elements.notificationLogList.querySelectorAll('.danger-btn[data-id]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = parseInt(btn.dataset.id);
+                    await supabaseClient.from('notifications').delete().eq('id', id);
+                    await fetchAllData();
+                    await renderNotificationLog();
+                });
             });
-        });
+        }
+    
+        // Clear all notifications button (admin only)
+        elements.clearAllNotificationsBtn.removeEventListener('click', clearAllNotificationsHandler); // Prevent duplicate listeners
+        elements.clearAllNotificationsBtn.addEventListener('click', clearAllNotificationsHandler);
     }
-
-    // Clear all notifications button (admin only)
-    elements.clearAllNotificationsBtn.removeEventListener('click', clearAllNotificationsHandler); // Prevent duplicate listeners
-    elements.clearAllNotificationsBtn.addEventListener('click', clearAllNotificationsHandler);
-}
     async function clearAllNotificationsHandler() {
         if (currentUser?.role !== 'admin') return;
         if (!confirm('Are you sure you want to clear all notifications?')) return;
