@@ -1316,7 +1316,7 @@ body.dark-mode #loading-animation {
     display: flex;
     justify-content: center;
     gap: var(--spacing-md);
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     margin-top: var(--spacing-sm);
 }
 
@@ -1327,7 +1327,7 @@ body.dark-mode #loading-animation {
 
 /* Styling for 3D effect */
 .day-meal, .night-meal {
-    padding: 12px;
+    padding: 8px;
     border-radius: var(--radius-lg);
     background: linear-gradient(145deg, #e1f8f064, #dfeef2);
     box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
@@ -1339,9 +1339,16 @@ body.dark-mode #loading-animation {
     background: linear-gradient(145deg, #0142271a, #65656590);
 }
 
+.meal-count-box p {
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: rgb(77, 77, 77) !important;
+
+}
+
 .meal-count span {
 
-    font-size: 1.5rem;
+    font-size: 1rem;
     color: var(--secondary);
     font-weight: bold;
 }
@@ -1350,12 +1357,13 @@ body.dark-mode #loading-animation {
     background-color: #3d6244b4;
     border-radius: 20px;
     color: rgb(226, 228, 198);
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     font-weight: 600;
-    padding: 0px 50px;
+    padding: 0px 40px;
+    margin-bottom: 10px ;
     text-align: center;
     display: inline-block;
-    min-width: 50px;
+    min-width: 40px;
 
     /* Inset shadow for depth effect */
     box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.3), 
