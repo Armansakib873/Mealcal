@@ -143,7 +143,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeAnnouncementsView: document.getElementById('close-announcements-view'),
     mealToggleCard: document.getElementById('meal-toggle-card'),
 userDayToggle: document.getElementById('user-day-toggle'),
-userNightToggle: document.getElementById('user-night-toggle')
+userNightToggle: document.getElementById('user-night-toggle'),
+todayDayCount: document.getElementById('today-day-count'),
+    todayNightCount: document.getElementById('today-night-count'),
+    totalDeposits: document.getElementById('total-deposits'), // Example, adjust as needed
+    totalExpenditure: document.getElementById('total-expenditure'),
+    currentBalance: document.getElementById('current-balance'),
+    totalMeals: document.getElementById('total-meals'),
+    mealRate: document.getElementById('meal-rate')
+    // Add other elements as needed
 };
 
         
@@ -1443,25 +1451,14 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
 
 
     async function toggleMealStatus(member, type) {
+        const statusKey = type === 'day' ? 'day_status' : 'night_status';
+        const newStatus = !member[statusKey];
+    
         if (currentUser.role === 'user' && !isToggleTimeAllowed()) {
             showNotification('Meal toggling is only allowed between 8 PM and 6 PM.', 'error');
             return;
         }
     
-        const statusKey = type === 'day' ? 'day_status' : 'night_status';
-        const newStatus = !member[statusKey];
-        const btn = document.querySelector(`.member-card[data-id="${member.id}"] .toggle-btn[data-type="${type}"]`);
-    
-        // Immediate animation trigger
-        requestAnimationFrame(() => {
-            if (btn) {
-                btn.classList.remove(newStatus ? 'off' : 'on');
-                btn.classList.add(newStatus ? 'on' : 'off');
-                btn.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ${newStatus ? '' : '(Off)'}`;
-            }
-        });
-    
-        // Async database update
         await supabaseClient.from('members')
             .update({ [statusKey]: newStatus })
             .eq('id', member.id);
@@ -1471,33 +1468,22 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
             sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
         }
     
-        // Update appState locally
         const memberIndex = appState.members.findIndex(m => m.id === member.id);
         appState.members[memberIndex][statusKey] = newStatus;
     
-        // Notification with deduplication
         const mealType = type === 'day' ? 'Day Meal' : 'Night Meal';
         const action = newStatus ? 'turned ON' : 'turned OFF';
-        const notificationKey = `${member.id}-${type}-${newStatus}-${Date.now()}`; // Unique key per toggle
-        if (!appState.lastNotificationKey || appState.lastNotificationKey !== notificationKey) {
-            showNotification(
-                `${mealType} ${action} for ${member.name}`,
-                'success',
-                false,
-                { userName: member.name, type: `meal_${type}_${newStatus ? 'on' : 'off'}`, editor: currentUser.username }
-            );
-            appState.lastNotificationKey = notificationKey; // Store the key to prevent duplicates
-        }
+        showNotification(`${mealType} ${action} for ${member.name}`, 'success', false, {
+            userName: member.name,
+            type: `meal_${type}_${newStatus ? 'on' : 'off'}`,
+            editor: currentUser.username
+        });
     
-        // Targeted UI updates
+        // Update UI immediately
         await renderMembers();
         await renderSummary();
-        await updateDashboard();
-        if (currentUser.member_id === member.id) {
-            await updateUserOverview();
-            await updateMealToggleCard(); // Ensure dashboard card updates
-        }
-        updateUserToggleButtons();
+        await updateDashboard(); // Ensure dashboard updates
+        await updateMealToggleCard(); // Sync toggle card
     }
 
 
@@ -1806,120 +1792,55 @@ async function renderExpenses() {
         const totalExpenses = appState.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
         const totalMealsCount = appState.meals.reduce((sum, m) => sum + (m.count || 0), 0);
         const mealRate = totalMealsCount ? totalExpenses / totalMealsCount : 0;
-
+    
+        const dayCount = appState.members.filter(m => m.day_status).length;
+        const nightCount = appState.members.filter(m => m.night_status).length;
+    
+        console.log('updateDashboard - Day Count:', dayCount, 'Night Count:', nightCount);
+    
+        if (elements.todayDayCount) {
+            elements.todayDayCount.textContent = dayCount;
+            console.log('Set today-day-count to:', elements.todayDayCount.textContent);
+        } else {
+            console.error('today-day-count element not found');
+        }
+    
+        if (elements.todayNightCount) {
+            elements.todayNightCount.textContent = nightCount;
+            console.log('Set today-night-count to:', elements.todayNightCount.textContent);
+        } else {
+            console.error('today-night-count element not found');
+        }
+    
         elements.totalDeposits.textContent = formatCurrency(totalDeposits);
         elements.totalExpenditure.textContent = formatCurrency(totalExpenses);
         elements.currentBalance.textContent = formatCurrency(totalDeposits - totalExpenses);
-        elements.todayDayCount.textContent = appState.members.filter(m => m.day_status).length;
-        elements.todayNightCount.textContent = appState.members.filter(m => m.night_status).length;
         elements.totalMeals.textContent = totalMealsCount;
         elements.mealRate.textContent = formatCurrency(mealRate, true);
-
-        await updateTodayMealCard(); // Add this
+    
+        // Enhanced force re-render
+        const mealCountBox = document.querySelector('.meal-count-box');
+        if (mealCountBox) {
+            mealCountBox.classList.add('hidden'); // Use class toggle for smoother transition
+            requestAnimationFrame(() => {
+                mealCountBox.classList.remove('hidden');
+            });
+        }
+    
+        // Fallback: Direct element refresh
+        if (elements.todayDayCount && elements.todayNightCount) {
+            elements.todayDayCount.style.display = 'none';
+            elements.todayNightCount.style.display = 'none';
+            requestAnimationFrame(() => {
+                elements.todayDayCount.style.display = '';
+                elements.todayNightCount.style.display = '';
+            });
+        }
+    
+        await updateTodayMealCard();
     }
-
-
     // In setupRealtimeSubscriptions, update the UI update calls to use debouncing where needed
-    function setupRealtimeSubscriptions() {
-        console.log('Setting up real-time subscriptions...');
-    
-        // Helper function to subscribe with retry
-        const subscribeWithRetry = (channel, event, callback, maxRetries = 3, retryDelay = 2000) => {
-            let retries = 0;
-    
-            const attemptSubscribe = () => {
-                channel
-                    .on('postgres_changes', event, callback)
-                    .subscribe((status, error) => {
-                        console.log(`${channel.name} subscription status:`, status);
-                        if (error) {
-                            console.error(`${channel.name} subscription error:`, error);
-                        }
-                        if (status === 'TIMED_OUT' && retries < maxRetries) {
-                            retries++;
-                            console.log(`Retrying ${channel.name} subscription (${retries}/${maxRetries})...`);
-                            setTimeout(() => {
-                                channel.unsubscribe();
-                                attemptSubscribe();
-                            }, retryDelay);
-                        }
-                    });
-            };
-    
-            attemptSubscribe();
-            return channel;
-        };
-    
-        // Subscribe to changes in the members table
-        const membersChannel = subscribeWithRetry(
-            supabaseClient.channel('public:members'),
-            { event: '*', schema: 'public', table: 'members' },
-            async (payload) => {
-                console.log('Members table updated:', payload);
-                if (payload.eventType === 'UPDATE') {
-                    const updatedMember = payload.new;
-                    const memberIndex = appState.members.findIndex(m => m.id === updatedMember.id);
-                    if (memberIndex !== -1) {
-                        appState.members[memberIndex] = { ...appState.members[memberIndex], ...updatedMember };
-                        console.log(`Updated member ${updatedMember.id} in appState`);
-                        await renderMembers();
-                        await renderSummary();
-                        debouncedUpdateAllViews();
-                        if (currentUser?.member_id === updatedMember.id) {
-                            currentUser.day_status = updatedMember.day_status;
-                            currentUser.night_status = updatedMember.night_status;
-                            sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
-                            await updateUserOverview();
-                        }
-                    }
-                }
-            }
-        );
-    
-        // Subscribe to changes in the deposits table
-        const depositsChannel = subscribeWithRetry(
-            supabaseClient.channel('public:deposits'),
-            { event: '*', schema: 'public', table: 'deposits' },
-            async (payload) => {
-                console.log('Deposits table updated:', payload);
-                if (payload.eventType === 'INSERT') {
-                    const newDeposit = payload.new;
-                    appState.deposits.push(newDeposit);
-                    appState.hasShownNegativeBalanceWarning = false;
-                    console.log(`Added deposit ${newDeposit.id} to appState`);
-                    await updateDashboard();
-                    await renderMembers();
-                } else if (payload.eventType === 'DELETE') {
-                    const deletedDeposit = payload.old;
-                    appState.deposits = appState.deposits.filter(d => d.id !== deletedDeposit.id);
-                    appState.hasShownNegativeBalanceWarning = false;
-                    console.log(`Removed deposit ${deletedDeposit.id} from appState`);
-                    await updateDashboard();
-                    await renderMembers();
-                }
-            }
-        );
-    
-        // Subscribe to changes in the expenses table
-        const expensesChannel = subscribeWithRetry(
-            supabaseClient.channel('public:expenses'),
-            { event: '*', schema: 'public', table: 'expenses' },
-            async (payload) => {
-                console.log('Expenses table updated:', payload);
-                if (payload.eventType === 'INSERT') {
-                    const newExpense = payload.new;
-                    appState.expenses.push(newExpense);
-                    appState.hasShownNegativeBalanceWarning = false;
-                    console.log(`Added expense ${newExpense.id} to appState`);
-                    await renderExpenses();
-                    await updateDashboard();
-                    await renderMembers();
-                }
-            }
-        );
-    
-        return [membersChannel, depositsChannel, expensesChannel];
-    }
+
 
     async function updateTodayMealCard() {
         const today = new Date().toLocaleString('en-US', { weekday: 'long' }); // e.g., "Sunday"
@@ -1949,13 +1870,13 @@ async function renderExpenses() {
         const member = appState.members.find(m => m.id === currentUser.member_id);
         if (!member) return;
     
-        elements.mealToggleCard.style.display = 'block'; // Show for non-admins
+        elements.mealToggleCard.style.display = 'block';
     
         const isAllowed = isToggleTimeAllowed();
         const dayBtn = elements.userDayToggle;
         const nightBtn = elements.userNightToggle;
     
-        // Update button states without triggering events
+        // Update button states
         dayBtn.classList.toggle('on', member.day_status);
         dayBtn.classList.toggle('off', !member.day_status);
         dayBtn.textContent = `Day ${member.day_status ? 'On' : 'Off'}`;
@@ -1966,21 +1887,22 @@ async function renderExpenses() {
         nightBtn.textContent = `Night ${member.night_status ? 'On' : 'Off'}`;
         nightBtn.classList.toggle('disabled', !isAllowed);
     
-        // Remove existing listeners to prevent duplicates
+        // Remove and reattach event listeners to prevent duplicates
         const dayBtnClone = dayBtn.cloneNode(true);
         const nightBtnClone = nightBtn.cloneNode(true);
         dayBtn.parentNode.replaceChild(dayBtnClone, dayBtn);
         nightBtn.parentNode.replaceChild(nightBtnClone, nightBtn);
     
-        // Update references after cloning
         elements.userDayToggle = dayBtnClone;
         elements.userNightToggle = nightBtnClone;
     
-        // Add new event listeners
         if (isAllowed) {
             dayBtnClone.addEventListener('click', () => toggleMealStatus(member, 'day'));
             nightBtnClone.addEventListener('click', () => toggleMealStatus(member, 'night'));
         }
+    
+        // Ensure dashboard counts are in sync
+        await updateDashboard(); // Add this to sync counts
     }
     // --- User Overview ---
     async function updateUserOverview() {
@@ -2317,69 +2239,87 @@ function setupMessageSubscription() {
 function setupRealtimeSubscriptions() {
     console.log('Setting up real-time subscriptions...');
 
-    // Members table subscription
-    supabaseClient
-        .channel('public:members')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, async (payload) => {
+    const subscribeWithRetry = (channel, event, callback, maxRetries = 3, retryDelay = 2000) => {
+        let retries = 0;
+
+        const attemptSubscribe = () => {
+            channel
+                .on('postgres_changes', event, callback)
+                .subscribe((status, error) => {
+                    console.log(`${channel.name} subscription status:`, status);
+                    if (error) console.error(`${channel.name} subscription error:`, error);
+                    if (status === 'TIMED_OUT' && retries < maxRetries) {
+                        retries++;
+                        console.log(`Retrying ${channel.name} subscription (${retries}/${maxRetries})...`);
+                        setTimeout(() => {
+                            channel.unsubscribe();
+                            attemptSubscribe();
+                        }, retryDelay);
+                    }
+                });
+        };
+
+        attemptSubscribe();
+        return channel;
+    };
+
+    const membersChannel = subscribeWithRetry(
+        supabaseClient.channel('public:members'),
+        { event: '*', schema: 'public', table: 'members' },
+        async (payload) => {
             console.log('Received payload for members:', payload);
-
-            if (payload.eventType === 'INSERT') {
-                appState.members.push(payload.new);
-                console.log(`Added new member ${payload.new.id} to appState`);
-                await renderMembers();
-            } else if (payload.eventType === 'UPDATE') {
-                const memberIndex = appState.members.findIndex(m => m.id === payload.new.id);
+            if (payload.eventType === 'UPDATE') {
+                const updatedMember = payload.new;
+                const memberIndex = appState.members.findIndex(m => m.id === updatedMember.id);
                 if (memberIndex !== -1) {
-                    appState.members[memberIndex] = { ...appState.members[memberIndex], ...payload.new };
-                    console.log(`Updated member ${payload.new.id} in appState`);
+                    appState.members[memberIndex] = { ...appState.members[memberIndex], ...updatedMember };
+                    console.log(`Updated member ${updatedMember.id} in appState`);
+                    await updateDashboard(); // Ensure this runs
                     await renderMembers();
+                    await renderSummary();
+                    debouncedUpdateAllViews();
+                    if (currentUser?.member_id === updatedMember.id) {
+                        currentUser.day_status = updatedMember.day_status;
+                        currentUser.night_status = updatedMember.night_status;
+                        sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+                        await updateUserOverview();
+                    }
                 }
-            } else if (payload.eventType === 'DELETE') {
-                appState.members = appState.members.filter(m => m.id !== payload.old.id);
-                console.log(`Removed member ${payload.old.id} from appState`);
-                await renderMembers();
             }
-        })
-        .subscribe((status) => {
-            console.log('Members subscription status:', status);
-        });
+        }
+    );
 
-    // Deposits table subscription
-    supabaseClient
-        .channel('public:deposits')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
-            console.log('Received payload for deposits:', payload);
-
+    const depositsChannel = subscribeWithRetry(
+        supabaseClient.channel('public:deposits'),
+        { event: '*', schema: 'public', table: 'deposits' },
+        async (payload) => {
+            console.log('Deposits table updated:', payload);
             if (payload.eventType === 'INSERT') {
                 appState.deposits.push(payload.new);
-                console.log(`Added deposit ${payload.new.id} to appState`);
                 await updateDashboard();
+                await renderMembers();
             } else if (payload.eventType === 'DELETE') {
                 appState.deposits = appState.deposits.filter(d => d.id !== payload.old.id);
-                console.log(`Removed deposit ${payload.old.id} from appState`);
                 await updateDashboard();
+                await renderMembers();
             }
-        })
-        .subscribe((status) => {
-            console.log('Deposits subscription status:', status);
-        });
+        }
+    );
 
-    // Expenses table subscription
-    supabaseClient
-        .channel('public:expenses')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async (payload) => {
-            console.log('Received payload for expenses:', payload);
-
+    const expensesChannel = subscribeWithRetry(
+        supabaseClient.channel('public:expenses'),
+        { event: '*', schema: 'public', table: 'expenses' },
+        async (payload) => {
+            console.log('Expenses table updated:', payload);
             if (payload.eventType === 'INSERT') {
                 appState.expenses.push(payload.new);
-                console.log(`Added expense ${payload.new.id} to appState`);
                 await renderExpenses();
                 await updateDashboard();
             }
-        })
-        .subscribe((status) => {
-            console.log('Expenses subscription status:', status);
-        });
+        }
+    );
+
+    return [membersChannel, depositsChannel, expensesChannel];
 }
 
 
@@ -2715,33 +2655,12 @@ try {
         await fetchAllData();
         updateUIForRole();
         updateSidebarUserInfo();
-        debouncedUpdateAllViews(); // Debounced to avoid blocking
+        debouncedUpdateAllViews();
         await updateMealToggleCard();
         syncTogglesWithMealToggle();
         startRestrictionCheck();
         window.chatChannel = setupMessageSubscription();
-
-        if (currentUser) {
-            loginPage.style.display = 'none';
-            mainApp.style.display = 'block';
-            await fetchAllData();
-            updateUIForRole();
-            updateSidebarUserInfo();
-            debouncedUpdateAllViews();
-            await updateMealToggleCard();
-            syncTogglesWithMealToggle();
-            startRestrictionCheck();
-            window.chatChannel = setupMessageSubscription();
-            window.realtimeChannels = setupRealtimeSubscriptions(); // Store channels for cleanup
-        
-            elements.resetMessagesBtn?.addEventListener('click', async () => {
-                if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
-                    await resetMessages();
-                }
-            });
-        
-            await showAnnouncementPopup();
-        }
+        window.realtimeChannels = setupRealtimeSubscriptions(); // Only this call remains
 
         elements.resetMessagesBtn?.addEventListener('click', async () => {
             if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
