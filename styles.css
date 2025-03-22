@@ -209,7 +209,7 @@ a:active {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.1); /* Slight overlay for contrast */
+    background-color: rgba(187, 185, 185, 0.467); /* Slight overlay for contrast */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1205,6 +1205,11 @@ body.dark-mode #loading-animation {
     border-radius: 0;
 }
 
+
+.dashboard-toggle .stat-box h3{
+    padding: 30px 100px !important;
+}
+
 .dashboard-tabs {
     display: none;  /* Hidden by default on larger screens */
     gap: var(--spacing-sm);
@@ -1253,9 +1258,18 @@ body.dark-mode #loading-animation {
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* Two columns */
     gap: var(--spacing-md);
 }
+
+.dashboard-grid > *:nth-child(-n+3) { 
+    grid-column: span 2; /* First three items take full width */
+}
+
+.dashboard-grid > * { 
+    grid-column: span 1; /* Rest take half width */
+}
+
 .stat-box {
     background: var(--dash);
     color: var(--foreground);
@@ -1375,6 +1389,14 @@ body.dark-mode #loading-animation {
 .day-meal:active, .night-meal:active {
     transform: scale(0.98);
 
+}
+
+.dashboard-card .toggle-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
 }
 
 /* --- Notification --- */
@@ -2353,52 +2375,6 @@ body.dark-mode #loading-animation {
     }
 }
 
-/* --- Meal Tracker --- */
-.month-selector {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-md);
-    background: var(--light);
-    padding: var(--spacing-md);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    color: var(--foreground);
-}
-
-.month-selector label {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--foreground);
-    white-space: nowrap;
-}
-
-.month-selector select {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: 1rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
-    background-repeat: no-repeat;
-    background-position-x: calc(100% - 8px);
-    background-position-y: center;
-    padding-right: 30px;
-    background-color: var(--light);
-    width: 100%;
-    max-width: 200px;
-    color: var(--foreground);
-}
-
-.month-selector select:focus {
-    border-color: var(--primary);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
-}
-
 /* --- Buttons --- */
 .btn {
     padding: var(--spacing-sm) var(--spacing-md);
@@ -2465,72 +2441,65 @@ body.dark-mode #loading-animation {
 .toggle-btn {
     border: none;
     border-radius: 25px;
-    padding: 10px 20px;
-    font-size: 0.8rem;
+    padding: 10px;
+    font-size: 0.7rem;
     font-weight: 800;
     cursor: pointer;
-    transition: all 0.3s ease-in-out;
     text-transform: uppercase;
     letter-spacing: 1px;
     outline: none;
     display: inline-block;
-    min-width: 80px;
+    min-width: 110px;
     text-align: center;
-}
-.toggle-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    background: rgba(255, 255, 255, 0.1);
-    pointer-events: none;
-}
-
-.toggle-btn:active::before {
-    opacity: 1;
+    
+    /* Smooth transition for all properties */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
 }
 
 .toggle-btn:active {
-    transform: translateY(5px) scale(0.98);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+    transform: translateY(2px) scale(0.98);
 }
 
 /* ON State */
 .toggle-btn.on {
     background: linear-gradient(135deg, #000000ac 0%, #257d35b4 50%, #3d6244b4 100%);
     color: rgb(226, 228, 198);
-    box-shadow: 0 4px 10px rgba(6, 105, 31, 0.496), 
-                inset 2px 2px 5px rgba(255, 255, 255, 0.2), 
+    box-shadow: 0 4px 10px rgba(6, 105, 31, 0.496),
+                inset 2px 2px 5px rgba(255, 255, 255, 0.2),
                 inset -2px -2px 5px rgba(0, 0, 0, 0.3);
 }
-
-
 
 /* OFF State */
 .toggle-btn.off {
     background: linear-gradient(135deg, #f8593f 0%, #b42b0c 50%, #8c1e04 100%);
     color: rgb(226, 228, 198);
-    box-shadow: 0 4px 10px rgba(180, 43, 12, 0.5), 
-                inset 2px 2px 5px rgba(255, 255, 255, 0.2), 
+    box-shadow: 0 4px 10px rgba(180, 43, 12, 0.5),
+                inset 2px 2px 5px rgba(255, 255, 255, 0.2),
                 inset -2px -2px 5px rgba(0, 0, 0, 0.3);
 }
 
+/* Text animation for toggle state */
 
-@keyframes toggleBounce {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+
+/* Ripple effect */
+.toggle-btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.4);
+    transform: scale(0);
+    animation: ripple 0.6s linear;
+    pointer-events: none;
 }
 
-.toggle-btn.on,
-.toggle-btn.off {
-    animation: toggleBounce 1s ease;
+@keyframes ripple {
+    to {
+        transform: scale(2.5);
+        opacity: 0;
+    }
 }
+
 
 .toggle-btn.disabled {
     background: #ced4da;
@@ -2541,37 +2510,8 @@ body.dark-mode #loading-animation {
 }
 
 
-/* --- trial --- */
-.toggle-btn:active {
-    transform: translateY(3px) scale(0.95) rotate(-1deg);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
-    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
-}
+/* --- dash toggle  --- */
 
-.toggle-btn {
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease-in-out;
-}
-
-.toggle-btn:active::after {
-    content: "";
-    position: absolute;
-    width: 120%;
-    height: 120%;
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 50%;
-    animation: ripple 0.4s ease-out;
-}
-
-@keyframes ripple {
-    from {
-        transform: scale(0);
-        opacity: 0.8;
-    }
-    to {
-        transform: scale(1);
-        opacity: 0;
-    }
-}
 
 
 /* --- Custom Scrollbar Styling (Webkit Browsers) --- */

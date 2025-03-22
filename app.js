@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mainApp = document.getElementById('main-app');
 
     console.log('Starting initialization...');
+    showLoader(); // Show loader as soon as app starts
     loginPage.style.display = 'none';
     mainApp.style.display = 'none';
     
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentDate: document.getElementById('current-date'),
         notification: document.getElementById('notification'),
         toggleThemeBtn: document.getElementById('toggle-theme'),
+        
 
         mealPlannerSection: document.getElementById('meal-planner-section'),
     mealPlannerTableBody: document.querySelector('#meal-planner-table tbody'),
@@ -138,7 +140,10 @@ document.addEventListener('DOMContentLoaded', async () => {
      viewAnnouncementsBtn: document.getElementById('view-announcements-btn'),
     announcementsViewPopup: document.getElementById('announcements-view-popup'),
     announcementsViewList: document.getElementById('announcements-view-list'),
-    closeAnnouncementsView: document.getElementById('close-announcements-view')
+    closeAnnouncementsView: document.getElementById('close-announcements-view'),
+    mealToggleCard: document.getElementById('meal-toggle-card'),
+userDayToggle: document.getElementById('user-day-toggle'),
+userNightToggle: document.getElementById('user-night-toggle')
 };
 
         
@@ -257,6 +262,21 @@ collapsibleHeaders.forEach(header => {
     }
 
 
+    function showLoader() {
+        const loader = document.getElementById('loader');
+        if (loader) {
+            loader.classList.remove('hidden');
+        }
+    }
+    
+    function hideLoader() {
+        const loader = document.getElementById('loader');
+        if (loader) {
+            loader.classList.add('hidden');
+        }
+    }
+
+
     function formatCurrency(amount, isMealRate = false) {
         return isMealRate ? `৳${amount.toFixed(2)}` : `৳${Math.round(amount)}`;
     }
@@ -296,6 +316,15 @@ collapsibleHeaders.forEach(header => {
         const hours = now.getHours();
         return hours >= 20 || hours < 18; // 8 PM to 6 PM (for users only)
     }
+
+    function debounce(func, wait) {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        };
+    }
+    const debouncedUpdateAllViews = debounce(updateAllViews, 300); // Debounce full UI updates
 
     function getLocalTime() {
         return new Date().toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
@@ -369,6 +398,8 @@ collapsibleHeaders.forEach(header => {
         const password = document.getElementById('login-password').value;
         const rememberMe = document.getElementById('remember-me').checked;
     
+        showLoader(); // Show loader when login starts
+    
         const { data, error } = await supabaseClient.from('users')
             .select('*')
             .eq('username', username)
@@ -377,6 +408,7 @@ collapsibleHeaders.forEach(header => {
     
         if (error || !data) {
             showNotification('Invalid credentials.', 'error', true);
+            hideLoader();
             return;
         }
     
@@ -393,24 +425,25 @@ collapsibleHeaders.forEach(header => {
         elements.loginPage.style.display = 'none';
         elements.loginPage.classList.remove('hidden');
         elements.mainApp.style.display = 'block';
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 0)); // Ensure DOM updates
     
         await fetchAllData();
         updateUIForRole();
         updateSidebarUserInfo();
         await updateAllViews();
-        
+    
         // Trigger the announcement popup right after login
         await showAnnouncementPopup();
-        
+    
         const today = new Date().toISOString().split('T')[0];
         const hasViewedToday = appState.user_announcement_views.some(v => 
             v.user_id === currentUser.id && 
             new Date(v.viewed_at).toISOString().split('T')[0] === today
         );
         if (!hasViewedToday) await showAnnouncementPopup();
+    
+        hideLoader(); // Hide loader once everything is fully loaded
     }
-
     async function signup() {
         const username = document.getElementById('signup-username').value.trim();
         const password = document.getElementById('signup-password').value;
@@ -442,18 +475,37 @@ collapsibleHeaders.forEach(header => {
         await createAuthForms();
     }
 
-    function logout() {
-        currentUser = null;
-        sessionStorage.removeItem('mealsync_currentUser');
+    async function logout() {
+        // Clean up real-time subscriptions
+        if (window.realtimeChannels) {
+            window.realtimeChannels.forEach(channel => channel.unsubscribe());
+        }
+        if (window.chatChannel) {
+            window.chatChannel.unsubscribe();
+        }
+        supabaseClient.removeAllChannels(); // Additional safety
+    
         localStorage.removeItem('mealsync_auto_login');
-        // REMOVE: elements.headerNav.classList.remove('active'); // No longer needed
-        elements.mainApp.style.display = 'none';
+        sessionStorage.removeItem('mealsync_currentUser');
+        currentUser = null;
+        appState = {
+            members: [],
+            expenses: [],
+            deposits: [],
+            meals: [],
+            messages: [],
+            notifications: [],
+            user_settings: [],
+            users: [],
+            user_announcement_views: [],
+            hasShownNegativeBalanceWarning: false,
+            lastNotificationKey: null
+        };
         elements.loginPage.style.display = 'flex';
-        elements.loginPage.classList.remove('hidden');
-        elements.signupFormContainer.classList.add('hidden');
-        elements.loginFormContainer.classList.remove('hidden');
-        elements.toggleSignupBtn.textContent = 'Need an account? Sign Up';
-        updateSidebarUserInfo(); // Update sidebar
+        elements.mainApp.style.display = 'none';
+        await createAuthForms();
+        updateSidebarUserInfo();
+        showNotification('Logged out successfully.', 'success');
     }
 
 
@@ -471,6 +523,7 @@ function updateSidebarUserInfo() { // Renamed function
     async function checkAutoLogin() {
         const autoLoginData = localStorage.getItem('mealsync_auto_login');
         if (autoLoginData) {
+            showLoader(); // Show loader during auto-login
             const [username, password] = atob(autoLoginData).split(':');
             const { data: user } = await supabaseClient.from('users')
                 .select('*')
@@ -493,8 +546,11 @@ function updateSidebarUserInfo() { // Renamed function
                 );
                 if (!hasViewedToday) await showAnnouncementPopup();
             }
+            hideLoader(); // Hide loader after auto-login completes
         }
     }
+
+
     // --- Theme Toggle ---
     elements.toggleThemeBtn.addEventListener('click', async () => {
         document.body.classList.toggle('dark-mode');
@@ -1075,6 +1131,11 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
             return;
         }
     
+        // Immediate UI feedback
+        closeModal(elements.addMemberModal); // Close modal instantly
+        showNotification(`${name} added successfully!`, 'success'); // Show success immediately
+    
+        // Async operations in the background
         const { data: existingMember } = await supabaseClient.from('members')
             .select('id')
             .eq('name', name)
@@ -1115,101 +1176,112 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
             label,
             amount
         }));
-
-
-   if (depositEntries.length > 0) {
-    await supabaseClient.from('deposits').insert(depositEntries);
-    depositEntries.forEach(entry => {
-        showNotification(`${name} deposits BDT ${entry.amount} added`, 'success', false, {
-            userName: name,
-            amount: entry.amount,
-            type: 'deposit_added'
-        });
-    });
-    appState.hasShownNegativeBalanceWarning = false; // Reset flag
-}
     
-        await fetchAllData();
-        await updateAllViews();
-        showNotification(`${name} added successfully!`, 'success');
-        closeModal(elements.addMemberModal);
+        if (depositEntries.length > 0) {
+            await supabaseClient.from('deposits').insert(depositEntries);
+            depositEntries.forEach(entry => {
+                showNotification(`${name} deposits BDT ${entry.amount} added`, 'success', false, {
+                    userName: name,
+                    amount: entry.amount,
+                    type: 'deposit_added'
+                });
+            });
+            appState.hasShownNegativeBalanceWarning = false;
+        }
+    
+        // Update appState locally
+        appState.members.push(member);
+        appState.users.push(user);
+        appState.deposits.push(...depositEntries);
+    
+        // Targeted UI update
+        await renderMembers();
+        await createAuthForms(); // Refresh login/signup dropdowns
+    }
+
+
+    async function updateMember() {
+        if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
+    
+        const member = appState.members.find(m => m.id === editingMemberId);
+        const user = appState.users.find(u => u.member_id === editingMemberId);
+    
+        const name = document.getElementById('edit-member-name').value.trim();
+        const username = document.getElementById('edit-member-username').value.trim();
+        const preMonthBalance = parseFloat(document.getElementById('edit-pre-month-balance').value) || 0;
+    
+        // Immediate UI feedback
+        closeModal(elements.editMemberModal); // Close modal instantly
+        showNotification(`${name} updated successfully!`, 'success');
+    
+        // Async operations in the background
+        if (name !== member.name) {
+            const { data: existingMember } = await supabaseClient.from('members')
+                .select('id')
+                .eq('name', name)
+                .single();
+            if (existingMember) {
+                showNotification('Member name already exists.', 'error');
+                return;
+            }
+        }
+    
+        if (username !== user.username) {
+            const { data: existingUser } = await supabaseClient.from('users')
+                .select('id')
+                .eq('username', username)
+                .single();
+            if (existingUser) {
+                showNotification('Username already exists.', 'error');
+                return;
+            }
+        }
+    
+        const memberUpdate = { name, pre_month_balance: preMonthBalance };
+        await supabaseClient.from('members')
+            .update(memberUpdate)
+            .eq('id', editingMemberId);
+    
+        const userUpdate = { username };
+        if (currentUser.role === 'admin') {
+            const password = document.getElementById('edit-member-password').value || undefined;
+            if (password) userUpdate.password = password;
+        }
+        await supabaseClient.from('users')
+            .update(userUpdate)
+            .eq('id', user.id);
+    
+        const deposits = {};
+        elements.editDepositFields.querySelectorAll('input').forEach(input => {
+            deposits[input.dataset.label] = parseFloat(input.value) || 0;
+        });
+        await supabaseClient.from('deposits').delete().eq('member_id', editingMemberId);
+        const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
+            member_id: editingMemberId,
+            label,
+            amount
+        }));
+        if (depositEntries.length > 0) {
+            await supabaseClient.from('deposits').insert(depositEntries);
+            depositEntries.forEach(entry => {
+                showNotification(`${name} deposits BDT ${entry.amount} edited`, 'success', false, {
+                    userName: name,
+                    amount: entry.amount,
+                    type: 'deposit_edited'
+                });
+            });
+        }
+    
+        // Update appState locally
+        Object.assign(member, memberUpdate);
+        Object.assign(user, userUpdate);
+        appState.deposits = appState.deposits.filter(d => d.member_id !== editingMemberId).concat(depositEntries);
+    
+        // Targeted UI update
+        await renderMembers();
+        await updateDashboard();
         await createAuthForms();
     }
-
-
- async function updateMember() {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
-
-    const member = appState.members.find(m => m.id === editingMemberId);
-    const user = appState.users.find(u => u.member_id === editingMemberId);
-
-    const name = document.getElementById('edit-member-name').value.trim();
-    const username = document.getElementById('edit-member-username').value.trim();
-    const preMonthBalance = parseFloat(document.getElementById('edit-pre-month-balance').value) || 0;
-
-    if (name !== member.name) {
-        const { data: existingMember } = await supabaseClient.from('members')
-            .select('id')
-            .eq('name', name)
-            .single();
-        if (existingMember) {
-            showNotification('Member name already exists.', 'error');
-            return;
-        }
-    }
-
-    if (username !== user.username) {
-        const { data: existingUser } = await supabaseClient.from('users')
-            .select('id')
-            .eq('username', username)
-            .single();
-        if (existingUser) {
-            showNotification('Username already exists.', 'error');
-            return;
-        }
-    }
-
-    const memberUpdate = { name, pre_month_balance: preMonthBalance };
-    await supabaseClient.from('members')
-        .update(memberUpdate)
-        .eq('id', editingMemberId);
-
-    const userUpdate = { username };
-    if (currentUser.role === 'admin') {
-        const password = document.getElementById('edit-member-password').value || undefined;
-        if (password) userUpdate.password = password;
-    }
-    await supabaseClient.from('users')
-        .update(userUpdate)
-        .eq('id', user.id);
-
-    const deposits = {};
-    elements.editDepositFields.querySelectorAll('input').forEach(input => {
-        deposits[input.dataset.label] = parseFloat(input.value) || 0;
-    });
-    await supabaseClient.from('deposits').delete().eq('member_id', editingMemberId);
-    const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
-        member_id: editingMemberId,
-        label,
-        amount
-    }));
-    if (depositEntries.length > 0) {
-        await supabaseClient.from('deposits').insert(depositEntries);
-        depositEntries.forEach(entry => {
-            showNotification(`${name} deposits BDT ${entry.amount} edited`, 'success', false, {
-                userName: name,
-                amount: entry.amount,
-                type: 'deposit_edited'
-            });
-        });
-    }
-
-    await fetchAllData();
-    await updateAllViews();
-    showNotification(`${name} updated successfully!`, 'success');
-    closeModal(elements.editMemberModal);
-    await createAuthForms();
-}
 
     async function editMember(id) {
         if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
@@ -1378,6 +1450,18 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
     
         const statusKey = type === 'day' ? 'day_status' : 'night_status';
         const newStatus = !member[statusKey];
+        const btn = document.querySelector(`.member-card[data-id="${member.id}"] .toggle-btn[data-type="${type}"]`);
+    
+        // Immediate animation trigger
+        requestAnimationFrame(() => {
+            if (btn) {
+                btn.classList.remove(newStatus ? 'off' : 'on');
+                btn.classList.add(newStatus ? 'on' : 'off');
+                btn.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ${newStatus ? '' : '(Off)'}`;
+            }
+        });
+    
+        // Async database update
         await supabaseClient.from('members')
             .update({ [statusKey]: newStatus })
             .eq('id', member.id);
@@ -1387,34 +1471,36 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
             sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
         }
     
-        // Update appState
+        // Update appState locally
         const memberIndex = appState.members.findIndex(m => m.id === member.id);
         appState.members[memberIndex][statusKey] = newStatus;
     
-        // Add notification
+        // Notification with deduplication
         const mealType = type === 'day' ? 'Day Meal' : 'Night Meal';
         const action = newStatus ? 'turned ON' : 'turned OFF';
-        const editorName = currentUser.username || 'Unknown';
-        showNotification(
-            `${mealType} ${action} for ${member.name}`,
-            'success',
-            false,
-            {
-                userName: member.name,
-                type: `meal_${type}_${newStatus ? 'on' : 'off'}`,
-                editor: editorName
-            }
-        );
+        const notificationKey = `${member.id}-${type}-${newStatus}-${Date.now()}`; // Unique key per toggle
+        if (!appState.lastNotificationKey || appState.lastNotificationKey !== notificationKey) {
+            showNotification(
+                `${mealType} ${action} for ${member.name}`,
+                'success',
+                false,
+                { userName: member.name, type: `meal_${type}_${newStatus ? 'on' : 'off'}`, editor: currentUser.username }
+            );
+            appState.lastNotificationKey = notificationKey; // Store the key to prevent duplicates
+        }
     
-        // Update UI
-        await renderMembers(); // Re-render member card
-        await renderSummary(); // Re-render summary table
+        // Targeted UI updates
+        await renderMembers();
+        await renderSummary();
         await updateDashboard();
         if (currentUser.member_id === member.id) {
             await updateUserOverview();
+            await updateMealToggleCard(); // Ensure dashboard card updates
         }
-        updateUserToggleButtons(); // Sync button appearance
+        updateUserToggleButtons();
     }
+
+
     // --- Expense Functions ---
     async function openExpenseModal(expenseId = null) {
         if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
@@ -1435,31 +1521,40 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
         openModal(elements.expenseModal);
     }
 
-   async function addExpense() {
-    if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
-    const date = document.getElementById('expense-date').value;
-    const memberId = parseInt(document.getElementById('expense-member').value);
-    const amount = parseFloat(document.getElementById('expense-amount').value);
-
-    if (!date || isNaN(memberId) || isNaN(amount)) {
-        showNotification('Please fill all fields.', 'error');
-        return;
+    async function addExpense() {
+        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
+        const date = document.getElementById('expense-date').value;
+        const memberId = parseInt(document.getElementById('expense-member').value);
+        const amount = parseFloat(document.getElementById('expense-amount').value);
+    
+        if (!date || isNaN(memberId) || isNaN(amount)) {
+            showNotification('Please fill all fields.', 'error');
+            return;
+        }
+    
+        // Immediate UI feedback
+        closeModal(elements.expenseModal); // Close modal instantly
+        const member = appState.members.find(m => m.id === memberId);
+        showNotification(`${member.name} made an expense of BDT ${amount}`, 'success', false, {
+            userName: member.name,
+            amount,
+            type: 'expense_added'
+        });
+    
+        // Async operation in the background
+        const { data: expense } = await supabaseClient.from('expenses')
+            .insert([{ member_id: memberId, date, amount }])
+            .select()
+            .single();
+    
+        // Update appState locally
+        appState.expenses.push(expense);
+        appState.hasShownNegativeBalanceWarning = false;
+    
+        // Targeted UI update
+        await renderExpenses();
+        await updateDashboard(); // Update totals
     }
-
-    await supabaseClient.from('expenses')
-        .insert([{ member_id: memberId, date, amount }]);
-
-    const member = appState.members.find(m => m.id === memberId);
-    await fetchAllData();
-    await updateAllViews();
-    showNotification(`${member.name} made an expense of BDT ${amount}`, 'success', false, {
-        userName: member.name,
-        amount,
-        type: 'expense_added'
-    });
-    appState.hasShownNegativeBalanceWarning = false; // Reset flag
-    closeModal(elements.expenseModal);
-}
 
 
 async function updateExpense() {
@@ -1723,6 +1818,109 @@ async function renderExpenses() {
         await updateTodayMealCard(); // Add this
     }
 
+
+    // In setupRealtimeSubscriptions, update the UI update calls to use debouncing where needed
+    function setupRealtimeSubscriptions() {
+        console.log('Setting up real-time subscriptions...');
+    
+        // Helper function to subscribe with retry
+        const subscribeWithRetry = (channel, event, callback, maxRetries = 3, retryDelay = 2000) => {
+            let retries = 0;
+    
+            const attemptSubscribe = () => {
+                channel
+                    .on('postgres_changes', event, callback)
+                    .subscribe((status, error) => {
+                        console.log(`${channel.name} subscription status:`, status);
+                        if (error) {
+                            console.error(`${channel.name} subscription error:`, error);
+                        }
+                        if (status === 'TIMED_OUT' && retries < maxRetries) {
+                            retries++;
+                            console.log(`Retrying ${channel.name} subscription (${retries}/${maxRetries})...`);
+                            setTimeout(() => {
+                                channel.unsubscribe();
+                                attemptSubscribe();
+                            }, retryDelay);
+                        }
+                    });
+            };
+    
+            attemptSubscribe();
+            return channel;
+        };
+    
+        // Subscribe to changes in the members table
+        const membersChannel = subscribeWithRetry(
+            supabaseClient.channel('public:members'),
+            { event: '*', schema: 'public', table: 'members' },
+            async (payload) => {
+                console.log('Members table updated:', payload);
+                if (payload.eventType === 'UPDATE') {
+                    const updatedMember = payload.new;
+                    const memberIndex = appState.members.findIndex(m => m.id === updatedMember.id);
+                    if (memberIndex !== -1) {
+                        appState.members[memberIndex] = { ...appState.members[memberIndex], ...updatedMember };
+                        console.log(`Updated member ${updatedMember.id} in appState`);
+                        await renderMembers();
+                        await renderSummary();
+                        debouncedUpdateAllViews();
+                        if (currentUser?.member_id === updatedMember.id) {
+                            currentUser.day_status = updatedMember.day_status;
+                            currentUser.night_status = updatedMember.night_status;
+                            sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+                            await updateUserOverview();
+                        }
+                    }
+                }
+            }
+        );
+    
+        // Subscribe to changes in the deposits table
+        const depositsChannel = subscribeWithRetry(
+            supabaseClient.channel('public:deposits'),
+            { event: '*', schema: 'public', table: 'deposits' },
+            async (payload) => {
+                console.log('Deposits table updated:', payload);
+                if (payload.eventType === 'INSERT') {
+                    const newDeposit = payload.new;
+                    appState.deposits.push(newDeposit);
+                    appState.hasShownNegativeBalanceWarning = false;
+                    console.log(`Added deposit ${newDeposit.id} to appState`);
+                    await updateDashboard();
+                    await renderMembers();
+                } else if (payload.eventType === 'DELETE') {
+                    const deletedDeposit = payload.old;
+                    appState.deposits = appState.deposits.filter(d => d.id !== deletedDeposit.id);
+                    appState.hasShownNegativeBalanceWarning = false;
+                    console.log(`Removed deposit ${deletedDeposit.id} from appState`);
+                    await updateDashboard();
+                    await renderMembers();
+                }
+            }
+        );
+    
+        // Subscribe to changes in the expenses table
+        const expensesChannel = subscribeWithRetry(
+            supabaseClient.channel('public:expenses'),
+            { event: '*', schema: 'public', table: 'expenses' },
+            async (payload) => {
+                console.log('Expenses table updated:', payload);
+                if (payload.eventType === 'INSERT') {
+                    const newExpense = payload.new;
+                    appState.expenses.push(newExpense);
+                    appState.hasShownNegativeBalanceWarning = false;
+                    console.log(`Added expense ${newExpense.id} to appState`);
+                    await renderExpenses();
+                    await updateDashboard();
+                    await renderMembers();
+                }
+            }
+        );
+    
+        return [membersChannel, depositsChannel, expensesChannel];
+    }
+
     async function updateTodayMealCard() {
         const today = new Date().toLocaleString('en-US', { weekday: 'long' }); // e.g., "Sunday"
         const plan = appState.meal_plans.find(p => p.day_name === today) || { day_meal: 'Not set', night_meal: 'Not set' };
@@ -1742,6 +1940,48 @@ async function renderExpenses() {
     }
 
 
+    async function updateMealToggleCard() {
+        if (currentUser?.role === 'admin' || !currentUser?.member_id) {
+            elements.mealToggleCard.style.display = 'none';
+            return;
+        }
+    
+        const member = appState.members.find(m => m.id === currentUser.member_id);
+        if (!member) return;
+    
+        elements.mealToggleCard.style.display = 'block'; // Show for non-admins
+    
+        const isAllowed = isToggleTimeAllowed();
+        const dayBtn = elements.userDayToggle;
+        const nightBtn = elements.userNightToggle;
+    
+        // Update button states without triggering events
+        dayBtn.classList.toggle('on', member.day_status);
+        dayBtn.classList.toggle('off', !member.day_status);
+        dayBtn.textContent = `Day ${member.day_status ? 'On' : 'Off'}`;
+        dayBtn.classList.toggle('disabled', !isAllowed);
+    
+        nightBtn.classList.toggle('on', member.night_status);
+        nightBtn.classList.toggle('off', !member.night_status);
+        nightBtn.textContent = `Night ${member.night_status ? 'On' : 'Off'}`;
+        nightBtn.classList.toggle('disabled', !isAllowed);
+    
+        // Remove existing listeners to prevent duplicates
+        const dayBtnClone = dayBtn.cloneNode(true);
+        const nightBtnClone = nightBtn.cloneNode(true);
+        dayBtn.parentNode.replaceChild(dayBtnClone, dayBtn);
+        nightBtn.parentNode.replaceChild(nightBtnClone, nightBtn);
+    
+        // Update references after cloning
+        elements.userDayToggle = dayBtnClone;
+        elements.userNightToggle = nightBtnClone;
+    
+        // Add new event listeners
+        if (isAllowed) {
+            dayBtnClone.addEventListener('click', () => toggleMealStatus(member, 'day'));
+            nightBtnClone.addEventListener('click', () => toggleMealStatus(member, 'night'));
+        }
+    }
     // --- User Overview ---
     async function updateUserOverview() {
         if (currentUser.role === 'admin') return; // Skip for admins
@@ -1961,7 +2201,8 @@ async function renderExpenses() {
                             .eq('day_name', day);
                         plan[field] = newValue;
                         showNotification(`${day} ${field.replace('_', ' ')} updated to "${newValue}"`, 'success');
-                        await updateTodayMealCard(); // Update dashboard
+                        await updateTodayMealCard();
+                        await updateMealToggleCard(); // Add this line
                     });
                 });
             }
@@ -2029,35 +2270,117 @@ const debouncedRenderMessages = debounce(renderMessages, 100); // 100ms debounce
 
 // Update the subscription to use debouncedRenderMessages
 function setupMessageSubscription() {
-    let channel = supabaseClient
-        .channel('public:messages')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-            console.log('New message received:', payload.new);
-            if (!appState.messages.some(msg => msg.id === payload.new.id)) {
-                appState.messages.push(payload.new);
-                if (!elements.chatPopup.classList.contains('open')) {
-                    const sender = appState.users.find(u => u.id === payload.new.sender_id)?.username || 'Unknown';
-                    showNotification(`New message from ${sender}: ${payload.new.content}`, 'info');
-                }
-                debouncedRenderMessages(); // Use debounced version
-            }
-        })
-        .subscribe((status, err) => {
-            if (status === 'SUBSCRIBED') {
-                console.log('Subscribed to group chat');
-            } else if (err) {
-                console.error('Subscription error:', err);
-                setTimeout(() => {
-                    console.log('Reattempting subscription...');
-                    channel.unsubscribe();
-                    setupMessageSubscription();
-                }, 1000);
-            }
-        });
+    const channel = supabaseClient.channel('public:messages');
+    const subscribeWithRetry = (channel, event, callback, maxRetries = 3, retryDelay = 2000) => {
+        let retries = 0;
 
-    return channel;
+        const attemptSubscribe = () => {
+            channel
+                .on('postgres_changes', event, callback)
+                .subscribe((status, error) => {
+                    console.log('Messages subscription status:', status);
+                    if (error) {
+                        console.error('Messages subscription error:', error);
+                    }
+                    if (status === 'TIMED_OUT' && retries < maxRetries) {
+                        retries++;
+                        console.log(`Retrying messages subscription (${retries}/${maxRetries})...`);
+                        setTimeout(() => {
+                            channel.unsubscribe();
+                            attemptSubscribe();
+                        }, retryDelay);
+                    } else if (status === 'SUBSCRIBED') {
+                        console.log('Subscribed to group chat');
+                    }
+                });
+        };
+
+        attemptSubscribe();
+        return channel;
+    };
+
+    return subscribeWithRetry(
+        channel,
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        async (payload) => {
+            console.log('Messages table updated:', payload);
+            const newMessage = payload.new;
+            const sender = appState.users.find(u => u.id === newMessage.user_id);
+            newMessage.sender = sender?.username || 'Unknown';
+            appState.messages.push(newMessage);
+            await renderMessages();
+        }
+    );
 }
 
+
+function setupRealtimeSubscriptions() {
+    console.log('Setting up real-time subscriptions...');
+
+    // Members table subscription
+    supabaseClient
+        .channel('public:members')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, async (payload) => {
+            console.log('Received payload for members:', payload);
+
+            if (payload.eventType === 'INSERT') {
+                appState.members.push(payload.new);
+                console.log(`Added new member ${payload.new.id} to appState`);
+                await renderMembers();
+            } else if (payload.eventType === 'UPDATE') {
+                const memberIndex = appState.members.findIndex(m => m.id === payload.new.id);
+                if (memberIndex !== -1) {
+                    appState.members[memberIndex] = { ...appState.members[memberIndex], ...payload.new };
+                    console.log(`Updated member ${payload.new.id} in appState`);
+                    await renderMembers();
+                }
+            } else if (payload.eventType === 'DELETE') {
+                appState.members = appState.members.filter(m => m.id !== payload.old.id);
+                console.log(`Removed member ${payload.old.id} from appState`);
+                await renderMembers();
+            }
+        })
+        .subscribe((status) => {
+            console.log('Members subscription status:', status);
+        });
+
+    // Deposits table subscription
+    supabaseClient
+        .channel('public:deposits')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
+            console.log('Received payload for deposits:', payload);
+
+            if (payload.eventType === 'INSERT') {
+                appState.deposits.push(payload.new);
+                console.log(`Added deposit ${payload.new.id} to appState`);
+                await updateDashboard();
+            } else if (payload.eventType === 'DELETE') {
+                appState.deposits = appState.deposits.filter(d => d.id !== payload.old.id);
+                console.log(`Removed deposit ${payload.old.id} from appState`);
+                await updateDashboard();
+            }
+        })
+        .subscribe((status) => {
+            console.log('Deposits subscription status:', status);
+        });
+
+    // Expenses table subscription
+    supabaseClient
+        .channel('public:expenses')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async (payload) => {
+            console.log('Received payload for expenses:', payload);
+
+            if (payload.eventType === 'INSERT') {
+                appState.expenses.push(payload.new);
+                console.log(`Added expense ${payload.new.id} to appState`);
+                await renderExpenses();
+                await updateDashboard();
+            }
+        })
+        .subscribe((status) => {
+            console.log('Expenses subscription status:', status);
+        });
+}
 
 
 function debounce(func, wait) {
@@ -2356,6 +2679,7 @@ async function renderNotificationLog() {
         await renderExpenses();
         await renderNotificationLog();
         await renderMealPlanner();
+        await updateMealToggleCard(); // Add this line
     
         const isAdmin = currentUser.role === 'admin';
         const isManager = currentUser.role === 'manager';
@@ -2391,10 +2715,33 @@ try {
         await fetchAllData();
         updateUIForRole();
         updateSidebarUserInfo();
-        await updateAllViews();
+        debouncedUpdateAllViews(); // Debounced to avoid blocking
+        await updateMealToggleCard();
         syncTogglesWithMealToggle();
         startRestrictionCheck();
         window.chatChannel = setupMessageSubscription();
+
+        if (currentUser) {
+            loginPage.style.display = 'none';
+            mainApp.style.display = 'block';
+            await fetchAllData();
+            updateUIForRole();
+            updateSidebarUserInfo();
+            debouncedUpdateAllViews();
+            await updateMealToggleCard();
+            syncTogglesWithMealToggle();
+            startRestrictionCheck();
+            window.chatChannel = setupMessageSubscription();
+            window.realtimeChannels = setupRealtimeSubscriptions(); // Store channels for cleanup
+        
+            elements.resetMessagesBtn?.addEventListener('click', async () => {
+                if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
+                    await resetMessages();
+                }
+            });
+        
+            await showAnnouncementPopup();
+        }
 
         elements.resetMessagesBtn?.addEventListener('click', async () => {
             if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
@@ -2402,7 +2749,7 @@ try {
             }
         });
 
-        await showAnnouncementPopup(); // Trigger popup after everything loads
+        await showAnnouncementPopup();
     } else {
         loginPage.style.display = 'flex';
         mainApp.style.display = 'none';
@@ -2411,5 +2758,7 @@ try {
 } catch (error) {
     console.error('Initialization failed:', error);
     showNotification('Failed to load the app. Please try again.', 'error', true);
+} finally {
+    hideLoader();
 }
 });
