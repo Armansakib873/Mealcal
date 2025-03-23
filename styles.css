@@ -291,8 +291,14 @@ body.dark-mode .loader-icon {
 .main-container {
     position: relative;
     overflow: auto;
+    padding-top: 60px; /* Add padding equal to header height */
 }
 
+@media (min-width: 769px) {
+  .main-container {
+    padding-top: 0; /*Remove padding from desktop*/
+  }
+}
 .card {
     position: relative;
     margin-bottom: var(--spacing-md);
@@ -415,8 +421,8 @@ body.dark-mode .loader-icon {
     height: 60px;
     background: linear-gradient(to right, var(--light), rgba(var(--primary-rgb), 0.05));
     border-bottom: 1px solid var(--border);
-    position: fixed !important; /* Key for sticky behavior */
-    top: 0;          /* Stick to the top of the viewport */
+    position: fixed; /* Key for sticky behavior */
+    top: 0px;          /* Stick to the top of the viewport */
     z-index: 1000;    /* Ensure it's above other content */
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
