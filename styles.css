@@ -398,7 +398,6 @@ body.dark-mode .loader-icon {
     transform: scaleY(1);
     padding: var(--spacing-md); /* Static padding when expanded */
     border-bottom: 1px solid var(--border);
-    margin: 10px;
 }
 
 .collapsible-content p {
@@ -803,24 +802,6 @@ body.dark-mode #loading-animation {
 /* Notification Styling */
 
 
-@keyframes slideDown {
-    from { transform: translateY(-20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.notification.success {
-    background-color: var(--background);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    display: block;
-}
-
-.notification.error {
-    background-color: var(--error);
-    border: 1px solid var(--error);
-    color: var(--foreground);
-    display: block;
-}
 
 .hidden {
     display: none;
@@ -1392,6 +1373,7 @@ body.dark-mode #loading-animation {
 
 /* --- Notification --- */
 .notification {
+    position: fixed;
     display: flex;
     align-items: flex-start;
     padding: 12px 16px;
@@ -1405,6 +1387,8 @@ body.dark-mode #loading-animation {
 
 .notification.show {
     opacity: 1;
+    position: fixed !important;
+    z-index: 1000;
 }
 
 /* Notification Types */
@@ -3032,7 +3016,6 @@ body.dark-mode .notification-log .notification-separator {
     }
 
     .dashboard-grid {
-        grid-template-columns: 1fr;
         color: var(--foreground);
     }
 
