@@ -168,6 +168,23 @@ function toggleSidebar() {
     elements.sidebarOverlay.classList.toggle('sidebar-open');
 }
 
+// --- Sidebar State Management ---
+function initializeSidebarState() {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) {
+        // Desktop: Ensure sidebar is visible
+        elements.sidebar.classList.remove('sidebar-open');
+        elements.sidebarOverlay.classList.remove('sidebar-open');
+    } else {
+        // Mobile: Ensure sidebar is hidden by default
+        elements.sidebar.classList.remove('sidebar-open');
+        elements.sidebarOverlay.classList.remove('sidebar-open');
+    }
+}
+
+// Set initial state and handle resize
+window.addEventListener('resize', initializeSidebarState);
+
 // --- Collapsible Sections ---
 const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
 
@@ -237,14 +254,16 @@ collapsibleHeaders.forEach(header => {
     
         // Construct the new HTML structure
         const notificationHTML = `
-            <div class="notification-icon">${icon}</div>
+            <div class="show-notification-wrapper">
+  
             <div class="notification-content">
-                <div class="notification-message">${message}</div>
+                <div class="notification-message"> <span class="notification-icon">${icon}</span>${message}</div>
                 <div class="notification-meta">
                     <span class="notification-timestamp">${timestamp}</span>
                     <span class="notification-separator">•</span>
                     <span class="notification-editor">Editor: ${editorName}</span>
                 </div>
+            </div>
             </div>
         `;
     
@@ -777,31 +796,33 @@ elements.closeSidebarBtn.addEventListener('click', toggleSidebar);
 
 
 
-    // NEW: Event Delegation for Sidebar Links and Buttons
-    // Sidebar Link Click Handler (Modified)
-    elements.sidebar.addEventListener('click', (event) => {
-        const target = event.target.closest('.sidebar-link');
-        if (target) {
-            if (target.id === 'view-announcements-btn') {
-                showAnnouncementsViewPopup();
-                toggleSidebar(); // Explicitly collapse sidebar
-            } else {
-                const targetSectionId = target.dataset.section;
-                const targetSection = document.getElementById(targetSectionId);
-                if (targetSection) {
-                    targetSection.scrollIntoView({ behavior: 'smooth' });
-                    const collapsibleHeader = targetSection.querySelector('.collapsible-header');
-                    if (collapsibleHeader && collapsibleHeader.classList.contains('collapsed')) {
-                        collapsibleHeader.click();
-                    }
+// NEW: Event Delegation for Sidebar Links and Buttons
+// Sidebar Link Click Handler (Modified)
+elements.sidebar.addEventListener('click', (event) => {
+    const target = event.target.closest('.sidebar-link');
+    const isMobile = window.innerWidth <= 768; // Check if in mobile view
+
+    if (target) {
+        if (target.id === 'view-announcements-btn') {
+            showAnnouncementsViewPopup();
+            if (isMobile) toggleSidebar(); // Only toggle in mobile view
+        } else {
+            const targetSectionId = target.dataset.section;
+            const targetSection = document.getElementById(targetSectionId);
+            if (targetSection) {
+                targetSection.scrollIntoView({ behavior: 'smooth' });
+                const collapsibleHeader = targetSection.querySelector('.collapsible-header');
+                if (collapsibleHeader && collapsibleHeader.classList.contains('collapsed')) {
+                    collapsibleHeader.click();
                 }
-                toggleSidebar();
             }
+            if (isMobile) toggleSidebar(); // Only toggle in mobile view
         }
-        if (event.target.closest('.sidebar-actions button') || event.target.id === 'create-announcement-btn') {
-            toggleSidebar();
-        }
-    });
+    }
+    if (event.target.closest('.sidebar-actions button') || event.target.id === 'create-announcement-btn') {
+        if (isMobile) toggleSidebar(); // Only toggle in mobile view
+    }
+});
 
 
     elements.addMemberForm.addEventListener('submit', async (e) => {
@@ -2745,6 +2766,7 @@ try {
         await fetchAllData();
         updateUIForRole();
         updateSidebarUserInfo();
+        initializeSidebarState(); // Add this line
         debouncedUpdateAllViews(); // Debounced to avoid blocking
         await updateMealToggleCard();
         syncTogglesWithMealToggle();
@@ -2766,6 +2788,7 @@ try {
         loginPage.style.display = 'flex';
         mainApp.style.display = 'none';
         updateSidebarUserInfo();
+        initializeSidebarState();
     }
 } catch (error) {
     console.error('Initialization failed:', error);
