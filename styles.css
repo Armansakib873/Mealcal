@@ -1462,6 +1462,15 @@ body.dark-mode #loading-animation {
     margin-top: var(--spacing-md);
 }
 
+.dashboard-card{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+
+}
+
 /* --- Notification --- */
 .notification {
     position: fixed;
@@ -1471,16 +1480,20 @@ body.dark-mode #loading-animation {
     border-radius: 8px;
     margin: 5px 10px;
     top: 0;
+    right: 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     font-family: 'Arial', sans-serif;
     transition: opacity 0.3s ease;
     opacity: 0;
+    transition: all 0.3s ease;
 }
 
 .notification.show {
     opacity: 1;
     position: fixed !important;
     z-index: 1000;
+    transform: scale(1.5);
+    animation: scaleUpDown 4s infinite ease-in-out;
 }
 
 /* Notification Types */
