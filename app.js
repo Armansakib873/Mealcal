@@ -274,8 +274,8 @@ collapsibleHeaders.forEach(header => {
         setTimeout(() => target.classList.add('show'), 10);
         setTimeout(() => {
             target.classList.remove('show');
-            setTimeout(() => target.style.display = 'none', 100);
-        }, 1000);
+            setTimeout(() => target.style.display = 'none', 300);
+        }, 3000);
     
         // Handle logging important notifications to the database
         const importantTypes = [
@@ -2266,24 +2266,28 @@ function setupMessageSubscription() {
     const channel = supabaseClient.channel('public:messages');
     const subscribeWithRetry = (channel, event, callback, maxRetries = 3, retryDelay = 2000) => {
         let retries = 0;
-    
+
         const attemptSubscribe = () => {
             channel
                 .on('postgres_changes', event, callback)
                 .subscribe((status, error) => {
-                    console.log(`${channel.channelName} subscription status:`, status); // Use channel.channelName
-                    if (error) console.error(`${channel.channelName} subscription error:`, error);
+                    console.log('Messages subscription status:', status);
+                    if (error) {
+                        console.error('Messages subscription error:', error);
+                    }
                     if (status === 'TIMED_OUT' && retries < maxRetries) {
                         retries++;
-                        console.log(`Retrying ${channel.channelName} subscription (${retries}/${maxRetries})...`);
+                        console.log(`Retrying messages subscription (${retries}/${maxRetries})...`);
                         setTimeout(() => {
                             channel.unsubscribe();
                             attemptSubscribe();
                         }, retryDelay);
+                    } else if (status === 'SUBSCRIBED') {
+                        console.log('Subscribed to group chat');
                     }
                 });
         };
-    
+
         attemptSubscribe();
         return channel;
     };
@@ -2302,24 +2306,31 @@ function setupMessageSubscription() {
     );
 }
 
-
 function setupRealtimeSubscriptions() {
     console.log('Setting up real-time subscriptions...');
 
     const membersChannel = supabaseClient.channel('public:members')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, async (payload) => {
-        if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
-            await fetchAllData(); // Refresh data
-            populateMemberSelect(currentUser.role === 'admin', currentUser.role === 'manager'); // Update select
-            debouncedUpdateAllViews();
-        }
-    })
-    .subscribe();
-
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, async (payload) => {
+            console.log('Received payload for members:', payload);
+            if (isInitializing) {
+                console.log('Skipping update during initialization');
+                return; // Skip updates during init
+            }
+            if (payload.eventType === 'UPDATE') {
+                const updatedMember = payload.new;
+                const memberIndex = appState.members.findIndex(m => m.id === updatedMember.id);
+                if (memberIndex !== -1) {
+                    appState.members[memberIndex] = { ...appState.members[memberIndex], ...updatedMember };
+                    debouncedUpdateAllViews();
+                }
+            }
+        })
+        .subscribe();
 
     const depositsChannel = supabaseClient.channel('public:deposits')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
             console.log('Deposits table updated:', payload);
+            if (isInitializing) return; // Skip during init
             if (payload.eventType === 'INSERT') {
                 appState.deposits.push(payload.new);
             } else if (payload.eventType === 'DELETE') {
@@ -2332,6 +2343,7 @@ function setupRealtimeSubscriptions() {
     const expensesChannel = supabaseClient.channel('public:expenses')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async (payload) => {
             console.log('Expenses table updated:', payload);
+            if (isInitializing) return; // Skip during init
             if (payload.eventType === 'INSERT') {
                 appState.expenses.push(payload.new);
             }
@@ -2825,20 +2837,36 @@ try {
         loginPage.style.display = 'none';
         mainApp.style.display = 'block';
         await fetchAllData();
-        updateUIForRole(); // Populates selects once
+        updateUIForRole();
         updateSidebarUserInfo();
         initializeSidebarState();
-        await updateAllViews(); // No longer populates selects
-        window.chatChannel = setupMessageSubscription();
-        window.realtimeChannels = setupRealtimeSubscriptions();
+        await updateAllViews(); // Use await here instead of debouncedUpdateAllViews for synchronous initial load
         await updateMealToggleCard();
         syncTogglesWithMealToggle();
         startRestrictionCheck();
+        
+        window.chatChannel = setupMessageSubscription();
+        window.realtimeChannels = setupRealtimeSubscriptions();
+        
+        elements.resetMessagesBtn?.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
+                await resetMessages();
+            }
+        });
+
         await showAnnouncementPopup();
+        isInitializing = false; // Mark initialization complete after all setup
+    } else {
+        loginPage.style.display = 'flex';
+        mainApp.style.display = 'none';
+        updateSidebarUserInfo();
+        initializeSidebarState();
+        isInitializing = false; // Also set for non-logged-in case
     }
 } catch (error) {
     console.error('Initialization failed:', error);
     showNotification('Failed to load the app. Please try again.', 'error', true);
+    isInitializing = false; // Ensure flag is reset on error
 } finally {
     hideLoader();
 }
