@@ -1404,8 +1404,11 @@ body.dark-mode #loading-animation {
 }
 
 .meal-count div {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     text-align: center;
+    align-content: center;
 }
 
 /* Styling for 3D effect */
