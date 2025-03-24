@@ -2585,6 +2585,19 @@ async function resetMessages() {
             Name: m.Name,
             Balance: m.Balance
         }));
+        const balanceData = [];
+        const maxRows = Math.max(negativeBalances.length, positiveBalances.length);
+        for (let i = 0; i < maxRows; i++) {
+            const neg = negativeBalances[i] || { Name: '', Balance: '' };
+            const pos = positiveBalances[i] || { Name: '', Balance: '' };
+            balanceData.push({
+                'Negative Name': neg.Name,
+                'Negative Balance': neg.Balance,
+                '': '', // Spacer column
+                'Positive Name': pos.Name,
+                'Positive Balance': pos.Balance
+            });
+        }
     
         if (format === 'xlsx') {
             if (!window.XLSX) {
@@ -2592,55 +2605,62 @@ async function resetMessages() {
                 return;
             }
             const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet([[]]); // Initialize an empty worksheet
     
-            // Full Summary Sheet
-            const fullWs = XLSX.utils.json_to_sheet(fullSummary);
+            // Define styles
+            const titleStyle = {
+                font: { bold: true, sz: 14 },
+                alignment: { horizontal: 'center', vertical: 'center' }
+            };
+            const headerStyle = {
+                font: { bold: true },
+                fill: { fgColor: { rgb: 'FFFFAA00' } }, // Yellow background
+                alignment: { horizontal: 'center' }
+            };
+    
+            // Add Full Summary section
+            const fullTitleRow = 1; // 1-based row number
+            XLSX.utils.sheet_add_aoa(ws, [['Full Summary']], { origin: `A${fullTitleRow}` });
+            if (!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({ s: { r: fullTitleRow - 1, c: 0 }, e: { r: fullTitleRow - 1, c: 11 } }); // Merge A1 to L1
+            ws[`A${fullTitleRow}`].s = titleStyle;
+    
+            const fullHeaderRow = fullTitleRow + 1; // Row 2
+            XLSX.utils.sheet_add_json(ws, fullSummary, { origin: `A${fullHeaderRow}` }); // Adds header and data
+            for (let col = 0; col < 12; col++) {
+                const cellAddress = XLSX.utils.encode_cell({ r: fullHeaderRow - 1, c: col });
+                if (ws[cellAddress]) {
+                    ws[cellAddress].s = headerStyle;
+                }
+            }
+    
+            // Calculate position for Balance Summary
+            const fullDataEndRow = fullHeaderRow + fullSummary.length; // Last row of Full Summary data
+            const balanceTitleRow = fullDataEndRow + 2; // Leave one blank row
+    
+            // Add Balance Summary section
+            XLSX.utils.sheet_add_aoa(ws, [['Balance Summary']], { origin: `A${balanceTitleRow}` });
+            ws['!merges'].push({ s: { r: balanceTitleRow - 1, c: 0 }, e: { r: balanceTitleRow - 1, c: 4 } }); // Merge A to E
+            ws[`A${balanceTitleRow}`].s = titleStyle;
+    
+            const balanceHeaderRow = balanceTitleRow + 1;
+            XLSX.utils.sheet_add_json(ws, balanceData, { origin: `A${balanceHeaderRow}` });
+            for (let col = 0; col < 5; col++) {
+                const cellAddress = XLSX.utils.encode_cell({ r: balanceHeaderRow - 1, c: col });
+                if (ws[cellAddress]) {
+                    ws[cellAddress].s = headerStyle;
+                }
+            }
+    
+            // Set column widths based on Full Summary (12 columns)
             const fullColWidths = [
                 { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
                 { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }
             ];
-            fullWs['!cols'] = fullColWidths;
-            const fullRange = XLSX.utils.decode_range(fullWs['!ref']);
-            for (let col = fullRange.s.c; col <= fullRange.e.c; col++) {
-                const cell = XLSX.utils.encode_cell({ r: 0, c: col });
-                if (!fullWs[cell]) continue;
-                fullWs[cell].s = {
-                    font: { bold: true },
-                    fill: { fgColor: { rgb: 'FFFFAA00' } },
-                    alignment: { horizontal: 'center' }
-                };
-            }
-            XLSX.utils.book_append_sheet(wb, fullWs, 'Full Summary');
+            ws['!cols'] = fullColWidths;
     
-            // Balance Summary Sheet
-            const balanceData = [];
-            const maxRows = Math.max(negativeBalances.length, positiveBalances.length);
-            for (let i = 0; i < maxRows; i++) {
-                const neg = negativeBalances[i] || { Name: '', Balance: '' };
-                const pos = positiveBalances[i] || { Name: '', Balance: '' };
-                balanceData.push({
-                    'Negative Name': neg.Name,
-                    'Negative Balance': neg.Balance,
-                    '': '', // Spacer column
-                    'Positive Name': pos.Name,
-                    'Positive Balance': pos.Balance
-                });
-            }
-            const balanceWs = XLSX.utils.json_to_sheet(balanceData);
-            balanceWs['!cols'] = [
-                { wch: 20 }, { wch: 15 }, { wch: 5 }, { wch: 20 }, { wch: 15 }
-            ];
-            const balanceRange = XLSX.utils.decode_range(balanceWs['!ref']);
-            for (let col = balanceRange.s.c; col <= balanceRange.e.c; col++) {
-                const cell = XLSX.utils.encode_cell({ r: 0, c: col });
-                if (!balanceWs[cell]) continue;
-                balanceWs[cell].s = {
-                    font: { bold: true },
-                    fill: { fgColor: { rgb: 'FFFFAA00' } },
-                    alignment: { horizontal: 'center' }
-                };
-            }
-            XLSX.utils.book_append_sheet(wb, balanceWs, 'Balance Summary');
+            // Add the single worksheet to the workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Summary');
     
             const filename = `mealsync_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(wb, filename);
@@ -2671,7 +2691,6 @@ async function resetMessages() {
                 </tr>
             `).join('');
     
-            // Balance Summary Table
             const maxRows = Math.max(negativeBalances.length, positiveBalances.length);
             const balanceRows = [];
             for (let i = 0; i < maxRows; i++) {
@@ -2702,12 +2721,16 @@ async function resetMessages() {
                         th { background-color: #ffaa00; color: #fff; font-weight: bold; }
                         tr:nth-child(even) { background-color: #f9f9f9; }
                         .spacer { border: none; background: none; width: 20px; }
-                        @media print {
-                            body { margin: 0; }
-                            table { page-break-inside: auto; }
-                            tr { page-break-inside: avoid; page-break-after: auto; }
-                            h2 { page-break-before: always; }
-                        }
+                       @media print {
+    body { margin: 0; padding: 0; }
+    .date, h2 { margin: 5px 0; font-size: 14px; }
+    table { page-break-inside: avoid; width: 100%; font-size: 12px; }
+    th, td { padding: 4px; font-size: 12px; }
+    .spacer { width: 10px; }
+    h2 { page-break-before: avoid; }
+    * { max-height: 100%; max-width: 100%; }
+}
+
                     </style>
                 </head>
                 <body>

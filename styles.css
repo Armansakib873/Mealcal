@@ -423,7 +423,7 @@ body.dark-mode .loader-icon {
     height: 60px;
     background: linear-gradient(to right, var(--light), rgba(var(--primary-rgb), 0.05));
     border-bottom: 1px solid var(--border);
-    position: fixed; /* Key for sticky behavior */
+    position: sticky; /* Key for sticky behavior */
     top: 0px;          /* Stick to the top of the viewport */
     z-index: 1000;    /* Ensure it's above other content */
     backdrop-filter: blur(8px);
@@ -1218,6 +1218,11 @@ body.dark-mode #loading-animation {
     border: 1px solid var(--border);
     color: var(--light);
     background-color: var(--primary);
+}
+
+#reset-month-btn{
+    margin-top: var(--spacing-md);
+
 }
 
 #export-format {
@@ -2490,8 +2495,17 @@ body.dark-mode #loading-animation {
     .chat-message {
         max-width: 90%;
     }
-}
+    #reset-month-btn{
+        width: 100%;
+    
+    }
 
+    #export-format{
+        margin-top: var(--spacing-md);
+    }
+
+    
+}
 
 
 /* --- demo */
@@ -3215,6 +3229,10 @@ body.dark-mode .notification-log .notification-separator {
         box-shadow: var(--shadow-medium);
         border-bottom: 1px solid var(--border);
         gap: var(--spacing-md);
+    }
+
+    .header{
+        position: fixed; 
     }
 
     .header-nav.active {
