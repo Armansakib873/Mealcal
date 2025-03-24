@@ -274,8 +274,8 @@ collapsibleHeaders.forEach(header => {
         setTimeout(() => target.classList.add('show'), 10);
         setTimeout(() => {
             target.classList.remove('show');
-            setTimeout(() => target.style.display = 'none', 300);
-        }, 3000);
+            setTimeout(() => target.style.display = 'none', 100);
+        }, 1000);
     
         // Handle logging important notifications to the database
         const importantTypes = [
@@ -1884,52 +1884,32 @@ async function renderExpenses() {
         const totalExpenses = appState.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
         const totalMealsCount = appState.meals.reduce((sum, m) => sum + (m.count || 0), 0);
         const mealRate = totalMealsCount ? totalExpenses / totalMealsCount : 0;
-    
         const dayCount = appState.members.filter(m => m.day_status).length;
         const nightCount = appState.members.filter(m => m.night_status).length;
     
-        console.log('updateDashboard - Day Count:', dayCount, 'Night Count:', nightCount);
-    
-        if (elements.todayDayCount) {
+        // Only update if values differ
+        if (
+            elements.todayDayCount.textContent !== dayCount.toString() ||
+            elements.todayNightCount.textContent !== nightCount.toString() ||
+            elements.totalDeposits.textContent !== formatCurrency(totalDeposits) ||
+            elements.totalExpenditure.textContent !== formatCurrency(totalExpenses) ||
+            elements.currentBalance.textContent !== formatCurrency(totalDeposits - totalExpenses) ||
+            elements.totalMeals.textContent !== totalMealsCount.toString() ||
+            elements.mealRate.textContent !== formatCurrency(mealRate, true)
+        ) {
+            console.log('updateDashboard - Day Count:', dayCount, 'Night Count:', nightCount);
             elements.todayDayCount.textContent = dayCount;
-            console.log('Set today-day-count to:', elements.todayDayCount.textContent);
-        } else {
-            console.error('today-day-count element not found');
-        }
-    
-        if (elements.todayNightCount) {
             elements.todayNightCount.textContent = nightCount;
-            console.log('Set today-night-count to:', elements.todayNightCount.textContent);
+            elements.totalDeposits.textContent = formatCurrency(totalDeposits);
+            elements.totalExpenditure.textContent = formatCurrency(totalExpenses);
+            elements.currentBalance.textContent = formatCurrency(totalDeposits - totalExpenses);
+            elements.totalMeals.textContent = totalMealsCount;
+            elements.mealRate.textContent = formatCurrency(mealRate, true);
+    
+            await updateTodayMealCard();
         } else {
-            console.error('today-night-count element not found');
+            console.log('updateDashboard skipped - no changes');
         }
-    
-        elements.totalDeposits.textContent = formatCurrency(totalDeposits);
-        elements.totalExpenditure.textContent = formatCurrency(totalExpenses);
-        elements.currentBalance.textContent = formatCurrency(totalDeposits - totalExpenses);
-        elements.totalMeals.textContent = totalMealsCount;
-        elements.mealRate.textContent = formatCurrency(mealRate, true);
-    
-        // Enhanced force re-render
-        const mealCountBox = document.querySelector('.meal-count-box');
-        if (mealCountBox) {
-            mealCountBox.classList.add('hidden'); // Use class toggle for smoother transition
-            requestAnimationFrame(() => {
-                mealCountBox.classList.remove('hidden');
-            });
-        }
-    
-        // Fallback: Direct element refresh
-        if (elements.todayDayCount && elements.todayNightCount) {
-            elements.todayDayCount.style.display = 'none';
-            elements.todayNightCount.style.display = 'none';
-            requestAnimationFrame(() => {
-                elements.todayDayCount.style.display = '';
-                elements.todayNightCount.style.display = '';
-            });
-        }
-    
-        await updateTodayMealCard();
     }
     // In setupRealtimeSubscriptions, update the UI update calls to use debouncing where needed
 
@@ -2286,28 +2266,24 @@ function setupMessageSubscription() {
     const channel = supabaseClient.channel('public:messages');
     const subscribeWithRetry = (channel, event, callback, maxRetries = 3, retryDelay = 2000) => {
         let retries = 0;
-
+    
         const attemptSubscribe = () => {
             channel
                 .on('postgres_changes', event, callback)
                 .subscribe((status, error) => {
-                    console.log('Messages subscription status:', status);
-                    if (error) {
-                        console.error('Messages subscription error:', error);
-                    }
+                    console.log(`${channel.channelName} subscription status:`, status); // Use channel.channelName
+                    if (error) console.error(`${channel.channelName} subscription error:`, error);
                     if (status === 'TIMED_OUT' && retries < maxRetries) {
                         retries++;
-                        console.log(`Retrying messages subscription (${retries}/${maxRetries})...`);
+                        console.log(`Retrying ${channel.channelName} subscription (${retries}/${maxRetries})...`);
                         setTimeout(() => {
                             channel.unsubscribe();
                             attemptSubscribe();
                         }, retryDelay);
-                    } else if (status === 'SUBSCRIBED') {
-                        console.log('Subscribed to group chat');
                     }
                 });
         };
-
+    
         attemptSubscribe();
         return channel;
     };
@@ -2330,85 +2306,38 @@ function setupMessageSubscription() {
 function setupRealtimeSubscriptions() {
     console.log('Setting up real-time subscriptions...');
 
-    const subscribeWithRetry = (channel, event, callback, maxRetries = 3, retryDelay = 2000) => {
-        let retries = 0;
-
-        const attemptSubscribe = () => {
-            channel
-                .on('postgres_changes', event, callback)
-                .subscribe((status, error) => {
-                    console.log(`${channel.name} subscription status:`, status);
-                    if (error) console.error(`${channel.name} subscription error:`, error);
-                    if (status === 'TIMED_OUT' && retries < maxRetries) {
-                        retries++;
-                        console.log(`Retrying ${channel.name} subscription (${retries}/${maxRetries})...`);
-                        setTimeout(() => {
-                            channel.unsubscribe();
-                            attemptSubscribe();
-                        }, retryDelay);
-                    }
-                });
-        };
-
-        attemptSubscribe();
-        return channel;
-    };
-
-    const membersChannel = subscribeWithRetry(
-        supabaseClient.channel('public:members'),
-        { event: '*', schema: 'public', table: 'members' },
-        async (payload) => {
-            console.log('Received payload for members:', payload);
-            if (payload.eventType === 'UPDATE') {
-                const updatedMember = payload.new;
-                const memberIndex = appState.members.findIndex(m => m.id === updatedMember.id);
-                if (memberIndex !== -1) {
-                    appState.members[memberIndex] = { ...appState.members[memberIndex], ...updatedMember };
-                    console.log(`Updated member ${updatedMember.id} in appState`);
-                    await updateDashboard(); // Ensure this runs
-                    await renderMembers();
-                    await renderSummary();
-                    debouncedUpdateAllViews();
-                    if (currentUser?.member_id === updatedMember.id) {
-                        currentUser.day_status = updatedMember.day_status;
-                        currentUser.night_status = updatedMember.night_status;
-                        sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
-                        await updateUserOverview();
-                    }
-                }
-            }
+    const membersChannel = supabaseClient.channel('public:members')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, async (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
+            await fetchAllData(); // Refresh data
+            populateMemberSelect(currentUser.role === 'admin', currentUser.role === 'manager'); // Update select
+            debouncedUpdateAllViews();
         }
-    );
+    })
+    .subscribe();
 
-    const depositsChannel = subscribeWithRetry(
-        supabaseClient.channel('public:deposits'),
-        { event: '*', schema: 'public', table: 'deposits' },
-        async (payload) => {
+
+    const depositsChannel = supabaseClient.channel('public:deposits')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
             console.log('Deposits table updated:', payload);
             if (payload.eventType === 'INSERT') {
                 appState.deposits.push(payload.new);
-                await updateDashboard();
-                await renderMembers();
             } else if (payload.eventType === 'DELETE') {
                 appState.deposits = appState.deposits.filter(d => d.id !== payload.old.id);
-                await updateDashboard();
-                await renderMembers();
             }
-        }
-    );
+            debouncedUpdateAllViews();
+        })
+        .subscribe();
 
-    const expensesChannel = subscribeWithRetry(
-        supabaseClient.channel('public:expenses'),
-        { event: '*', schema: 'public', table: 'expenses' },
-        async (payload) => {
+    const expensesChannel = supabaseClient.channel('public:expenses')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async (payload) => {
             console.log('Expenses table updated:', payload);
             if (payload.eventType === 'INSERT') {
                 appState.expenses.push(payload.new);
-                await renderExpenses();
-                await updateDashboard();
             }
-        }
-    );
+            debouncedUpdateAllViews();
+        })
+        .subscribe();
 
     return [membersChannel, depositsChannel, expensesChannel];
 }
@@ -2878,20 +2807,6 @@ async function resetMessages() {
         await renderMealPlanner();
         await updateMealToggleCard(); // Add this line
     
-        const isAdmin = currentUser.role === 'admin';
-        const isManager = currentUser.role === 'manager';
-        if (isAdmin || isManager) {
-            elements.memberSelectContainer.classList.remove('hidden');
-            if (appState.members && appState.members.length > 0) {
-                populateMemberSelect(isAdmin, isManager); // Pass both parameters
-            }
-        }
-        if (isAdmin) {
-            elements.userSelectContainer.classList.remove('hidden');
-            if (appState.users && appState.users.length > 0) {
-                populateUserSelect();
-            }
-        }
     }
 
 // Move these outside the try block, right after elements are defined
@@ -2910,31 +2825,16 @@ try {
         loginPage.style.display = 'none';
         mainApp.style.display = 'block';
         await fetchAllData();
-        updateUIForRole();
+        updateUIForRole(); // Populates selects once
         updateSidebarUserInfo();
-        initializeSidebarState(); // Add this line
-        debouncedUpdateAllViews(); // Debounced to avoid blocking
+        initializeSidebarState();
+        await updateAllViews(); // No longer populates selects
+        window.chatChannel = setupMessageSubscription();
+        window.realtimeChannels = setupRealtimeSubscriptions();
         await updateMealToggleCard();
         syncTogglesWithMealToggle();
         startRestrictionCheck();
-        
-        // Set up real-time subscriptions (single call)
-        window.chatChannel = setupMessageSubscription();
-        window.realtimeChannels = setupRealtimeSubscriptions(); // Consolidated subscriptions
-
-        // Add reset messages listener
-        elements.resetMessagesBtn?.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
-                await resetMessages();
-            }
-        });
-
         await showAnnouncementPopup();
-    } else {
-        loginPage.style.display = 'flex';
-        mainApp.style.display = 'none';
-        updateSidebarUserInfo();
-        initializeSidebarState();
     }
 } catch (error) {
     console.error('Initialization failed:', error);

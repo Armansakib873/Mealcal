@@ -1,6 +1,8 @@
-/* ================================================
-   Enhanced Mobile-First Web App CSS (Remodeled)
-   ================================================ */
+/* --- Font Import (Nunito Sans) --- */
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
+
+
+
 
 /* CSS Variables (Combined and Refined for Light and Dark Modes) */
 :root {
@@ -3582,8 +3584,4 @@ body.dark-mode .notification-log .notification-separator {
     }
         /* Add more specific overrides for very small screens as needed */
 }
-
-/* --- Font Import (Nunito Sans) --- */
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
-
 
