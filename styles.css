@@ -552,6 +552,8 @@ body.dark-mode #loading-animation {
     transition: max-height var(--transition-normal) ease, opacity var(--transition-normal) ease;
 }
 
+
+
 /* Add desktop-specific styling */
 @media (min-width: 769px) {
     .header-nav {

@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
+
+
+
+
     const loginPage = document.getElementById('login-page');
     const mainApp = document.getElementById('main-app');
 
@@ -672,62 +676,56 @@ elements.cycleDates.textContent = getCycleDates();
 
 function updateUIForRole() {
     console.log('Updating UI for role:', currentUser ? currentUser.role : 'No user');
-    elements.userStatus.textContent = currentUser ? `Logged in as: ${currentUser.username}` : '';
-    elements.userRole.textContent = currentUser ? `Role: ${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` : '';
-    const isAdmin = currentUser?.role === 'admin';
-    const isManager = currentUser?.role === 'manager';
+    if (!currentUser) {
+      console.warn('No currentUser, defaulting to guest UI');
+      elements.userStatus.textContent = '';
+      elements.userRole.textContent = '';
+      elements.addMemberBtn.classList.add('hidden');
+      elements.addExpenseBtn.classList.add('hidden');
+      elements.adminControls.classList.add('hidden');
+      elements.summarySection.classList.add('hidden');
+      elements.memberSelectContainer.classList.add('hidden');
+      elements.userSelectContainer.classList.add('hidden');
+      return;
+    }
+  
+    const role = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+    elements.userStatus.textContent = `Logged in as: ${currentUser.username}`;
+    elements.userRole.textContent = `Role: ${role}`;
+    const isAdmin = currentUser.role === 'admin';
+    const isManager = currentUser.role === 'manager';
     const canEdit = isAdmin || isManager;
-
+  
     elements.addMemberBtn.classList.toggle('hidden', !isAdmin);
     elements.addExpenseBtn.classList.toggle('hidden', !canEdit);
     elements.adminControls.classList.toggle('hidden', !isAdmin);
     elements.summarySection.classList.toggle('hidden', !canEdit);
-    document.getElementById('user-overview').classList.toggle('hidden', isAdmin); // Add this line
-
+    document.getElementById('user-overview').classList.toggle('hidden', isAdmin);
+  
     elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
     if (isAdmin || isManager) {
-        if (appState.members && appState.members.length > 0) {
-            populateMemberSelect(isAdmin || isManager);
-        } else {
-            console.warn('No members available in appState for dropdown');
-            elements.memberSelectContainer.classList.add('hidden');
-        }
+      if (appState.members?.length > 0) {
+        populateMemberSelect(isAdmin, isManager);
+      } else {
+        console.warn('No members available, hiding member select');
+        elements.memberSelectContainer.classList.add('hidden');
+      }
     }
-
+  
     elements.userSelectContainer.classList.toggle('hidden', !isAdmin);
     if (isAdmin) {
-        if (appState.users && appState.users.length > 0) {
-            populateUserSelect();
-        } else {
-            console.warn('No users available in appState for dropdown');
-            elements.userSelectContainer.classList.add('hidden');
-        }
+      if (appState.users?.length > 0) {
+        populateUserSelect();
+      } else {
+        console.warn('No users available, hiding user select');
+        elements.userSelectContainer.classList.add('hidden');
+      }
     }
-
-    document.querySelectorAll('.member-card .actions').forEach(actions => {
-        const memberId = actions.closest('.member-card').dataset.id;
-        if (isAdmin) {
-            actions.innerHTML = `
-                <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
-                <button class="btn danger-btn delete-btn"><i class="fas fa-trash"></i> Delete</button>
-            `;
-        } else if (isManager) {
-            actions.innerHTML = `
-                <button class="btn primary-btn edit-btn"><i class="fas fa-edit"></i> Edit</button>
-            `;
-        } else {
-            actions.innerHTML = '';
-        }
-    });
-    
-    // --- Button Visibility Logic ---
-    elements.addMemberBtn.style.display = isAdmin ? 'block' : 'none'; // Add Member
-    elements.addExpenseBtn.style.display = canEdit ? 'block' : 'none';  // Add Expense
-    elements.clearAllNotificationsBtn.style.display = isAdmin ? 'block' : 'none'; // Clear All Notifications
-
-
+  
     updateSidebarUserInfo();
-}
+  }
+
+
 async function populateMemberSelect(isAdmin, isManager) {
     console.log('Populating member select:', appState.members);
     if (!appState.members || appState.members.length === 0) {
@@ -836,7 +834,14 @@ elements.sidebar.addEventListener('click', (event) => {
         e.preventDefault();
         await updateMember();
     });
-    elements.addExpenseBtn.addEventListener('click', () => openModal(elements.expenseModal));
+    elements.addExpenseBtn.addEventListener('click', () => {
+  // Set today's date as default when adding a new expense
+  if (!editingExpenseId) { // Only for new expenses, not edits
+    const today = new Date().toISOString().split('T')[0]; // Formats as "YYYY-MM-DD"
+    document.getElementById('expense-date').value = today;
+  }
+  openModal(elements.expenseModal);
+});
     elements.closeExpenseModal.addEventListener('click', () => closeModal(elements.expenseModal));
     elements.expenseForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -911,34 +916,48 @@ elements.sidebar.addEventListener('click', (event) => {
     // --- Data Fetching ---
     async function fetchAllData() {
         const tables = {
-            'members': 'created_at',
-            'deposits': 'created_at',
-            'meals': 'created_at',
-            'expenses': 'created_at',
-            'notifications': 'created_at',
-            'users': 'created_at',
-            'meal_plans': 'created_at',
-            'messages': 'created_at',
-            'announcements': 'created_at',
-            'user_announcement_views': 'viewed_at'
+          'members': 'created_at',
+          'deposits': 'created_at',
+          'meals': 'created_at',
+          'expenses': 'created_at',
+          'notifications': 'created_at',
+          'users': 'created_at',
+          'meal_plans': 'created_at',
+          'messages': 'created_at',
+          'announcements': 'created_at',
+          'user_announcement_views': 'viewed_at'
         };
-    
+      
+        const maxRetries = 3;
         for (const [table, sortColumn] of Object.entries(tables)) {
+          let retries = 0;
+          let success = false;
+          while (retries < maxRetries && !success) {
             const { data, error } = await supabaseClient
-                .from(table)
-                .select('*')
-                .order(sortColumn, { ascending: false });
+              .from(table)
+              .select('*')
+              .order(sortColumn, { ascending: false });
             if (error) {
-                console.error(`Error fetching ${table}:`, error.message);
-                showNotification(`Error fetching ${table}: ${error.message}`, 'error');
-                continue;
+              console.error(`Error fetching ${table} (attempt ${retries + 1}):`, error.message);
+              retries++;
+              if (retries === maxRetries) {
+                showNotification(`Failed to fetch ${table} after ${maxRetries} attempts.`, 'error');
+              }
+              await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
+            } else {
+              appState[table] = data || []; // Ensure empty array if no data
+              success = true;
             }
-            appState[table] = data;
+          }
         }
         appState.lastUpdated = Date.now();
         localStorage.setItem('mealsync_cache', JSON.stringify(appState));
-    }
-
+        console.log('fetchAllData completed:', {
+          members: appState.members.length,
+          meals: appState.meals.length,
+          meal_plans: appState.meal_plans.length
+        });
+      }
 
 
     // --- announcements ---
@@ -2830,44 +2849,49 @@ elements.chatInput?.addEventListener('keypress', (e) => {
 });
 
 // Replace the setupMessageSubscription call in the try block
-try {
-    await createAuthForms();
-    await checkAutoLogin();
-    if (currentUser) {
-        loginPage.style.display = 'none';
-        mainApp.style.display = 'block';
-        await fetchAllData();
-        updateUIForRole();
-        updateSidebarUserInfo();
-        initializeSidebarState();
-        await updateAllViews(); // Use await here instead of debouncedUpdateAllViews for synchronous initial load
-        await updateMealToggleCard();
-        syncTogglesWithMealToggle();
-        startRestrictionCheck();
-        
-        window.chatChannel = setupMessageSubscription();
-        window.realtimeChannels = setupRealtimeSubscriptions();
-        
-        elements.resetMessagesBtn?.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
-                await resetMessages();
-            }
-        });
+let isInitializing = true; // Already defined in your code
 
-        await showAnnouncementPopup();
-        isInitializing = false; // Mark initialization complete after all setup
-    } else {
-        loginPage.style.display = 'flex';
-        mainApp.style.display = 'none';
-        updateSidebarUserInfo();
-        initializeSidebarState();
-        isInitializing = false; // Also set for non-logged-in case
+try {
+  await createAuthForms();
+  await checkAutoLogin();
+  if (currentUser) {
+    loginPage.style.display = 'none';
+    mainApp.style.display = 'block';
+    await fetchAllData(); // Wait for all data to be fetched
+    if (!appState.members.length || !appState.meal_plans.length) {
+      throw new Error('Incomplete data fetch');
     }
+    updateUIForRole();
+    updateSidebarUserInfo();
+    initializeSidebarState();
+    await updateAllViews(); // Synchronous initial load
+    await updateMealToggleCard();
+    syncTogglesWithMealToggle();
+    startRestrictionCheck();
+
+    window.chatChannel = setupMessageSubscription();
+    window.realtimeChannels = setupRealtimeSubscriptions();
+
+    elements.resetMessagesBtn?.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to reset all messages? This cannot be undone.')) {
+        await resetMessages();
+      }
+    });
+
+    await showAnnouncementPopup();
+    isInitializing = false; // Mark initialization complete
+  } else {
+    loginPage.style.display = 'flex';
+    mainApp.style.display = 'none';
+    updateSidebarUserInfo();
+    initializeSidebarState();
+    isInitializing = false;
+  }
 } catch (error) {
-    console.error('Initialization failed:', error);
-    showNotification('Failed to load the app. Please try again.', 'error', true);
-    isInitializing = false; // Ensure flag is reset on error
+  console.error('Initialization failed:', error);
+  showNotification('Failed to load the app. Please try again.', 'error', true);
+  isInitializing = false;
 } finally {
-    hideLoader();
+  hideLoader();
 }
 });
