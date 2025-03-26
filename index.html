@@ -29,7 +29,7 @@
                 <h1>MealSync</h1>
             </div>
               
-                 <button id="close-sidebar" class="close-sidebar" aria-label="Close Sidebar">×</button>
+                 <button id="close-sidebar" class="close-sidebar" aria-label="Close Sidebar"><i class="fas fa-times"></i></button>
             </div>
             <!-- Add links to your main app sections here -->
             <a href="#dashboard-section" data-section="dashboard-section" class="sidebar-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
@@ -52,7 +52,7 @@
                     <i class="fas fa-moon"></i>
                 </button>
                  <button id="sidebar-notification-log-btn" class="btn secondary-btn" title="View Notification Log">
-                    <i class="fas fa-bell"></i>
+                    <i class="fas fa-history"></i>Notification Log
                 </button>
 
                 <button id="sidebar-logout-btn" class="btn danger-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
@@ -82,15 +82,15 @@
             <div id="login-notification" class="notification"></div>
             <div id="login-form-container" class="login-form-container"></div>
             <div id="signup-form-container" class="signup-form-container hidden"></div>
-            <button id="toggle-signup" class="btn secondary-btn">Need an account? Sign Up</button>
+            <button id="toggle-signup" class="btn secondary-btn"><i class="fas fa-user-plus"></i> Need an account? Sign Up</button>
         </div>
         <div class="login-footer">
      
-            <a href="#" class="terms-of-service">Terms of Service</a>
-            <a href="#" class="privacy-policy">Privacy Policy</a>
-            <a href="#" class="contact-us">Contact Us</a>
+            <a href="#" class="terms-of-service"><i class="fas fa-file-contract"></i> Terms of Service</a>
+            <a href="#" class="privacy-policy"><i class="fas fa-user-secret"></i> Privacy Policy</a>
+            <a href="#" class="contact-us"><i class="fas fa-envelope"></i> Contact Us</a>
             <p>Author: Md Arman Hossain</p>
-            <p>Copyright &copy; MealSync 2025. All rights reserved.</p>
+            <p>Copyright © MealSync 2025. All rights reserved.</p>
 
 
 
@@ -110,7 +110,7 @@
 
             <span id="sidebar-user-info" class="sidebar-user-info"></span>
             
-            <span id="current-date" class="date-display"></span>
+            <span id="current-date" class="date-display"><i class="far fa-calendar-alt"></i></span>
         </div>
     
 
@@ -155,12 +155,12 @@
                     </div>
                     <h3>Data Control</h3>
                     
-                    <button id="reset-messages-btn" class="btn danger hidden">Reset Messages</button>
+                    <button id="reset-messages-btn" class="btn danger hidden"><i class="fas fa-sync-alt"></i>Reset Messages</button>
                     <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-sync-alt"></i> Reset Month</button>
                     <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Data</button>
                     <select id="export-format" class="select-input">
-                        <option value="xlsx">XLSX</option>
-                        <option value="print">PRINT</option>
+                        <option value="xlsx"><i class="fas fa-file-excel"></i> XLSX</option>
+                        <option value="print"><i class="fas fa-print"></i> PRINT</option>
                     </select>
                 </div>
             </section>
@@ -174,7 +174,7 @@
                 </h2>
                 <div class="collapsible-content" >
                     <div class="dashboard-tabs">
-                        <button id="stats-tab" class="tab-btn active">Stats</button>
+                        <button id="stats-tab" class="tab-btn active"><i class="fas fa-chart-bar"></i> Stats</button>
                     </div>
                     <div id="stats-content" class="tab-content">
                         <div class="dashboard-grid">
@@ -184,11 +184,11 @@
                                 <h3>Today's Meal Plan</h3>
                                 <div class="meal-count">
                                     <div class="day-meal">
-                                        <span>Day</span>
+                                        <span><i class="fas fa-sun"></i>Day</span>
                                         <p id="today-day-count"></p>
                                     </div>
                                     <div class="night-meal">
-                                        <span>Night</span>
+                                        <span><i class="fas fa-moon"></i>Night</span>
                                         <p id="today-night-count"></p>
                                     </div>
                                 </div>
@@ -199,7 +199,7 @@
                                 <h3>Your Meal Status</h3>
                                 <div class="toggle-container">
                                     <button class="toggle-btn" id="user-day-toggle">Day</button>
-                                    <button class="toggle-btn" id="user-night-toggle">Night</button>
+                                    <button class="toggle-btn" id="user-night-toggle"> Night</button>
                                 </div>
                             </div>
 
@@ -207,7 +207,18 @@
                             <div class="stat-box" id="current-balance-box">
                                 <i class="fas fa-balance-scale"></i>
                                 <h3>Current Balance</h3>
-                                <p id="current-balance">৳0</p>
+                                <p id="current-balance" class="current-balance negative">৳0</p>
+                            </div>
+
+                            <div class="stat-box">
+                                <i class="fas fa-wallet"></i>
+                                <h3>Total Deposits</h3>
+                                <p id="total-deposits">৳0</p>
+                            </div>
+                            <div class="stat-box">
+                                <i class="fas fa-shopping-cart"></i>
+                                <h3>Total Expenditure</h3>
+                                <p id="total-expenditure">৳0</p>
                             </div>
                             <div class="stat-box">
                                 <i class="fas fa-chart-pie"></i>
@@ -218,16 +229,6 @@
                                 <i class="fas fa-money-bill-wave"></i>
                                 <h3>Meal Rate</h3>
                                 <p id="meal-rate">৳0.00</p>
-                            </div>
-                            <div class="stat-box">
-                                <i class="fas fa-wallet"></i>
-                                <h3>Total Deposits</h3>
-                                <p id="total-deposits">৳0</p>
-                            </div>
-                            <div class="stat-box">
-                                <i class="fas fa-shopping-cart"></i>
-                                <h3>Total Expenditure</h3>
-                                <p id="total-expenditure">৳0</p>
                             </div>
 
 
@@ -248,8 +249,8 @@
                     <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
                 </h2>
 
-                <div class="collapsible-content">
-                    <p>Welcome</p>  <p id="user-name">N/A</p>
+                <div id="greetings" class="collapsible-content">
+                    <p >  <i class="far fa-user"></i> Welcome</p>  <p id="user-name">N/A</p>
                     <div class="overview-grid">
                         <div class="overview-item">
                             <span>Your Deposit:</span><br>
@@ -337,8 +338,8 @@
                             <tbody>
                                 <tr>
                                   <td>User Name</td>
-                                  <td><button class="toggle-btn day-toggle" data-state="off">Off</button></td>
-                                  <td><button class="toggle-btn night-toggle" data-state="off">Off</button></td>
+                                  <td><button class="toggle-btn day-toggle" data-state="off"><i class="fas fa-sun"></i>Off</button></td>
+                                  <td><button class="toggle-btn night-toggle" data-state="off"><i class="fas fa-moon"></i>Off</button></td>
                                   <!-- Other cells -->
                                 </tr>
                               </tbody>
@@ -433,7 +434,7 @@
 
             <div id="create-announcement-modal" class="modal">
                 <div class="modal-content">
-                    <span class="modal-close" id="close-create-announcement-modal">×</span>
+                    <span class="modal-close" id="close-create-announcement-modal"><i class="fas fa-times"></i></span>
                     <h2><i class="fas fa-bullhorn"></i> Create Announcement</h2>
                     <form id="create-announcement-form" class="modal-form">
                         <div class="form-group">
@@ -466,7 +467,7 @@
         <!-- Add Member Modal -->
         <div id="add-member-modal" class="modal">
             <div class="modal-content">
-                <span class="modal-close" id="close-add-member-modal">×</span>
+                <span class="modal-close" id="close-add-member-modal"><i class="fas fa-times"></i></span>
                 <h2><i class="fas fa-user-plus"></i> Add Member</h2>
                 <form id="add-member-form" class="modal-form">
                     <div class="form-group">
@@ -495,7 +496,7 @@
         <!-- Edit Member Modal -->
         <div id="edit-member-modal" class="modal">
             <div class="modal-content">
-                <span class="modal-close" id="close-edit-member-modal">×</span>
+                <span class="modal-close" id="close-edit-member-modal"><i class="fas fa-times"></i></span>
                 <h2><i class="fas fa-user-edit"></i> Edit Member</h2>
                 <form id="edit-member-form" class="modal-form">
                     <div class="form-group">
@@ -524,7 +525,7 @@
         <!-- Expense Modal -->
         <div id="expense-modal" class="modal">
             <div class="modal-content">
-                <span class="modal-close" id="close-expense-modal">×</span>
+                <span class="modal-close" id="close-expense-modal"><i class="fas fa-times"></i></span>
                 <h2><i class="fas fa-receipt"></i> Add Expense</h2>
                 <form id="expense-form" class="modal-form">
                     <div class="form-group">
@@ -566,13 +567,13 @@
         </button>
         <div id="chat-popup" class="chat-popup hidden">
             <div class="chat-header">
-                <h3>Group Chat</h3>
-                <button id="chat-close-btn" class="btn-close">✕</button>
+                <h3><i class="fas fa-comments"></i> Group Chat</h3>
+                <button id="chat-close-btn" class="btn-close"><i class="fas fa-times"></i></button>
             </div>
             <div id="chat-messages" class="chat-box"></div>
             <div class="chat-input">
                 <input type="text" id="chat-input" placeholder="Type a message..." />
-                <button id="send-message-btn" class="chat-btn">Send</button>
+                <button id="send-message-btn" class="chat-btn"><i class="fas fa-paper-plane"></i> Send</button>
             </div>
         </div>
 

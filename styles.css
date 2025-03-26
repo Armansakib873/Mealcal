@@ -1380,7 +1380,7 @@ body.dark-mode #loading-animation {
 
 /* Title Styling */
 .stat-box h3 {
-    font-size: 1rem;
+    font-size: 1.7rem;
     font-weight: 600;
     margin-bottom: var(--spacing-xs);
     color: var(--secondary);
@@ -1391,13 +1391,54 @@ body.dark-mode #loading-animation {
     font-size: 1.3rem;
     font-weight: 700;
     margin-bottom: 0;
+    padding: 3px 10px;
     color: var(--foreground);
+    background-color: #f7f4d417;
+    border-radius: var(--radius-lg);
+    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.1), 
+    inset -3px -3px 6px rgba(255, 255, 255, 0.279);
+    transition: all 0.3s ease;
+}
+
+/* Styling for 3D effect */
+.stat-box p:hover {
+    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
+                inset -3px -3px 6px rgba(255, 255, 255, 0.5);
+    
+}
+
+.meal-count p {
+    background-color: #ffffff00 !important;
+    box-shadow: none !important;
 }
 
 
 #current-balance-box{
     grid-column: span 2;
 }
+
+#current-balance{
+    color: #005d19;
+
+}
+
+
+#meal-rate{
+    color: #5d0000;
+}
+
+#total-deposits{
+    color: #03005d;
+}
+
+#total-expenditure{
+    color: #825d01;
+}
+
+#total-meals{
+    color: #00585d;
+}
+
 
 .meal-count-box {
     grid-column: span 2;
@@ -1424,14 +1465,14 @@ body.dark-mode #loading-animation {
 .day-meal, .night-meal {
     padding: 8px;
     border-radius: var(--radius-lg);
-    background: linear-gradient(145deg, #e1f8f064, #dfeef2);
+    background: linear-gradient(145deg, #f4de5364, #dceaee);
     box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
                 inset -3px -3px 6px rgba(255, 255, 255, 0.5);
     transition: transform 0.2s ease-in-out;
 }
 
 .night-meal {
-    background: linear-gradient(145deg, #0142271a, #65656590);
+    background: linear-gradient(145deg, #42360173, #dfdfd490);
 }
 
 .meal-count-box p {
@@ -1652,6 +1693,10 @@ body.dark-mode #loading-animation {
     margin-bottom: 0;
 }
 
+#greetings p{
+    font-size: 1.2rem ;
+}
+
 .deposit-history {
     background: var(--light);
     padding: var(--spacing-md);
@@ -1834,7 +1879,6 @@ body.dark-mode #loading-animation {
 
 .balance-text {
     background: linear-gradient(90deg, #0e5c22, #3abb54) !important;
-    padding: 5px 10px;
     border-radius: var(--radius-md);
     color: var(--light);
 }
@@ -3509,8 +3553,9 @@ body.dark-mode .notification-log .notification-separator {
     }
 
     .stat-box p {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         color: var(--foreground);
+   
     }
 
      .notification-log {
