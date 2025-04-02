@@ -1879,8 +1879,14 @@ body.dark-mode #loading-animation {
 
 .balance-text {
     background: linear-gradient(90deg, #0e5c22, #3abb54) !important;
+    padding: 5px 10px;
     border-radius: var(--radius-md);
     color: var(--light);
+}
+
+#user-balance{
+    padding: 0;
+    margin-top: 2px;
 }
 
 .overview-item .balance-text {
