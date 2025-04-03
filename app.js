@@ -2560,7 +2560,7 @@ async function resetMessages() {
     }
 
  // --- Data Export ---
-async function exportData() {
+ async function exportData() {
     if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
         showNotification('Only admins and managers can export data.', 'error');
         return;
@@ -2588,6 +2588,8 @@ async function exportData() {
             await exportToXLSX(fullSummary, balanceData);
         } else if (format === 'print') {
             printSummary(fullSummary, balanceData);
+        } else if (format === 'jpg') {
+            await exportToJPG(fullSummary, balanceData);
         } else {
             showNotification('Unsupported export format.', 'error');
         }
@@ -2598,6 +2600,119 @@ async function exportData() {
         hideLoader();
     }
 }
+
+async function exportToJPG(fullSummary, balanceData) {
+    try {
+        // Load html2canvas dynamically if not already loaded
+        if (!window.html2canvas) {
+            showNotification('Loading image export library...', 'info');
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            script.async = true;
+            document.head.appendChild(script);
+            await new Promise((resolve, reject) => {
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('Failed to load html2canvas library'));
+            });
+        }
+
+        // Generate formatted date
+        const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+        // Define table headers
+        const fullHeaders = ['Name', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
+
+        // Generate Full Summary Table Rows
+        const fullTableRows = fullSummary.map((row, index) => `
+            <tr style="background: ${index % 2 === 0 ? '#f9f9f9' : '#ffffff'};">
+                <td>${row.Name}</td>
+                <td>${row['Total Meals']}</td>
+                <td>${formatCurrency(row['Total Cost'])}</td>
+                <td>${formatCurrency(row['Total Deposit'])}</td>
+                <td>${formatCurrency(row.Balance)}</td>
+                <td>${formatCurrency(row['Pre-Month'])}</td>
+                <td>${formatCurrency(row['1st'])}</td>
+                <td>${formatCurrency(row['2nd'])}</td>
+                <td>${formatCurrency(row['3rd'])}</td>
+                <td>${formatCurrency(row['4th'])}</td>
+                <td>${formatCurrency(row['5th'])}</td>
+                <td>${row['Total Bazar']}</td>
+            </tr>
+        `).join('');
+
+        // Generate Balance Summary Table Rows
+        const balanceRows = balanceData.map((row, index) => `
+            <tr style="background: ${index % 2 === 0 ? '#f9f9f9' : '#ffffff'};">
+                <td>${row['Negative Name'] || ''}</td>
+                <td>${row['Negative Balance'] ? formatCurrency(row['Negative Balance']) : ''}</td>
+                <td></td>
+                <td>${row['Positive Name'] || ''}</td>
+                <td>${row['Positive Balance'] ? formatCurrency(row['Positive Balance']) : ''}</td>
+            </tr>
+        `).join('');
+
+        // Create HTML Content
+        const previewHtml = `
+            <div style="font-family: Arial, sans-serif; padding: 20px; background: #fff; width: 100%;">
+                <div style="text-align: center; font-size: 12px; color: #666; margin-bottom: 20px;">Generated on: ${date}</div>
+                <h2 style="color: #333; margin-top: 20px; text-align: center;">Full Summary</h2>
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 40px; text-align: center;">
+                    <thead>
+                        <tr style="background: #ff8c00; color: #fff; font-weight: bold;">
+                            ${fullHeaders.map(h => `<th style="padding: 10px; border: 1px solid #ccc;">${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>${fullTableRows}</tbody>
+                </table>
+                
+                <h2 style="color: #333; margin-top: 30px; text-align: center;">Balance Summary</h2>
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 40px; text-align: center;">
+                    <thead>
+                        <tr style="background: #ff8c00; color: #fff; font-weight: bold;">
+                            <th style="padding: 10px; border: 1px solid #ccc;">Negative Name</th>
+                            <th style="padding: 10px; border: 1px solid #ccc;">Negative Balance</th>
+                            <th style="border: none; background: none; width: 20px;"></th>
+                            <th style="padding: 10px; border: 1px solid #ccc;">Positive Name</th>
+                            <th style="padding: 10px; border: 1px solid #ccc;">Positive Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>${balanceRows}</tbody>
+                </table>
+            </div>
+        `;
+
+        // Render the content in the hidden container
+        const container = document.getElementById('print-preview-container');
+        container.innerHTML = previewHtml;
+
+        // Use html2canvas to capture the content as an image
+        const canvas = await html2canvas(container, {
+            scale: 3, // Increased scale for high resolution
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        });
+
+        // Convert the canvas to a JPG data URL
+        const imgData = canvas.toDataURL('image/jpeg', 1.0); // Maximum quality
+
+        // Create a download link for the image
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = `MealSync_Summary_${new Date().toISOString().slice(0, 10)}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Clean up the container
+        container.innerHTML = '';
+
+        showNotification('Data exported successfully as JPG!', 'success');
+    } catch (error) {
+        console.error('Error exporting to JPG:', error);
+        showNotification('Failed to export data to JPG.', 'error');
+    }
+}
+
 
 function extractFullSummaryFromTable(table) {
     const rows = table.querySelectorAll('tbody tr');
