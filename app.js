@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     // --- Session and State ---
-    let currentUser = JSON.parse(sessionStorage.getItem('mealsync_currentUser')) || null;
+    let currentUser = JSON.parse(sessionStorage.getItem('mealcal_currentUser')) || null;
     let appState = {
         members: [],
         deposits: [],
@@ -510,12 +510,12 @@ function formatDateForNotificationLog(dateString) {
         }
     
         currentUser = data;
-        sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+        sessionStorage.setItem('mealcal_currentUser', JSON.stringify(currentUser));
         if (rememberMe) {
             await supabaseClient.from('user_settings')
                 .update({ auto_login: true })
                 .eq('user_id', currentUser.id);
-            localStorage.setItem('mealsync_auto_login', btoa(`${username}:${password}`));
+            localStorage.setItem('mealcal_auto_login', btoa(`${username}:${password}`));
         }
         showNotification(`Welcome, ${username}!`, 'success', true);
     
@@ -582,8 +582,8 @@ function formatDateForNotificationLog(dateString) {
         }
         supabaseClient.removeAllChannels(); // Additional safety
     
-        localStorage.removeItem('mealsync_auto_login');
-        sessionStorage.removeItem('mealsync_currentUser');
+        localStorage.removeItem('mealcal_auto_login');
+        sessionStorage.removeItem('mealcal_currentUser');
         currentUser = null;
         appState = {
             members: [],
@@ -618,7 +618,7 @@ function updateSidebarUserInfo() { // Renamed function
 
     // --- Auto-Login Check ---
     async function checkAutoLogin() {
-        const autoLoginData = localStorage.getItem('mealsync_auto_login');
+        const autoLoginData = localStorage.getItem('mealcal_auto_login');
         if (autoLoginData) {
             showLoader(); // Show loader during auto-login
             const [username, password] = atob(autoLoginData).split(':');
@@ -629,7 +629,7 @@ function updateSidebarUserInfo() { // Renamed function
                 .single();
             if (user) {
                 currentUser = user;
-                sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+                sessionStorage.setItem('mealcal_currentUser', JSON.stringify(currentUser));
                 elements.loginPage.classList.add('hidden');
                 elements.mainApp.style.display = 'block';
                 await fetchAllData();
@@ -664,7 +664,7 @@ function updateSidebarUserInfo() { // Renamed function
         document.body.classList.toggle('dark-mode');
         const isDark = document.body.classList.contains('dark-mode');
         elements.toggleThemeBtn.innerHTML = `<i class="fas fa-${isDark ? 'sun' : 'moon'}"></i>`;
-        localStorage.setItem('mealsync_theme', isDark ? 'dark' : 'light');
+        localStorage.setItem('mealcal_theme', isDark ? 'dark' : 'light');
         if (currentUser) {
           await supabaseClient.from('user_settings')
             .update({ theme: isDark ? 'dark' : 'light' })
@@ -673,7 +673,7 @@ function updateSidebarUserInfo() { // Renamed function
       });
 
 
-    if (localStorage.getItem('mealsync_theme') === 'dark') {
+    if (localStorage.getItem('mealcal_theme') === 'dark') {
         document.body.classList.add('dark-mode');
         elements.toggleThemeBtn.innerHTML = '<i class="fas fa-sun"></i>';
     }
@@ -872,7 +872,7 @@ elements.sidebar.addEventListener('click', (event) => {
             return;
         }
         currentUser.password = newPassword;
-        sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+        sessionStorage.setItem('mealcal_currentUser', JSON.stringify(currentUser));
         elements.userPassword.value = '';
         showNotification('Password updated successfully!', 'success');
     });
@@ -962,7 +962,7 @@ elements.sidebar.addEventListener('click', (event) => {
           }
         }
         appState.lastUpdated = Date.now();
-        localStorage.setItem('mealsync_cache', JSON.stringify(appState));
+        localStorage.setItem('mealcal_cache', JSON.stringify(appState));
         console.log('fetchAllData completed:', {
           members: appState.members.length,
           meals: appState.meals.length,
@@ -1587,7 +1587,7 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
     
         if (currentUser.member_id === member.id) {
             currentUser[statusKey] = newStatus;
-            sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+            sessionStorage.setItem('mealcal_currentUser', JSON.stringify(currentUser));
         }
     
         const memberIndex = appState.members.findIndex(m => m.id === member.id);
@@ -1855,7 +1855,7 @@ async function renderExpenses() {
                 await fetchAllData();
                 if (currentUser.id === userId) {
                     currentUser = appState.users.find(u => u.id === userId);
-                    sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+                    sessionStorage.setItem('mealcal_currentUser', JSON.stringify(currentUser));
                 }
                 const user = appState.users.find(u => u.id === userId);
                 showNotification(`${user.username} ${newCanEdit ? 'granted' : 'revoked'} manager access`, 'success', false, {
@@ -1881,7 +1881,7 @@ async function renderExpenses() {
                     .eq('id', userId);
                 if (userId === currentUser.id) {
                     currentUser.password = newPassword;
-                    sessionStorage.setItem('mealsync_currentUser', JSON.stringify(currentUser));
+                    sessionStorage.setItem('mealcal_currentUser', JSON.stringify(currentUser));
                 }
                 input.value = '';
                 await fetchAllData();
@@ -2559,225 +2559,259 @@ async function resetMessages() {
         showNotification('All notifications cleared successfully!', 'success');
     }
 
-    // --- Data Export ---
-    async function exportData() {
-        if (currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
-        const format = elements.exportFormat.value;
-    
-        // Prepare full summary data
-        const fullSummary = await Promise.all(appState.members.map(async m => {
-            const totalMeals = await calculateTotalMeals(m.id);
-            const totalDeposit = await calculateTotalDeposit(m.id);
-            const totalCost = await calculateTotalCost(m.id);
-            const totalBazar = await calculateTotalBazar(m.id);
-            const depositMap = Object.fromEntries(appState.deposits.filter(d => d.member_id === m.id).map(d => [d.label, d.amount]));
-            return {
-                Name: m.name,
-                'Total Meals': totalMeals,
-                'Total Cost': totalCost,
-                'Total Deposit': totalDeposit,
-                Balance: totalDeposit - totalCost,
-                'Pre-Month': m.pre_month_balance || 0,
-                '1st': depositMap['1st'] || 0,
-                '2nd': depositMap['2nd'] || 0,
-                '3rd': depositMap['3rd'] || 0,
-                '4th': depositMap['4th'] || 0,
-                '5th': depositMap['5th'] || 0,
-                'Total Bazar': totalBazar
-            };
-        }));
-    
-        // Prepare balance summary data
-        const negativeBalances = fullSummary.filter(m => m.Balance < 0).map(m => ({
-            Name: m.Name,
-            Balance: m.Balance
-        }));
-        const positiveBalances = fullSummary.filter(m => m.Balance >= 0).map(m => ({
-            Name: m.Name,
-            Balance: m.Balance
-        }));
-        const balanceData = [];
-        const maxRows = Math.max(negativeBalances.length, positiveBalances.length);
-        for (let i = 0; i < maxRows; i++) {
-            const neg = negativeBalances[i] || { Name: '', Balance: '' };
-            const pos = positiveBalances[i] || { Name: '', Balance: '' };
-            balanceData.push({
-                'Negative Name': neg.Name,
-                'Negative Balance': neg.Balance,
-                '': '', // Spacer column
-                'Positive Name': pos.Name,
-                'Positive Balance': pos.Balance
-            });
-        }
-    
+ // --- Data Export ---
+async function exportData() {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+        showNotification('Only admins and managers can export data.', 'error');
+        return;
+    }
+
+    const format = elements.exportFormat.value;
+    const summaryTable = document.getElementById('summary-table');
+    if (!summaryTable) {
+        showNotification('Summary table not found.', 'error');
+        return;
+    }
+
+    const rows = summaryTable.querySelectorAll('tbody tr');
+    if (rows.length === 0) {
+        showNotification('No data to export.', 'error');
+        return;
+    }
+
+    showLoader();
+    try {
+        const fullSummary = extractFullSummaryFromTable(summaryTable);
+        const balanceData = prepareBalanceSummary(fullSummary);
+
         if (format === 'xlsx') {
-            if (!window.XLSX) {
-                showNotification('XLSX library not loaded.', 'error');
-                return;
-            }
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet([[]]); // Initialize an empty worksheet
-    
-            // Define styles
-            const titleStyle = {
-                font: { bold: true, sz: 14 },
-                alignment: { horizontal: 'center', vertical: 'center' }
-            };
-            const headerStyle = {
-                font: { bold: true },
-                fill: { fgColor: { rgb: 'FFFFAA00' } }, // Yellow background
-                alignment: { horizontal: 'center' }
-            };
-    
-            // Add Full Summary section
-            const fullTitleRow = 1; // 1-based row number
-            XLSX.utils.sheet_add_aoa(ws, [['Full Summary']], { origin: `A${fullTitleRow}` });
-            if (!ws['!merges']) ws['!merges'] = [];
-            ws['!merges'].push({ s: { r: fullTitleRow - 1, c: 0 }, e: { r: fullTitleRow - 1, c: 11 } }); // Merge A1 to L1
-            ws[`A${fullTitleRow}`].s = titleStyle;
-    
-            const fullHeaderRow = fullTitleRow + 1; // Row 2
-            XLSX.utils.sheet_add_json(ws, fullSummary, { origin: `A${fullHeaderRow}` }); // Adds header and data
-            for (let col = 0; col < 12; col++) {
-                const cellAddress = XLSX.utils.encode_cell({ r: fullHeaderRow - 1, c: col });
-                if (ws[cellAddress]) {
-                    ws[cellAddress].s = headerStyle;
-                }
-            }
-    
-            // Calculate position for Balance Summary
-            const fullDataEndRow = fullHeaderRow + fullSummary.length; // Last row of Full Summary data
-            const balanceTitleRow = fullDataEndRow + 2; // Leave one blank row
-    
-            // Add Balance Summary section
-            XLSX.utils.sheet_add_aoa(ws, [['Balance Summary']], { origin: `A${balanceTitleRow}` });
-            ws['!merges'].push({ s: { r: balanceTitleRow - 1, c: 0 }, e: { r: balanceTitleRow - 1, c: 4 } }); // Merge A to E
-            ws[`A${balanceTitleRow}`].s = titleStyle;
-    
-            const balanceHeaderRow = balanceTitleRow + 1;
-            XLSX.utils.sheet_add_json(ws, balanceData, { origin: `A${balanceHeaderRow}` });
-            for (let col = 0; col < 5; col++) {
-                const cellAddress = XLSX.utils.encode_cell({ r: balanceHeaderRow - 1, c: col });
-                if (ws[cellAddress]) {
-                    ws[cellAddress].s = headerStyle;
-                }
-            }
-    
-            // Set column widths based on Full Summary (12 columns)
-            const fullColWidths = [
-                { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-                { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }
-            ];
-            ws['!cols'] = fullColWidths;
-    
-            // Add the single worksheet to the workbook
-            XLSX.utils.book_append_sheet(wb, ws, 'Summary');
-    
-            const filename = `mealsync_${new Date().toISOString().slice(0, 10)}.xlsx`;
-            XLSX.writeFile(wb, filename);
-            showNotification('Data exported successfully as XLSX!', 'success');
+            await exportToXLSX(fullSummary, balanceData);
         } else if (format === 'print') {
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
-                showNotification('Please allow popups to print.', 'error');
-                return;
-            }
-    
-            const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-            const fullHeaders = ['Name', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
-            const fullTableRows = fullSummary.map(row => `
-                <tr>
-                    <td>${row.Name}</td>
-                    <td>${row['Total Meals']}</td>
-                    <td>${formatCurrency(row['Total Cost'])}</td>
-                    <td>${formatCurrency(row['Total Deposit'])}</td>
-                    <td>${formatCurrency(row.Balance)}</td>
-                    <td>${formatCurrency(row['Pre-Month'])}</td>
-                    <td>${formatCurrency(row['1st'])}</td>
-                    <td>${formatCurrency(row['2nd'])}</td>
-                    <td>${formatCurrency(row['3rd'])}</td>
-                    <td>${formatCurrency(row['4th'])}</td>
-                    <td>${formatCurrency(row['5th'])}</td>
-                    <td>${row['Total Bazar']}</td>
-                </tr>
-            `).join('');
-    
-            const maxRows = Math.max(negativeBalances.length, positiveBalances.length);
-            const balanceRows = [];
-            for (let i = 0; i < maxRows; i++) {
-                const neg = negativeBalances[i] || { Name: '', Balance: '' };
-                const pos = positiveBalances[i] || { Name: '', Balance: '' };
-                balanceRows.push(`
-                    <tr>
-                        <td>${neg.Name}</td>
-                        <td>${neg.Balance !== '' ? formatCurrency(neg.Balance) : ''}</td>
-                        <td></td> <!-- Spacer -->
-                        <td>${pos.Name}</td>
-                        <td>${pos.Balance !== '' ? formatCurrency(pos.Balance) : ''}</td>
-                    </tr>
-                `);
-            }
-    
-            const printHtml = `
-                <html>
-                <head>
-                    <title>MealSync Summary</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        h1 { text-align: center; color: #333; }
-                        h2 { color: #555; margin-top: 30px; }
-                        .date { text-align: center; font-size: 12px; color: #666; margin-bottom: 20px; }
-                        table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 40px; }
-                        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-                        th { background-color: #ffaa00; color: #fff; font-weight: bold; }
-                        tr:nth-child(even) { background-color: #f9f9f9; }
-                        .spacer { border: none; background: none; width: 20px; }
-                       @media print {
-    body { margin: 0; padding: 0; }
-    .date, h2 { margin: 5px 0; font-size: 14px; }
-    table { page-break-inside: avoid; width: 100%; font-size: 12px; }
-    th, td { padding: 4px; font-size: 12px; }
-    .spacer { width: 10px; }
-    h2 { page-break-before: avoid; }
-    * { max-height: 100%; max-width: 100%; }
+            printSummary(fullSummary, balanceData);
+        } else {
+            showNotification('Unsupported export format.', 'error');
+        }
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification('Failed to export data.', 'error');
+    } finally {
+        hideLoader();
+    }
 }
 
-                    </style>
-                </head>
-                <body>
-                    <div class="date">Generated on: ${date}</div>
-                    <h2>Full Summary</h2>
-                    <table>
-                        <thead>
-                            <tr>${fullHeaders.map(h => `<th>${h}</th>`).join('')}</tr>
-                        </thead>
-                        <tbody>${fullTableRows}</tbody>
-                    </table>
-                    <h2>Balance Summary</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Negative Name</th>
-                                <th>Negative Balance</th>
-                                <th class="spacer"></th>
-                                <th>Positive Name</th>
-                                <th>Positive Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody>${balanceRows.join('')}</tbody>
-                    </table>
-                    <script>
-                        window.onload = function() { window.print(); window.close(); }
-                    </script>
-                </body>
-                </html>
-            `;
-    
-            printWindow.document.write(printHtml);
-            printWindow.document.close();
-            showNotification('Print dialog opened successfully!', 'success');
-        }
+function extractFullSummaryFromTable(table) {
+    const rows = table.querySelectorAll('tbody tr');
+    const fullSummary = [];
+
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const depositMap = {
+            '1st': parseFloat(cells[8].textContent.replace('৳', '')) || 0,
+            '2nd': parseFloat(cells[9].textContent.replace('৳', '')) || 0,
+            '3rd': parseFloat(cells[10].textContent.replace('৳', '')) || 0,
+            '4th': parseFloat(cells[11].textContent.replace('৳', '')) || 0,
+            '5th': parseFloat(cells[12].textContent.replace('৳', '')) || 0,
+        };
+
+        fullSummary.push({
+            Name: cells[0].textContent,
+            'Total Meals': parseInt(cells[3].textContent) || 0,
+            'Total Cost': parseFloat(cells[4].textContent.replace('৳', '')) || 0,
+            'Total Deposit': parseFloat(cells[5].textContent.replace('৳', '')) || 0,
+            Balance: parseFloat(cells[6].textContent.replace('৳', '')) || 0,
+            'Pre-Month': parseFloat(cells[7].textContent.replace('৳', '')) || 0,
+            '1st': depositMap['1st'],
+            '2nd': depositMap['2nd'],
+            '3rd': depositMap['3rd'],
+            '4th': depositMap['4th'],
+            '5th': depositMap['5th'],
+            'Total Bazar': parseInt(cells[13].textContent) || 0,
+        });
+    });
+
+    return fullSummary;
+}
+
+function prepareBalanceSummary(fullSummary) {
+    const negativeBalances = fullSummary
+        .filter(m => m.Balance < 0)
+        .map(m => ({ Name: m.Name, Balance: m.Balance }));
+    const positiveBalances = fullSummary
+        .filter(m => m.Balance >= 0)
+        .map(m => ({ Name: m.Name, Balance: m.Balance }));
+
+    const balanceData = [];
+    const maxRows = Math.max(negativeBalances.length, positiveBalances.length);
+
+    for (let i = 0; i < maxRows; i++) {
+        const neg = negativeBalances[i] || { Name: '', Balance: '' };
+        const pos = positiveBalances[i] || { Name: '', Balance: '' };
+        balanceData.push({
+            'Negative Name': neg.Name,
+            'Negative Balance': neg.Balance,
+            '': '',
+            'Positive Name': pos.Name,
+            'Positive Balance': pos.Balance,
+        });
     }
+
+    return balanceData;
+}
+
+async function exportToXLSX(fullSummary, balanceData) {
+    if (!window.XLSX) {
+        showNotification('Loading export library...', 'info');
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        script.async = true;
+        document.head.appendChild(script);
+        await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('Failed to load XLSX library'));
+        });
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([[]]);
+
+    const titleStyle = { font: { bold: true, sz: 14 }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const headerStyle = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: 'FFFFAA00' } },
+        alignment: { horizontal: 'center' },
+    };
+
+    const fullTitleRow = 1;
+    XLSX.utils.sheet_add_aoa(ws, [['Full Summary']], { origin: `A${fullTitleRow}` });
+    ws['!merges'] = [{ s: { r: fullTitleRow - 1, c: 0 }, e: { r: fullTitleRow - 1, c: 11 } }];
+    ws[`A${fullTitleRow}`].s = titleStyle;
+
+    const fullHeaderRow = fullTitleRow + 1;
+    XLSX.utils.sheet_add_json(ws, fullSummary, { origin: `A${fullHeaderRow}` });
+    for (let col = 0; col < 12; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: fullHeaderRow - 1, c: col });
+        if (ws[cellAddress]) ws[cellAddress].s = headerStyle;
+    }
+
+    const fullDataEndRow = fullHeaderRow + fullSummary.length;
+    const balanceTitleRow = fullDataEndRow + 2;
+    XLSX.utils.sheet_add_aoa(ws, [['Balance Summary']], { origin: `A${balanceTitleRow}` });
+    ws['!merges'].push({ s: { r: balanceTitleRow - 1, c: 0 }, e: { r: balanceTitleRow - 1, c: 4 } });
+    ws[`A${balanceTitleRow}`].s = titleStyle;
+
+    const balanceHeaderRow = balanceTitleRow + 1;
+    XLSX.utils.sheet_add_json(ws, balanceData, { origin: `A${balanceHeaderRow}` });
+    for (let col = 0; col < 5; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: balanceHeaderRow - 1, c: col });
+        if (ws[cellAddress]) ws[cellAddress].s = headerStyle;
+    }
+
+    ws['!cols'] = [
+        { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+        { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+    const filename = `mealcal_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    showNotification('Data exported successfully as XLSX!', 'success');
+}
+
+// Print the summary
+function printSummary(fullSummary, balanceData) {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        showNotification('Please allow popups to print.', 'error');
+        return;
+    }
+
+    const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const fullHeaders = ['Name', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
+    const fullTableRows = fullSummary.map(row => `
+        <tr>
+            <td>${row.Name}</td>
+            <td>${row['Total Meals']}</td>
+            <td>${formatCurrency(row['Total Cost'])}</td>
+            <td>${formatCurrency(row['Total Deposit'])}</td>
+            <td>${formatCurrency(row.Balance)}</td>
+            <td>${formatCurrency(row['Pre-Month'])}</td>
+            <td>${formatCurrency(row['1st'])}</td>
+            <td>${formatCurrency(row['2nd'])}</td>
+            <td>${formatCurrency(row['3rd'])}</td>
+            <td>${formatCurrency(row['4th'])}</td>
+            <td>${formatCurrency(row['5th'])}</td>
+            <td>${row['Total Bazar']}</td>
+        </tr>
+    `).join('');
+
+    const balanceRows = balanceData.map(row => `
+        <tr>
+            <td>${row['Negative Name']}</td>
+            <td>${row['Negative Balance'] !== '' ? formatCurrency(row['Negative Balance']) : ''}</td>
+            <td></td>
+            <td>${row['Positive Name']}</td>
+            <td>${row['Positive Balance'] !== '' ? formatCurrency(row['Positive Balance']) : ''}</td>
+        </tr>
+    `).join('');
+
+    const printHtml = `
+        <html>
+        <head>
+            <title>mealcal Summary</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { text-align: center; color: #333; }
+                h2 { color: #555; margin-top: 30px; }
+                .date { text-align: center; font-size: 12px; color: #666; margin-bottom: 20px; }
+                table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 40px; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+                th { background-color: #ffaa00; color: #fff; font-weight: bold; }
+                tr:nth-child(even) { background-color: #f9f9f9; }
+                .spacer { border: none; background: none; width: 20px; }
+                @media print {
+                    body { margin: 0; padding: 0; }
+                    .date, h2 { margin: 5px 0; font-size: 14px; }
+                    table { page-break-inside: avoid; width: 100%; font-size: 12px; }
+                    th, td { padding: 4px; font-size: 12px; }
+                    .spacer { width: 10px; }
+                    h2 { page-break-before: avoid; }
+                    * { max-height: 100%; max-width: 100%; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="date">Generated on: ${date}</div>
+            <h2>Full Summary</h2>
+            <table>
+                <thead>
+                    <tr>${fullHeaders.map(h => `<th>${h}</th>`).join('')}</tr>
+                </thead>
+                <tbody>${fullTableRows}</tbody>
+            </table>
+            <h2>Balance Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Negative Name</th>
+                        <th>Negative Balance</th>
+                        <th class="spacer"></th>
+                        <th>Positive Name</th>
+                        <th>Positive Balance</th>
+                    </tr>
+                </thead>
+                <tbody>${balanceRows}</tbody>
+            </table>
+            <script>
+                window.onload = function() { window.print(); window.close(); }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+    showNotification('Print dialog opened successfully!', 'success');
+}
 
     // --- Reset Month ---
     async function resetMonth() {
