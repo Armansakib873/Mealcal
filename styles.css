@@ -730,7 +730,7 @@ body.dark-mode #loading-animation {
 .login-footer{
     display: flex;
     flex-direction: column;
-    text-align: center;
+    text-align: start;
     gap: var(--spacing-sm);
     margin-top: var(--spacing-lg);
 }
@@ -3197,6 +3197,11 @@ body.dark-mode .notification-log .notification-separator {
 
 .sidebar-link:active,
 .sidebar-link.active {
+    background-color: var(--primary);
+    color: var(--light);
+}
+
+.sidebar-link:hover {
     background-color: var(--primary);
     color: var(--light);
 }

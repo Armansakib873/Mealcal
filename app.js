@@ -648,6 +648,17 @@ function updateSidebarUserInfo() { // Renamed function
     }
 
 
+    function handleSupabaseLoadError() {
+        console.error('Failed to load Supabase script');
+        const notification = document.getElementById('login-notification');
+        if (notification) {
+            notification.innerHTML = '<p class="error">Failed to load Supabase. Please check your internet connection and try again later.</p>';
+        }
+        // Optionally, hide the loader
+        const loader = document.getElementById('loader');
+        if (loader) loader.classList.add('hidden');
+    }
+
     // --- Theme Toggle ---
     elements.toggleThemeBtn.addEventListener('click', async () => {
         document.body.classList.toggle('dark-mode');

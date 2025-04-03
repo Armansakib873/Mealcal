@@ -1,32 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>MealSync</title>
-    <link rel="icon" type="image/x-icon" href="bowl.ico">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
-          crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-       <!-- Add these before your app.js script tag -->
-<!-- Add these before your app.js script tag -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-<link rel="stylesheet" href="styles.css">
-
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <title>MealCal</title>
+        <link rel="icon" type="image/x-icon" href="bowl.ico">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+              integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+              crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+        <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <link rel="stylesheet" href="styles.css">
+        <!-- Supabase script with pinned version and error handling -->
+        <script>
+        window.supabaseLoadError = false;
+        function handleSupabaseLoadError() {
+            console.error('Failed to load Supabase script');
+            const notification = document.getElementById('login-notification');
+            if (notification) {
+                notification.innerHTML = '<p class="error">Failed to load Supabase. Please check your internet connection and try again later.</p>';
+            }
+            const loader = document.getElementById('loader');
+            if (loader) loader.classList.add('hidden');
+        }
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" onerror="window.supabaseLoadError = true; handleSupabaseLoadError();"></script>
+        <script>
+        if (window.supabaseLoadError) {
+            document.write('<script src="lib/supabase.min.js"><\/script>');
+            console.warn('Loaded local Supabase script as fallback');
+        }
+        </script>
+    </head>
 <body>
 
     <div id="sidebar" class="sidebar">
         <nav class="sidebar-nav">
              <div class="sidebar-header" st>
-                <img src="logo.png" alt="MealSync Logo" class="sidebar-logo">
+                <img src="logo.png" alt="MealCal Logo" class="sidebar-logo">
                 <div class="sidename">
-                <h1>MealSync</h1>
+                <h1>MealCal</h1>
             </div>
               
                  <button id="close-sidebar" class="close-sidebar" aria-label="Close Sidebar"><i class="fas fa-times"></i></button>
@@ -62,7 +77,7 @@
     <div id="sidebar-overlay"></div>
 
     <div id="loader" class="loader">
-        <img src="logo.png" alt="MealSync Loader" class="loader-icon">
+        <img src="logo.png" alt="MealCal Loader" class="loader-icon">
     </div>
 
 
@@ -70,13 +85,13 @@
     <div id="login-page" class="login-page" style="display: none;">
 
         <div class="greetings">
-            <h1>Welcome to MealSync</h1>
+            <h1>Welcome to MealCal</h1>
             <p>A simple meal tracking app that keep track of your meals and expenses.</p>
         </div>
         <div class="login-container">
             <div class="logo-container">
-                <img src="logo.png" alt="MealSync Logo" class="logo">
-                <h1>MealSync</h1>
+                <img src="logo.png" alt="MealCal Logo" class="logo">
+                <h1>MealCal</h1>
 
             </div>
             <div id="login-notification" class="notification"></div>
@@ -90,7 +105,7 @@
             <a href="#" class="privacy-policy"><i class="fas fa-user-secret"></i> Privacy Policy</a>
             <a href="#" class="contact-us"><i class="fas fa-envelope"></i> Contact Us</a>
             <p>Author: Md Arman Hossain</p>
-            <p>Copyright © MealSync 2025. All rights reserved.</p>
+            <p>Copyright © MealCal 2025. All rights reserved.</p>
 
 
 
@@ -116,8 +131,8 @@
 
             <div class="logo-container">
                 <div class="logo-icon">
-                <img src="logo.png" alt="MealSync Logo" class="logo">
-                <h1>MealSync</h1>
+                <img src="logo.png" alt="MealCal Logo" class="logo">
+                <h1>MealCal</h1>
             </div>
             </div>
 
@@ -155,8 +170,8 @@
                     </div>
                     <h3>Data Control</h3>
                     
-                    <button id="reset-messages-btn" class="btn danger hidden"><i class="fas fa-sync-alt"></i>Reset Messages</button>
-                    <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-sync-alt"></i> Reset Month</button>
+                    <button id="reset-messages-btn" class="btn danger hidden"><i class="fas fa-Cal-alt"></i>Reset Messages</button>
+                    <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-Cal-alt"></i> Reset Month</button>
                     <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Data</button>
                     <select id="export-format" class="select-input">
                         <option value="xlsx"><i class="fas fa-file-excel"></i> XLSX</option>
@@ -198,7 +213,7 @@
                                 <i class="fas fa-power-off"></i>
                                 <h3>Your Meal Status</h3>
                                 <div class="toggle-container">
-                                    <button class="toggle-btn" id="user-day-toggle">Day</button>
+                                    <button class="toggle-btn" id="user-day-toggle" aria-pressed="false">Day</button>
                                     <button class="toggle-btn" id="user-night-toggle"> Night</button>
                                 </div>
                             </div>
@@ -573,7 +588,7 @@
             <div id="chat-messages" class="chat-box"></div>
             <div class="chat-input">
                 <input type="text" id="chat-input" placeholder="Type a message..." />
-                <button id="send-message-btn" class="chat-btn"><i class="fas fa-paper-plane"></i> Send</button>
+                <button id="send-message-btn" class="chat-btn"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
 
