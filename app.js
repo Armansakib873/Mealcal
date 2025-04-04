@@ -1,8 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
-
-
-
     const loginPage = document.getElementById('login-page');
     const mainApp = document.getElementById('main-app');
 
@@ -65,7 +62,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         menuToggle: document.querySelector('.menu-toggle'),
-        headerNav: document.querySelector('.header-nav'),
         userStatus: document.getElementById('user-status'),
         userRole: document.getElementById('user-role'),
         logoutBtn: document.getElementById('logout-btn'),
@@ -845,14 +841,27 @@ elements.sidebar.addEventListener('click', (event) => {
         e.preventDefault();
         await updateMember();
     });
+
+
     elements.addExpenseBtn.addEventListener('click', () => {
-  // Set today's date as default when adding a new expense
-  if (!editingExpenseId) { // Only for new expenses, not edits
-    const today = new Date().toISOString().split('T')[0]; // Formats as "YYYY-MM-DD"
-    document.getElementById('expense-date').value = today;
-  }
-  openModal(elements.expenseModal);
-});
+        // Re-query the modal element to ensure it exists
+        const expenseModal = document.getElementById('expense-modal');
+        if (!expenseModal) {
+            console.error('Expense modal not found at the time of click');
+            showNotification('Failed to open expense modal: Element not found.', 'error');
+            return;
+        }
+    
+        // Set today's date as default when adding a new expense
+        if (!editingExpenseId) { // Only for new expenses, not edits
+            const today = new Date().toISOString().split('T')[0]; // Formats as "YYYY-MM-DD"
+            document.getElementById('expense-date').value = today;
+        }
+        openModal(expenseModal);
+    });
+
+
+
     elements.closeExpenseModal.addEventListener('click', () => closeModal(elements.expenseModal));
     elements.expenseForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -889,8 +898,12 @@ elements.sidebar.addEventListener('click', (event) => {
 
     // --- Modal Functions ---
     function openModal(modal) {
+        if (!modal) {
+            console.error('Modal element not found:', modal);
+            showNotification('Failed to open modal: Element not found.', 'error');
+            return;
+        }
         modal.style.display = 'block';
-        elements.headerNav.classList.remove('active');
     }
 
     function closeModal(modal) {
@@ -1656,12 +1669,8 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
             .single();
     
         // Update appState locally
-        appState.expenses.push(expense);
         appState.hasShownNegativeBalanceWarning = false;
     
-        // Targeted UI update
-        await renderExpenses();
-        await updateDashboard(); // Update totals
     }
 
 
