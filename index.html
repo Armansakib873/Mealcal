@@ -172,15 +172,7 @@
                     
                     <button id="reset-messages-btn" class="btn danger hidden"><i class="fas fa-Cal-alt"></i>Reset Messages</button>
                     <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-Cal-alt"></i> Reset Month</button>
-                    <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Data</button>
-                    <select id="export-format">
-                        <option value="xlsx">XLSX</option>
-                        <option value="print">PRINT</option>
-                        <option value="jpg">JPG</option>
-                    </select>
-
-                    <!-- Hidden container for rendering tables -->
-                    <div id="print-preview-container" style="position: absolute; left: -9999px; top: -9999px;"></div>
+               
             </section>
 
 
@@ -363,8 +355,23 @@
                               </tbody>
                         </table>
                     </div>
+
+                    <div class="export-summary">
+                        <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Data</button>
+                        <select id="export-format">
+                            <option value="xlsx">XLSX</option>
+                            <option value="print">PRINT</option>
+                            <option value="jpg">JPG</option>
+                        </select>
+    
+                        <!-- Hidden container for rendering tables -->
+                        <div id="print-preview-container" style="position: absolute; left: -9999px; top: -9999px;"></div>
+                    </div>
+
+
                 </div>
             </section>
+
 
         <!-- Meal planner Section -->
 
