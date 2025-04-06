@@ -13,7 +13,6 @@ const urlsToCache = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js'
 ];
 
-// Install event: Cache essential files
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -25,7 +24,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Fetch event: Serve from cache if available, otherwise fetch from network
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => {
@@ -36,7 +34,6 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Activate event: Clean up old caches
 self.addEventListener('activate', (event) => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
@@ -51,7 +48,6 @@ self.addEventListener('activate', (event) => {
     })
   );
 });
-
 
 
 const API_CACHE_NAME = 'mealcal-api-cache-v1';
