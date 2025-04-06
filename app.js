@@ -2022,44 +2022,39 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
 
 
     async function toggleMealStatus(member, type) {
-        const isDay = type === 'day';
-        const field = isDay ? 'day_status' : 'night_status';
-        const newStatus = !member[field];
+        const statusKey = type === 'day' ? 'day_status' : 'night_status';
+        const newStatus = !member[statusKey];
     
-        if (!currentUser || (currentUser.role === 'user' && !isToggleTimeAllowed())) {
-            showNotification('Meal toggling is restricted at this time or not allowed for your role.', 'error');
+        if (currentUser.role === 'user' && !isToggleTimeAllowed()) {
+            showNotification('Meal toggling is only allowed between 8 PM and 6 PM.', 'error');
             return;
         }
     
-        if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
-            showNotification('Only admins and managers can toggle meals in the summary table.', 'error');
-            return;
+        await supabaseClient.from('members')
+            .update({ [statusKey]: newStatus })
+            .eq('id', member.id);
+    
+        if (currentUser.member_id === member.id) {
+            currentUser[statusKey] = newStatus;
+            sessionStorage.setItem('mealcal_currentUser', JSON.stringify(currentUser));
         }
     
-        try {
-            const { data, error } = await supabaseClient
-                .from('members')
-                .update({ [field]: newStatus })
-                .eq('id', member.id)
-                .select()
-                .single();
-            if (error) throw error;
+        const memberIndex = appState.members.findIndex(m => m.id === member.id);
+        appState.members[memberIndex][statusKey] = newStatus;
     
-            const index = appState.members.findIndex(m => m.id === member.id);
-            appState.members[index] = data;
+        const mealType = type === 'day' ? 'Day Meal' : 'Night Meal';
+        const action = newStatus ? 'turned ON' : 'turned OFF';
+        showNotification(`${mealType} ${action} for ${member.name}`, 'success', false, {
+            userName: member.name,
+            type: `meal_${type}_${newStatus ? 'on' : 'off'}`,
+            editor: currentUser.username
+        });
     
-            showNotification(
-                `${type.charAt(0).toUpperCase() + type.slice(1)} Meal turned ${newStatus ? 'ON' : 'OFF'} for ${member.name}`,
-                'success',
-                false,
-                { type: `meal_${type}_${newStatus ? 'on' : 'off'}`, userName: member.name, editor: currentUser.username }
-            );
-            await updateAllViews();
-        } catch (error) {
-            console.error(`Error toggling ${type} meal:`, error);
-            showNotification(`Failed to toggle ${type} meal`, 'error');
-        } finally {
-        }
+        // Update UI immediately
+        await renderMembers();
+        await renderSummary();
+        await updateDashboard(); // Ensure dashboard updates
+        await updateMealToggleCard(); // Sync toggle card
     }
 
     // --- Expense Functions ---

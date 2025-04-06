@@ -2603,19 +2603,7 @@ body.dark-mode #loading-animation {
     box-shadow:  0 2px 6px rgba(180, 43, 12, 0.35);
 }
 
-#summary-table .toggle-btn.restricted {
-    background: #ced4da;
-    color: var(--foreground);
-    cursor: not-allowed;
-    opacity: 0.7;
-    box-shadow: none;
-    pointer-events: none; /* Disable interaction */
-}
 
-#summary-table .toggle-btn:active:not(.restricted) {
-    transform: translateY(1px);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
