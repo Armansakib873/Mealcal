@@ -8,7 +8,7 @@
 
     "display": "standalone",
     "background_color": "#ffffff",
-    "theme_color": "#ff8c00",
+    "theme_color": "#ffffff",
     "icons": [
       {
         "src": "bowl-app.png",
