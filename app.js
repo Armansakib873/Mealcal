@@ -1111,70 +1111,67 @@ elements.currentDate.textContent = new Date().toLocaleDateString('en-US', {
 });
 elements.cycleDates.textContent = getCycleDates();
 
-
 function updateUIForRole() {
     console.log('Updating UI for role:', currentUser ? currentUser.role : 'No user');
     if (!currentUser) {
-      console.warn('No currentUser, defaulting to guest UI');
-      elements.userStatus.textContent = '';
-      elements.userRole.textContent = '';
-      elements.addMemberBtn.classList.add('hidden');
-      elements.addExpenseBtn.classList.add('hidden');
-      elements.adminControls.classList.add('hidden');
-      elements.summarySection.classList.add('hidden');
-      elements.memberSelectContainer.classList.add('hidden');
-      elements.userSelectContainer.classList.add('hidden');
-      return;
+        console.warn('No currentUser, defaulting to guest UI');
+        elements.userStatus.textContent = '';
+        elements.userRole.textContent = '';
+        elements.addMemberBtn.classList.add('hidden');
+        elements.addExpenseBtn.classList.add('hidden');
+        elements.adminControls.classList.add('hidden');
+        elements.summarySection.classList.add('hidden'); // Hidden for guests
+        elements.memberSelectContainer.classList.add('hidden');
+        elements.userSelectContainer.classList.add('hidden');
+        return;
     }
-  
+
     const role = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
     elements.userStatus.textContent = `Logged in as: ${currentUser.username}`;
     elements.userRole.textContent = `Role: ${role}`;
     const isAdmin = currentUser.role === 'admin';
     const isManager = currentUser.role === 'manager';
     const canEdit = isAdmin || isManager;
-  
+
     elements.addMemberBtn.classList.toggle('hidden', !isAdmin);
     elements.addExpenseBtn.classList.toggle('hidden', !canEdit);
     elements.adminControls.classList.toggle('hidden', !isAdmin);
-    elements.summarySection.classList.toggle('hidden', !canEdit);
+    elements.summarySection.classList.remove('hidden'); // Always visible for logged-in users
     document.getElementById('user-overview').classList.toggle('hidden', isAdmin);
-  
+
     elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
 
     if (currentUser.role === 'admin' || currentUser.role === 'manager') {
         elements.exportAllDataBtn.style.display = 'block';
         elements.manualBackupBtn.style.display = 'block';
         document.getElementById('backup-download-container').classList.remove('hidden');
-        // Do NOT call populateBackupFiles here
-      } else {
+    } else {
         elements.exportAllDataBtn.style.display = 'none';
         elements.manualBackupBtn.style.display = 'none';
         document.getElementById('backup-download-container').classList.add('hidden');
-      }
-
-      
-    if (isAdmin || isManager) {
-      if (appState.members?.length > 0) {
-        populateMemberSelect(isAdmin, isManager);
-      } else {
-        console.warn('No members available, hiding member select');
-        elements.memberSelectContainer.classList.add('hidden');
-      }
     }
-  
+
+    if (isAdmin || isManager) {
+        if (appState.members?.length > 0) {
+            populateMemberSelect(isAdmin, isManager);
+        } else {
+            console.warn('No members available, hiding member select');
+            elements.memberSelectContainer.classList.add('hidden');
+        }
+    }
+
     elements.userSelectContainer.classList.toggle('hidden', !isAdmin);
     if (isAdmin) {
-      if (appState.users?.length > 0) {
-        populateUserSelect();
-      } else {
-        console.warn('No users available, hiding user select');
-        elements.userSelectContainer.classList.add('hidden');
-      }
+        if (appState.users?.length > 0) {
+            populateUserSelect();
+        } else {
+            console.warn('No users available, hiding user select');
+            elements.userSelectContainer.classList.add('hidden');
+        }
     }
-  
+
     updateSidebarUserInfo();
-  }
+}
 
 
 async function populateMemberSelect(isAdmin, isManager) {
@@ -2028,43 +2025,46 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
     }
 
 
-
     async function toggleMealStatus(member, type) {
-        const statusKey = type === 'day' ? 'day_status' : 'night_status';
-        const newStatus = !member[statusKey];
+        const isDay = type === 'day';
+        const field = isDay ? 'day_status' : 'night_status';
+        const newStatus = !member[field];
     
-        if (currentUser.role === 'user' && !isToggleTimeAllowed()) {
-            showNotification('Meal toggling is only allowed between 8 PM and 6 PM.', 'error');
+        if (!currentUser || (currentUser.role === 'user' && !isToggleTimeAllowed())) {
+            showNotification('Meal toggling is restricted at this time or not allowed for your role.', 'error');
             return;
         }
     
-        await supabaseClient.from('members')
-            .update({ [statusKey]: newStatus })
-            .eq('id', member.id);
-    
-        if (currentUser.member_id === member.id) {
-            currentUser[statusKey] = newStatus;
-            sessionStorage.setItem('mealcal_currentUser', JSON.stringify(currentUser));
+        if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+            showNotification('Only admins and managers can toggle meals in the summary table.', 'error');
+            return;
         }
     
-        const memberIndex = appState.members.findIndex(m => m.id === member.id);
-        appState.members[memberIndex][statusKey] = newStatus;
+        try {
+            const { data, error } = await supabaseClient
+                .from('members')
+                .update({ [field]: newStatus })
+                .eq('id', member.id)
+                .select()
+                .single();
+            if (error) throw error;
     
-        const mealType = type === 'day' ? 'Day Meal' : 'Night Meal';
-        const action = newStatus ? 'turned ON' : 'turned OFF';
-        showNotification(`${mealType} ${action} for ${member.name}`, 'success', false, {
-            userName: member.name,
-            type: `meal_${type}_${newStatus ? 'on' : 'off'}`,
-            editor: currentUser.username
-        });
+            const index = appState.members.findIndex(m => m.id === member.id);
+            appState.members[index] = data;
     
-        // Update UI immediately
-        await renderMembers();
-        await renderSummary();
-        await updateDashboard(); // Ensure dashboard updates
-        await updateMealToggleCard(); // Sync toggle card
+            showNotification(
+                `${type.charAt(0).toUpperCase() + type.slice(1)} Meal turned ${newStatus ? 'ON' : 'OFF'} for ${member.name}`,
+                'success',
+                false,
+                { type: `meal_${type}_${newStatus ? 'on' : 'off'}`, userName: member.name, editor: currentUser.username }
+            );
+            await updateAllViews();
+        } catch (error) {
+            console.error(`Error toggling ${type} meal:`, error);
+            showNotification(`Failed to toggle ${type} meal`, 'error');
+        } finally {
+        }
     }
-
 
     // --- Expense Functions ---
     async function openExpenseModal(expenseId = null) {
@@ -2509,10 +2509,6 @@ async function renderExpenses() {
     // --- Summary ---
     async function renderSummary() {
         elements.summaryTableBody.innerHTML = '';
-        if (!currentUser.can_edit && currentUser.role !== 'admin' && currentUser.role !== 'manager') return;
-    
-        // Update table header if needed (assuming it’s static in HTML)
-        // If dynamic, ensure thead includes: <th>Day</th><th>Night</th> after <th>Name</th>
     
         for (const member of appState.members) {
             const totalMeals = await calculateTotalMeals(member.id);
@@ -2524,15 +2520,31 @@ async function renderExpenses() {
             const memberDeposits = appState.deposits.filter(d => d.member_id === member.id);
             const depositMap = Object.fromEntries(memberDeposits.map(d => [d.label, d.amount]));
     
-            const isAllowed = isToggleTimeAllowed() || currentUser.role !== 'user'; // Admins/managers bypass time restriction
-            const toggleClass = isAllowed ? '' : 'restricted';
+            const isAdminOrManager = currentUser.role === 'admin' || currentUser.role === 'manager';
+            const isAllowed = isToggleTimeAllowed() || isAdminOrManager; // Admins/managers bypass time restriction
+            const toggleClass = isAllowed && isAdminOrManager ? '' : 'restricted';
+            const disabledAttr = isAdminOrManager ? '' : 'disabled'; // Disable buttons for regular users
     
             const row = document.createElement('tr');
             row.dataset.memberId = member.id;
             row.innerHTML = `
                 <td>${member.name}</td>
-                <td><button class="toggle-btn day-toggle ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-state="${member.day_status ? 'on' : 'off'}" data-type="day">Day ${member.day_status ? 'On' : 'Off'}</button></td>
-                <td><button class="toggle-btn night-toggle ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-state="${member.night_status ? 'on' : 'off'}" data-type="night">Night ${member.night_status ? 'On' : 'Off'}</button></td>
+                <td>
+                    <button class="toggle-btn day-toggle ${member.day_status ? 'on meal-on' : 'off meal-off'} ${toggleClass}" 
+                            data-state="${member.day_status ? 'on' : 'off'}" 
+                            data-type="day" 
+                            ${disabledAttr}>
+                        Day ${member.day_status ? 'On' : 'Off'}
+                    </button>
+                </td>
+                <td>
+                    <button class="toggle-btn night-toggle ${member.night_status ? 'on meal-on' : 'off meal-off'} ${toggleClass}" 
+                            data-state="${member.night_status ? 'on' : 'off'}" 
+                            data-type="night" 
+                            ${disabledAttr}>
+                        Night ${member.night_status ? 'On' : 'Off'}
+                    </button>
+                </td>
                 <td>${totalMeals}</td>
                 <td>${formatCurrency(totalCost)}</td>
                 <td>${formatCurrency(totalDeposit)}</td>
@@ -2548,8 +2560,10 @@ async function renderExpenses() {
             elements.summaryTableBody.appendChild(row);
         }
     
-        // Add event listeners to toggles
-        initializeToggleListeners();
+        // Add event listeners to toggles only for admins/managers
+        if (currentUser.role === 'admin' || currentUser.role === 'manager') {
+            initializeToggleListeners();
+        }
     }
 
 
@@ -2560,7 +2574,7 @@ async function renderExpenses() {
                     const memberId = parseInt(toggle.closest('tr').dataset.memberId);
                     const member = appState.members.find(m => m.id === memberId);
                     const type = toggle.dataset.type;
-                    toggleMealStatus(member, type); // Reuse existing function
+                    toggleMealStatus(member, type); // Calls existing toggle function
                 }
             });
         });

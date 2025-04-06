@@ -333,7 +333,7 @@ body.dark-mode .loader-icon {
 .card h2 i {
     color: var(--primary);
     font-size: 1rem;
-    letter-spacing: 5px;
+    letter-spacing: 4px;
     padding-left: 15px;
 }
 
