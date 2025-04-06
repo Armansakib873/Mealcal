@@ -1774,77 +1774,75 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
         await createAuthForms(); // Refresh login/signup dropdowns
     }
 
-
     async function updateMember() {
-        if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
-    
-        const member = appState.members.find(m => m.id === editingMemberId);
-        const user = appState.users.find(u => u.member_id === editingMemberId);
-    
         const name = document.getElementById('edit-member-name').value.trim();
-        const username = document.getElementById('edit-member-username').value.trim();
         const preMonthBalance = parseFloat(document.getElementById('edit-pre-month-balance').value) || 0;
     
-        // Immediate UI feedback
-        closeModal(elements.editMemberModal); // Close modal instantly
-        showNotification(`${name} updated successfully!`, 'success');
-    
-        // Async operations in the background
-        if (name !== member.name) {
-            const { data: existingMember } = await supabaseClient.from('members')
-                .select('id')
-                .eq('name', name)
-                .single();
-            if (existingMember) {
-                showNotification('Member name already exists.', 'error');
-                return;
-            }
-        }
-    
-        if (username !== user.username) {
-            const { data: existingUser } = await supabaseClient.from('users')
-                .select('id')
-                .eq('username', username)
-                .single();
-            if (existingUser) {
-                showNotification('Username already exists.', 'error');
-                return;
-            }
-        }
-    
-        const memberUpdate = { name, pre_month_balance: preMonthBalance };
-        await supabaseClient.from('members')
-            .update(memberUpdate)
-            .eq('id', editingMemberId);
-    
-        const userUpdate = { username };
-        if (currentUser.role === 'admin') {
-            const password = document.getElementById('edit-member-password').value || undefined;
-            if (password) userUpdate.password = password;
-        }
-        await supabaseClient.from('users')
-            .update(userUpdate)
-            .eq('id', user.id);
-    
-        const deposits = {};
-        elements.editDepositFields.querySelectorAll('input').forEach(input => {
-            deposits[input.dataset.label] = parseFloat(input.value) || 0;
-        });
-        await supabaseClient.from('deposits').delete().eq('member_id', editingMemberId);
-        const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
+        // Collect all deposit inputs from the form
+        const depositInputs = elements.editDepositFields.querySelectorAll('.deposit-field');
+        const depositsFromForm = Array.from(depositInputs).map((input, index) => ({
             member_id: editingMemberId,
-            label,
-            amount
+            label: depositLabels[index], // '1st', '2nd', etc.
+            amount: parseFloat(input.value) || 0,
         }));
-        if (depositEntries.length > 0) {
-            await supabaseClient.from('deposits').insert(depositEntries);
-            depositEntries.forEach(entry => {
-                showNotification(`${name} deposits BDT ${entry.amount} edited`, 'success', false, {
-                    userName: name,
-                    amount: entry.amount,
-                    type: 'deposit_edited'
-                });
+    
+        // Get existing deposits for this member
+        const existingDeposits = appState.deposits.filter(d => d.member_id === editingMemberId);
+    
+        // Filter deposits to upsert (non-zero amounts only)
+        const depositsToUpsert = depositsFromForm.filter(d => d.amount > 0).map(d => ({
+            id: existingDeposits.find(ed => ed.label === d.label)?.id || null,
+            member_id: d.member_id,
+            label: d.label,
+            amount: d.amount,
+        }));
+    
+        // Identify deposits to delete (existing ones explicitly set to 0)
+        const depositsToDelete = existingDeposits.filter(ed =>
+            depositsFromForm.some(d => d.label === ed.label && d.amount === 0 && ed.amount > 0)
+        );
+    
+        const memberUpdates = { name, pre_month_balance: preMonthBalance };
+    
+        showLoader();
+        try {
+            // Update member details
+            const { error: memberError } = await supabaseClient
+                .from('members')
+                .update(memberUpdates)
+                .eq('id', editingMemberId);
+            if (memberError) throw memberError;
+    
+            // Upsert non-zero deposits
+            if (depositsToUpsert.length > 0) {
+                const { error: upsertError } = await supabaseClient
+                    .from('deposits')
+                    .upsert(depositsToUpsert, { onConflict: 'member_id, label' });
+                if (upsertError) throw upsertError;
+            }
+    
+            // Delete deposits explicitly set to 0
+            if (depositsToDelete.length > 0) {
+                const { error: deleteError } = await supabaseClient
+                    .from('deposits')
+                    .delete()
+                    .in('id', depositsToDelete.map(d => d.id));
+                if (deleteError) throw deleteError;
+            }
+    
+            await fetchAllData();
+            closeModal(elements.editMemberModal);
+            await updateAllViews();
+            showNotification(`Member ${name} updated successfully!`, 'success', false, {
+                type: 'deposit_edited',
+                userName: name,
+                editor: currentUser.username,
             });
+        } catch (error) {
+            console.error('Error updating member:', error);
+            showNotification('Failed to update member: ' + error.message, 'error');
+        } finally {
+            hideLoader();
         }
     
     
@@ -1853,6 +1851,7 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
         await updateDashboard();
         await createAuthForms();
     }
+    
 
     async function editMember(id) {
         if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
