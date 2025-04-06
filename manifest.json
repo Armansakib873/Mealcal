@@ -21,14 +21,14 @@
     ],
     "screenshots": [
       {
-        "src": "ss3.png",
+        "src": "ss7.png",
         "sizes": "1280x720",
         "type": "image/png",
         "form_factor": "wide",
         "label": "MealCal Dashboard on Desktop"
       },
       {
-        "src": "ss4.png",
+        "src": "ss8.png",
         "sizes": "720x1280",
         "type": "image/png",
         "form_factor": "narrow",
