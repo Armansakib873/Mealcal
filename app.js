@@ -846,6 +846,11 @@ elements.manualBackupBtn.addEventListener('click', async () => {
 });
 
 
+document.getElementById('load-backups-btn').addEventListener('click', async () => {
+    showNotification('Loading backup files...', 'info');
+    await populateBackupFiles();
+  });
+
 // First, add this to keep the XLSX generation functionality
 async function generateXLSXBlob() {
     // Ensure XLSX library is loaded
@@ -953,31 +958,29 @@ async function populateBackupFiles() {
       return;
     }
   
-    document.getElementById('backup-download-container').classList.remove('hidden');
+    const container = document.getElementById('backup-download-container');
     const select = document.getElementById('backup-file-select');
+    container.classList.remove('hidden');
     select.innerHTML = '<option value="">Select a backup file</option>';
   
     try {
-      console.log('Fetching backup files...');
+      console.log('Fetching backup files with key:', supabaseKey.slice(0, 10) + '...');
       const { data: files, error } = await supabaseClient.storage
         .from('backup')
         .list('', { sortBy: { column: 'created_at', order: 'desc' } });
   
-      if (error) {
-        console.error('List error:', error);
-        throw error;
-      }
+      if (error) throw error;
   
-      console.log('Files retrieved:', files);
+      console.log('Files:', files);
   
       if (!files || files.length === 0) {
-        console.log('No backup files found.');
         select.innerHTML += '<option value="">No backups available</option>';
         return;
       }
   
-      files.forEach(file => {
-        console.log('Processing file:', file);
+      // Filter out placeholder files
+      const validFiles = files.filter(file => file.name !== '.emptyFolderPlaceholder');
+      validFiles.forEach(file => {
         const option = document.createElement('option');
         option.value = file.name;
         option.textContent = `${file.name} (${new Date(file.created_at).toLocaleDateString()})`;
@@ -1139,11 +1142,11 @@ function updateUIForRole() {
   
     elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
 
-
     if (currentUser.role === 'admin' || currentUser.role === 'manager') {
         elements.exportAllDataBtn.style.display = 'block';
         elements.manualBackupBtn.style.display = 'block';
-        populateBackupFiles(); // Ensure this is called
+        document.getElementById('backup-download-container').classList.remove('hidden');
+        // Do NOT call populateBackupFiles here
       } else {
         elements.exportAllDataBtn.style.display = 'none';
         elements.manualBackupBtn.style.display = 'none';
@@ -2807,18 +2810,21 @@ function setupRealtimeSubscriptions() {
         })
         .subscribe();
 
-    const depositsChannel = supabaseClient.channel('public:deposits')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
-            console.log('Deposits table updated:', payload);
-            if (isInitializing) return; // Skip during init
-            if (payload.eventType === 'INSERT') {
+// In setupRealtimeSubscriptions
+const depositsChannel = supabaseClient.channel('public:deposits')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
+        console.log('Deposits table updated:', payload);
+        if (isInitializing) return; // Skip during init
+        if (payload.eventType === 'INSERT') {
+            if (!appState.deposits.some(d => d.id === payload.new.id)) {
                 appState.deposits.push(payload.new);
-            } else if (payload.eventType === 'DELETE') {
-                appState.deposits = appState.deposits.filter(d => d.id !== payload.old.id);
             }
-            debouncedUpdateAllViews();
-        })
-        .subscribe();
+        } else if (payload.eventType === 'DELETE') {
+            appState.deposits = appState.deposits.filter(d => d.id !== payload.old.id);
+        }
+        debouncedUpdateAllViews();
+    })
+    .subscribe();
 
     const expensesChannel = supabaseClient.channel('public:expenses')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async (payload) => {

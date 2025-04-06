@@ -3802,3 +3802,7 @@ body.dark-mode .notification-log .notification-separator {
         /* Add more specific overrides for very small screens as needed */
 }
 
+#load-backups-btn {
+    padding: 5px 10px;
+    margin-bottom: 10px;
+  }
