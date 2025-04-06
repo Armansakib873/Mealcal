@@ -1856,10 +1856,6 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
             });
         }
     
-        // Update appState locally
-        Object.assign(member, memberUpdate);
-        Object.assign(user, userUpdate);
-        appState.deposits = appState.deposits.filter(d => d.member_id !== editingMemberId).concat(depositEntries);
     
         // Targeted UI update
         await renderMembers();
