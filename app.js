@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         userSelectContainer: document.getElementById('user-select-container'),
         userSelect: document.getElementById('user-select'),
         clearAllNotificationsBtn: document.getElementById('clear-all-notifications-btn'),
+        exportAllDataBtn: document.getElementById('export-all-data-btn'),
+        manualBackupBtn: document.getElementById('manual-backup-btn'),
 
             // ... (Keep existing elements, BUT UPDATE THESE) ...
     toggleThemeBtn: document.getElementById('sidebar-toggle-theme'), // Updated ID
@@ -600,6 +602,346 @@ function formatDateForNotificationLog(dateString) {
         updateSidebarUserInfo();
         showNotification('Logged out successfully.', 'success');
     }
+
+   // Place this function anywhere after `elements` and utility functions are defined (e.g., after line 1500)
+// --- MOCK DATA GENERATION (For Development/Testing) ---
+
+/**
+ * Generates random mock data for meals and expenses.
+ * @param {Array} members - Array of member objects (must include 'id').
+ * @param {number} numDays - How many days of data to generate (e.g., 30 for a month).
+ * @param {number} [maxMealsPerDay=2] - Max meal count for a member on a single day.
+ * @param {number} [expenseProbability=0.1] - Chance (0-1) a member has an expense on a day.
+ * @param {number} [maxExpenseAmount=500] - Max amount for a random expense.
+ * @param {number} [month=new Date().getMonth()] - 0-indexed month (default: current).
+ * @param {number} [year=new Date().getFullYear()] - Year (default: current).
+ * @returns {object} An object containing { meals: [], expenses: [] }
+ */
+function generateMockData(members, numDays, maxMealsPerDay = 2, expenseProbability = 0.1, maxExpenseAmount = 500, month = new Date().getMonth(), year = new Date().getFullYear()) {
+    if (!members || members.length === 0) {
+        console.error("generateMockData: Members array is required.");
+        return { meals: [], expenses: [] };
+    }
+
+    const mockMeals = [];
+    const mockExpenses = [];
+
+    const getRandomInt = (min, max) => {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    };
+
+    console.log(`Generating mock data for ${numDays} days in ${month + 1}/${year} for ${members.length} members...`);
+
+    for (let day = 1; day <= numDays; day++) {
+        // Ensure valid date construction
+        let currentDate;
+        try {
+            // Create date in UTC to avoid timezone issues during generation
+            // Note: Day is 1-based, month is 0-based
+             currentDate = new Date(Date.UTC(year, month, day));
+             if (currentDate.getUTCDate() !== day || currentDate.getUTCMonth() !== month || currentDate.getUTCFullYear() !== year) {
+                 // Handle invalid dates (e.g., Feb 30th) - skip this day
+                 console.warn(`Skipping invalid date: ${year}-${month + 1}-${day}`);
+                 continue;
+             }
+        } catch (e) {
+            console.error(`Error creating date for day ${day}:`, e);
+            continue; // Skip if date creation fails
+        }
+
+
+        // Format date as YYYY-MM-DD (consistent with how Supabase often handles 'date' type)
+        // Using UTC methods to match the UTC date creation
+        const dateString = currentDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
+
+        for (const member of members) {
+            // --- Generate Meal Data ---
+            const mealCount = getRandomInt(0, maxMealsPerDay);
+            if (mealCount > 0) {
+                // Assuming 'created_at' is used to determine the day's meals,
+                // or if you have a 'meal_date' column, use dateString there.
+                // Also assuming 'day' column stores the day number (1-31).
+                mockMeals.push({
+                    member_id: member.id,
+                    created_at: currentDate.toISOString(), // Use full ISO string if needed by DB/logic
+                    day: day, // Store the day number if your schema uses it
+                    count: mealCount
+                    // If you track day/night separately in the DB:
+                    // day_count: member.day_status ? getRandomInt(0, 1) : 0,
+                    // night_count: member.night_status ? getRandomInt(0, 1) : 0,
+                    // Ensure count = day_count + night_count if using separate counts
+                });
+            }
+
+            // --- Generate Expense Data ---
+            if (Math.random() < expenseProbability) {
+                const expenseAmount = getRandomInt(50, maxExpenseAmount); // Min expense 50
+                 mockExpenses.push({
+                    member_id: member.id,
+                    date: dateString, // Use YYYY-MM-DD for the 'date' column
+                    amount: expenseAmount,
+                    // Optional: add a random description
+                    // description: `Mock expense on ${dateString}`
+                });
+            }
+        }
+    }
+
+    console.log(`Generated ${mockMeals.length} mock meal records.`);
+    console.log(`Generated ${mockExpenses.length} mock expense records.`);
+    return { meals: mockMeals, expenses: mockExpenses };
+}
+
+
+
+
+
+
+
+
+
+
+
+async function exportAllDataToXLSX() {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+        showNotification('Only admins and managers can export all data.', 'error');
+        return;
+    }
+
+    showLoader();
+    try {
+        // Ensure XLSX library is loaded
+        if (!window.XLSX) {
+            throw new Error('XLSX library not loaded.');
+        }
+
+        // --- 1. Prepare Summary Data ---
+        const summaryTable = document.getElementById('summary-table');
+        if (!summaryTable) {
+            throw new Error('Summary table not found.');
+        }
+        const fullSummary = extractFullSummaryFromTable(summaryTable); // Reuse existing function
+
+        // --- 2. Prepare Meal Tracker Data ---
+        const mealTrackerData = await prepareMealTrackerData();
+
+        // --- 3. Prepare Expenses Data ---
+        const expensesData = prepareExpensesData();
+
+        // --- Create Workbook ---
+        const wb = XLSX.utils.book_new();
+
+        // --- Summary Sheet ---
+        const summaryHeaders = [
+            'Name', 'Day', 'Night', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance',
+            'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'
+        ];
+        const summarySheetData = [
+            summaryHeaders,
+            ...fullSummary.map(row => [
+                row.Name,
+                row.Day || (appState.members.find(m => m.name === row.Name)?.day_status ? 'On' : 'Off'),
+                row.Night || (appState.members.find(m => m.name === row.Name)?.night_status ? 'On' : 'Off'),
+                row['Total Meals'],
+                formatCurrency(row['Total Cost']),
+                formatCurrency(row['Total Deposit']),
+                formatCurrency(row.Balance),
+                formatCurrency(row['Pre-Month']),
+                formatCurrency(row['1st']),
+                formatCurrency(row['2nd']),
+                formatCurrency(row['3rd']),
+                formatCurrency(row['4th']),
+                formatCurrency(row['5th']),
+                row['Total Bazar']
+            ])
+        ];
+        const summarySheet = XLSX.utils.aoa_to_sheet(summarySheetData);
+        summarySheet['!cols'] = summaryHeaders.map(() => ({ wch: 15 })); // Set column width
+        XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+        // --- Meal Tracker Sheet ---
+        const mealHeaders = mealTrackerData.headers;
+        const mealSheetData = [mealHeaders, ...mealTrackerData.rows];
+        const mealSheet = XLSX.utils.aoa_to_sheet(mealSheetData);
+        mealSheet['!cols'] = mealHeaders.map(() => ({ wch: 12 })); // Set column width
+        XLSX.utils.book_append_sheet(wb, mealSheet, 'Meal Tracker');
+
+        // --- Expenses Sheet ---
+        const expenseHeaders = ['Date', 'Member', 'Amount'];
+        const expenseSheetData = [
+            expenseHeaders,
+            ...expensesData.map(exp => [
+                formatDateOnly(exp.date), // Use your existing date formatting
+                appState.members.find(m => m.id === exp.member_id)?.name || 'Unknown',
+                formatCurrency(exp.amount)
+            ])
+        ];
+        const expenseSheet = XLSX.utils.aoa_to_sheet(expenseSheetData);
+        expenseSheet['!cols'] = expenseHeaders.map(() => ({ wch: 15 })); // Set column width
+        XLSX.utils.book_append_sheet(wb, expenseSheet, 'Expenses');
+
+        // --- Export the File ---
+        const filename = `MealCal_AllData_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(wb, filename);
+
+        showNotification('All data exported successfully as XLSX!', 'success');
+    } catch (error) {
+        console.error('Error exporting all data to XLSX:', error);
+        showNotification('Failed to export all data: ' + error.message, 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// --- Helper Function: Prepare Meal Tracker Data ---
+async function prepareMealTrackerData() {
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const headers = ['Name', ...Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString())];
+    const rows = [];
+
+    for (const member of appState.members) {
+        const memberMeals = appState.meals.filter(m => m.member_id === member.id);
+        const dailyMeals = Array(daysInMonth).fill(0);
+
+        memberMeals.forEach(meal => {
+            const day = new Date(meal.created_at).getDate() - 1; // 0-based index
+            if (day >= 0 && day < daysInMonth) {
+                dailyMeals[day] += meal.count || 0;
+            }
+        });
+
+        rows.push([member.name, ...dailyMeals]);
+    }
+
+    return { headers, rows };
+}
+
+// --- Helper Function: Prepare Expenses Data ---
+function prepareExpensesData() {
+    return appState.expenses.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+
+
+
+
+elements.exportAllDataBtn.addEventListener('click', exportAllDataToXLSX);
+elements.manualBackupBtn.addEventListener('click', async () => {
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
+        showNotification('Only admins and managers can perform backups.', 'error');
+        return;
+    }
+    showNotification('Starting manual backup...', 'info');
+    await performDailyExport();
+    showNotification('Manual backup completed successfully!', 'success');
+});
+
+
+
+// First, add this to keep the XLSX generation functionality
+async function generateXLSXBlob() {
+    // Ensure XLSX library is loaded
+    if (!window.XLSX) {
+        throw new Error('XLSX library not loaded.');
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // Reuse your export logic
+    const summaryTable = document.getElementById('summary-table');
+    const fullSummary = extractFullSummaryFromTable(summaryTable);
+    const mealTrackerData = await prepareMealTrackerData();
+    const expensesData = prepareExpensesData();
+
+    // Summary Sheet
+    const summaryHeaders = [
+        'Name', 'Day', 'Night', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance',
+        'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'
+    ];
+    const summarySheetData = [
+        summaryHeaders,
+        ...fullSummary.map(row => [
+            row.Name,
+            appState.members.find(m => m.name === row.Name)?.day_status ? 'On' : 'Off',
+            appState.members.find(m => m.name === row.Name)?.night_status ? 'On' : 'Off',
+            row['Total Meals'],
+            formatCurrency(row['Total Cost']),
+            formatCurrency(row['Total Deposit']),
+            formatCurrency(row.Balance),
+            formatCurrency(row['Pre-Month']),
+            formatCurrency(row['1st']),
+            formatCurrency(row['2nd']),
+            formatCurrency(row['3rd']),
+            formatCurrency(row['4th']),
+            formatCurrency(row['5th']),
+            row['Total Bazar']
+        ])
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summarySheetData);
+    summarySheet['!cols'] = summaryHeaders.map(() => ({ wch: 15 }));
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+    // Meal Tracker Sheet
+    const mealHeaders = mealTrackerData.headers;
+    const mealSheetData = [mealHeaders, ...mealTrackerData.rows];
+    const mealSheet = XLSX.utils.aoa_to_sheet(mealSheetData);
+    mealSheet['!cols'] = mealHeaders.map(() => ({ wch: 12 }));
+    XLSX.utils.book_append_sheet(wb, mealSheet, 'Meal Tracker');
+
+    // Expenses Sheet
+    const expenseHeaders = ['Date', 'Member', 'Amount'];
+    const expenseSheetData = [
+        expenseHeaders,
+        ...expensesData.map(exp => [
+            formatDateOnly(exp.date),
+            appState.members.find(m => m.id === exp.member_id)?.name || 'Unknown',
+            formatCurrency(exp.amount)
+        ])
+    ];
+    const expenseSheet = XLSX.utils.aoa_to_sheet(expenseSheetData);
+    expenseSheet['!cols'] = expenseHeaders.map(() => ({ wch: 15 }));
+    XLSX.utils.book_append_sheet(wb, expenseSheet, 'Expenses');
+
+    // Generate Blob
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    return new Blob([wbout], { type: 'application/octet-stream' });
+}
+
+// Replace your uploadToS3Direct function with this:
+async function uploadToSupabaseStorage(blob) {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `MealCal_Backup_${dateStr}.xlsx`;
+    const filePath = `${fileName}`; // Store at the root of the bucket
+
+    try {
+        // Use the existing supabaseClient
+        const { data, error } = await supabaseClient
+            .storage
+            .from('backup') // Your bucket name
+            .upload(filePath, blob, {
+                cacheControl: '3600',
+                upsert: true, // Overwrite if file already exists for the same day
+                contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
+        if (error) {
+            // More specific Supabase storage error
+            console.error('Supabase Storage upload error:', error);
+            throw new Error(`Supabase Storage upload failed: ${error.message}`);
+        }
+
+        console.log('Backup uploaded successfully to Supabase Storage:', data);
+        return data;
+
+    } catch (err) {
+        console.error('Error during Supabase Storage upload:', err);
+        // Rethrow or handle as needed
+        throw err;
+    }
+}
+
 
 
     // --- Update updateMobileUserInfo (Now updateSidebarUserInfo) ---
@@ -3046,6 +3388,9 @@ let isInitializing = true; // Already defined in your code
 try {
   await createAuthForms();
   await checkAutoLogin();
+
+
+
   if (currentUser) {
     loginPage.style.display = 'none';
     mainApp.style.display = 'block';

@@ -12,6 +12,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
         <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1048.0.min.js"></script>
         <link rel="stylesheet" href="styles.css">
         <!-- Supabase script with pinned version and error handling -->
         <script>
@@ -174,6 +175,11 @@
                     <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-Cal-alt"></i> Reset Month</button>
                
             </section>
+
+            <button id="export-all-data-btn" class="btn primary-btn">Export All Data</button>
+
+            <!-- Inside #admin-controls or another suitable section -->
+<button id="manual-backup-btn" class="btn primary-btn"><i class="fas fa-cloud-upload-alt"></i> Manual Backup</button>
 
 
             <!-- Dashboard Section -->
