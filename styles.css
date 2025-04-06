@@ -2161,6 +2161,16 @@ body.dark-mode #loading-animation {
 #summary-table tr:active td:first-child {
     background: rgb(207, 229, 247);
 }
+
+
+
+.export-summary {
+    margin-top: 20px;
+}
+
+
+
+
 /* Enable horizontal scrolling */
 .meal-plan {
     padding: var(--spacing-md);

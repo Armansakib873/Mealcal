@@ -702,11 +702,6 @@ function generateMockData(members, numDays, maxMealsPerDay = 2, expenseProbabili
 
 
 async function exportAllDataToXLSX(returnBlobOnly = false) {
-    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
-        showNotification('Only admins and managers can export all data.', 'error');
-        return null;
-    }
-
     showLoader();
     try {
         if (!window.XLSX) {
@@ -1120,7 +1115,7 @@ function updateUIForRole() {
         elements.addMemberBtn.classList.add('hidden');
         elements.addExpenseBtn.classList.add('hidden');
         elements.adminControls.classList.add('hidden');
-        elements.summarySection.classList.add('hidden'); // Hidden for guests
+        elements.summarySection.classList.add('hidden');
         elements.memberSelectContainer.classList.add('hidden');
         elements.userSelectContainer.classList.add('hidden');
         return;
@@ -1136,20 +1131,17 @@ function updateUIForRole() {
     elements.addMemberBtn.classList.toggle('hidden', !isAdmin);
     elements.addExpenseBtn.classList.toggle('hidden', !canEdit);
     elements.adminControls.classList.toggle('hidden', !isAdmin);
-    elements.summarySection.classList.remove('hidden'); // Always visible for logged-in users
+    elements.summarySection.classList.remove('hidden');
     document.getElementById('user-overview').classList.toggle('hidden', isAdmin);
 
     elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
 
-    if (currentUser.role === 'admin' || currentUser.role === 'manager') {
-        elements.exportAllDataBtn.style.display = 'block';
-        elements.manualBackupBtn.style.display = 'block';
-        document.getElementById('backup-download-container').classList.remove('hidden');
-    } else {
-        elements.exportAllDataBtn.style.display = 'none';
-        elements.manualBackupBtn.style.display = 'none';
-        document.getElementById('backup-download-container').classList.add('hidden');
-    }
+    // Show export buttons and container for all logged-in users
+    elements.exportAllDataBtn.style.display = 'block';
+    elements.manualBackupBtn.style.display = 'block';
+    document.getElementById('backup-download-container').classList.remove('hidden');
+
+    // Rest of the function...
 
     if (isAdmin || isManager) {
         if (appState.members?.length > 0) {
@@ -1172,7 +1164,6 @@ function updateUIForRole() {
 
     updateSidebarUserInfo();
 }
-
 
 async function populateMemberSelect(isAdmin, isManager) {
     console.log('Populating member select:', appState.members);
@@ -3022,10 +3013,7 @@ async function resetMessages() {
 
  // --- Data Export ---
  async function exportData() {
-    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
-        showNotification('Only admins and managers can export data.', 'error');
-        return;
-    }
+
 
     const format = elements.exportFormat.value;
     const summaryTable = document.getElementById('summary-table');
