@@ -2046,8 +2046,8 @@ async function renderExpenses() {
         elements.userMeals.textContent = await calculateTotalMeals(member.id);
     
         elements.depositHistoryList.innerHTML = `
-            <li>Pre-Month: ${formatCurrency(member.pre_month_balance)}</li>
-            ${deposits.map(d => `<li>${d.label}: ${formatCurrency(d.amount)}</li>`).join('')}
+            <li>Pre-Month: <p>${formatCurrency(member.pre_month_balance)}</p></li>
+            ${deposits.map(d => `<li>${d.label}: <p>${formatCurrency(d.amount)}</p></li>`).join('')}
         `;
     
         if (balance < 0 && currentUser.role === 'user' && !appState.hasShownNegativeBalanceWarning) {

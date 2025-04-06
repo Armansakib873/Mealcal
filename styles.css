@@ -20,7 +20,7 @@
     --foreground: #212529;
     --light: #ffffff;
     --border: #e2e8f0;
-    --dash: #c3ebebd5;
+    --dash: #d2faf990;
     --dash-2: #79928f17;
     --dash-3: rgba(247, 245, 212, 0.556);
     --shadow-light: rgba(0, 0, 0, 0.1);
@@ -333,12 +333,13 @@ body.dark-mode .loader-icon {
 .card h2 i {
     color: var(--primary);
     font-size: 1rem;
+    letter-spacing: 5px;
+    padding-left: 15px;
 }
 
 .card h3 {
     font-size: 1.2rem;
     color: var(--foreground);
-    margin: var(--spacing-md) 0;
     font-weight: 600;
 }
 
@@ -370,7 +371,6 @@ body.dark-mode .loader-icon {
     display: flex;
     align-items: center;
     color: var(--primary);
-    font-size: 1.4rem;
 }
 
 
@@ -1352,6 +1352,7 @@ body.dark-mode #loading-animation {
     background: var(--dash);
     color: var(--foreground);
     padding: var(--spacing-md);
+   
     border-radius: var(--radius-md);
     text-align: center;
     min-height: 120px;
@@ -1389,7 +1390,7 @@ body.dark-mode #loading-animation {
 /* Value Styling */
 .stat-box p {
     font-size: 1.3rem;
-    font-weight: 700;
+    font-weight: 900;
     margin-bottom: 0;
     padding: 3px 10px;
     color: var(--foreground);
@@ -1492,9 +1493,9 @@ body.dark-mode #loading-animation {
 .m-count {
     background-color: #3d6244b4;
     border-radius: 20px;
-    color: rgb(226, 228, 198);
+    color: rgb(239, 239, 239);
     font-size: 1.4rem;
-    font-weight: 600;
+    font-weight: 800;
     padding: 0px 40px;
     margin-bottom: 10px ;
     text-align: center;
@@ -1694,7 +1695,13 @@ body.dark-mode #loading-animation {
 }
 
 #greetings p{
-    font-size: 1.2rem ;
+    font-size: 0.9rem ;
+   ;
+}
+
+#greetings p:first-of-type {
+    padding-left: 20px;
+
 }
 
 .deposit-history {
@@ -1705,9 +1712,11 @@ body.dark-mode #loading-animation {
     margin-top: var(--spacing-md);
     color: var(--foreground);
 }
-.deposit-history h3 {
+.deposit-history h3, .profile-section h3 {
     margin-top: 0;
-    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    padding-left: 15px;
+
     padding-bottom: var(--spacing-sm);
     color: var(--foreground);
 }
@@ -1718,13 +1727,12 @@ body.dark-mode #loading-animation {
 }
 .deposit-history li {
     padding: var(--spacing-sm) 0;
-    font-size: 0.9rem;
-    font-weight: bold;
+    font-size: 0.8rem;
+
+    justify-content: space-between;
     border-bottom: 1px dashed var(--border);
     transition: background-color var(--transition-normal);
     display: flex;
-    justify-content: space-between;
-    align-items: center;
     color: var(--foreground);
 }
 .deposit-history li:last-child {
@@ -1734,22 +1742,25 @@ body.dark-mode #loading-animation {
 .deposit-history li:active {
     background-color: var(--light);
 }
-.deposit-history .amount {
-    font-weight: 600;
-    color: var(--foreground);
+
+#deposit-history-list{
+    background-color: #f3f0fedf;
+    padding: 10px;
+    border-radius: var(--radius-md);
+
 }
+#deposit-history-list p {
+    font-weight: bold;
+    text-align: left;
+    color: rgb(3, 80, 3);
+    padding-left: 5px !important;
+}
+
 .profile-section {
     background: var(--light);
     padding: var(--spacing-md);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
-    color: var(--foreground);
-}
-
-.profile-section h3 {
-    margin-top: 0;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: var(--spacing-sm);
     color: var(--foreground);
 }
 
@@ -2156,7 +2167,6 @@ body.dark-mode #loading-animation {
     width: 90vw;
     max-width: 100%;
     overflow-x: auto; /* Enables horizontal scrolling */
-    margin-bottom: 1rem; /* Add some bottom margin */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 
 }
@@ -3262,14 +3272,16 @@ body.dark-mode .notification-log .notification-separator {
     }
 
     .header .logo {
-        height: 32px;
+        height: 25px;
     }
 
     .header h1 {
-        font-size: 1.23rem;
+        font-size: 1.13rem;
         font-weight: 600;
 
     }
+
+
 
     .header-nav {
         display: none;
@@ -3548,6 +3560,7 @@ body.dark-mode .notification-log .notification-separator {
  .stat-box {
         min-height: 100px;
         padding: var(--spacing-md);
+        padding-bottom:30px ;
         color: var(--foreground);
         border: 1px solid var(--border);
     }
