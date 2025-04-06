@@ -693,13 +693,14 @@ document.getElementById('refresh-btn')?.addEventListener('click', showLoaderOnRe
     </script>
 
 <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('Service Worker registered:', reg))
-          .catch(err => console.error('Service Worker registration failed:', err));
-      });
-    }
+ self.addEventListener('fetch', function (event) {
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match('/Mealcal/index.html');
+    })
+  );
+});
+
   </script>
 </body>
 
