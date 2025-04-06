@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // --- Supabase Client Initialization ---
     const supabaseUrl = "https://eiqrmxgyyjbndznnbaqv.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcXJteGd5eWpibmR6bm5iYXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1ODk0ODYsImV4cCI6MjA1NjE2NTQ4Nn0.L10Z83pobbfeAId8bCQwxDi83ac37jYum9geSU-htTY";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpcXJteGd5eWpibmR6bm5iYXF2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MDU4OTQ4NiwiZXhwIjoyMDU2MTY1NDg2fQ.TUJb_JuDyx2yS9GYTyYD-hxQJiNil0k2f3tAcBS4g9s";
     const { createClient } = supabase;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
@@ -701,39 +701,29 @@ function generateMockData(members, numDays, maxMealsPerDay = 2, expenseProbabili
 
 
 
-
-
-
-async function exportAllDataToXLSX() {
+async function exportAllDataToXLSX(returnBlobOnly = false) {
     if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
         showNotification('Only admins and managers can export all data.', 'error');
-        return;
+        return null;
     }
 
     showLoader();
     try {
-        // Ensure XLSX library is loaded
         if (!window.XLSX) {
             throw new Error('XLSX library not loaded.');
         }
 
-        // --- 1. Prepare Summary Data ---
         const summaryTable = document.getElementById('summary-table');
         if (!summaryTable) {
             throw new Error('Summary table not found.');
         }
-        const fullSummary = extractFullSummaryFromTable(summaryTable); // Reuse existing function
-
-        // --- 2. Prepare Meal Tracker Data ---
+        const fullSummary = extractFullSummaryFromTable(summaryTable);
         const mealTrackerData = await prepareMealTrackerData();
-
-        // --- 3. Prepare Expenses Data ---
         const expensesData = prepareExpensesData();
 
-        // --- Create Workbook ---
         const wb = XLSX.utils.book_new();
 
-        // --- Summary Sheet ---
+        // Summary Sheet
         const summaryHeaders = [
             'Name', 'Day', 'Night', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance',
             'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'
@@ -758,38 +748,53 @@ async function exportAllDataToXLSX() {
             ])
         ];
         const summarySheet = XLSX.utils.aoa_to_sheet(summarySheetData);
-        summarySheet['!cols'] = summaryHeaders.map(() => ({ wch: 15 })); // Set column width
+        summarySheet['!cols'] = summaryHeaders.map(() => ({ wch: 15 }));
         XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
 
-        // --- Meal Tracker Sheet ---
+        // Meal Tracker Sheet
         const mealHeaders = mealTrackerData.headers;
         const mealSheetData = [mealHeaders, ...mealTrackerData.rows];
         const mealSheet = XLSX.utils.aoa_to_sheet(mealSheetData);
-        mealSheet['!cols'] = mealHeaders.map(() => ({ wch: 12 })); // Set column width
+        mealSheet['!cols'] = mealHeaders.map(() => ({ wch: 12 }));
         XLSX.utils.book_append_sheet(wb, mealSheet, 'Meal Tracker');
 
-        // --- Expenses Sheet ---
+        // Expenses Sheet
         const expenseHeaders = ['Date', 'Member', 'Amount'];
         const expenseSheetData = [
             expenseHeaders,
             ...expensesData.map(exp => [
-                formatDateOnly(exp.date), // Use your existing date formatting
+                formatDateOnly(exp.date),
                 appState.members.find(m => m.id === exp.member_id)?.name || 'Unknown',
                 formatCurrency(exp.amount)
             ])
         ];
         const expenseSheet = XLSX.utils.aoa_to_sheet(expenseSheetData);
-        expenseSheet['!cols'] = expenseHeaders.map(() => ({ wch: 15 })); // Set column width
+        expenseSheet['!cols'] = expenseHeaders.map(() => ({ wch: 15 }));
         XLSX.utils.book_append_sheet(wb, expenseSheet, 'Expenses');
 
-        // --- Export the File ---
-        const filename = `MealCal_AllData_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        XLSX.writeFile(wb, filename);
+        // Generate Blob
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/octet-stream' });
 
-        showNotification('All data exported successfully as XLSX!', 'success');
+        // Download if not returnBlobOnly
+        if (!returnBlobOnly) {
+            const filename = `MealCal_AllData_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            showNotification('All data exported successfully as XLSX!', 'success');
+        }
+
+        return blob; // Always return the Blob for flexibility
     } catch (error) {
         console.error('Error exporting all data to XLSX:', error);
         showNotification('Failed to export all data: ' + error.message, 'error');
+        return null;
     } finally {
         hideLoader();
     }
@@ -827,17 +832,18 @@ function prepareExpensesData() {
 
 
 
-elements.exportAllDataBtn.addEventListener('click', exportAllDataToXLSX);
+elements.exportAllDataBtn.addEventListener('click', async () => {
+    await exportAllDataToXLSX(false); // Explicitly false to ensure download
+});
 elements.manualBackupBtn.addEventListener('click', async () => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
         showNotification('Only admins and managers can perform backups.', 'error');
         return;
     }
     showNotification('Starting manual backup...', 'info');
-    await performDailyExport();
-    showNotification('Manual backup completed successfully!', 'success');
+    const blob = await exportAllDataToXLSX(true); // Get Blob without downloading
+    await uploadBackupToSupabase(blob);
 });
-
 
 
 // First, add this to keep the XLSX generation functionality
@@ -909,40 +915,120 @@ async function generateXLSXBlob() {
     return new Blob([wbout], { type: 'application/octet-stream' });
 }
 
-// Replace your uploadToS3Direct function with this:
-async function uploadToSupabaseStorage(blob) {
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const fileName = `MealCal_Backup_${dateStr}.xlsx`;
-    const filePath = `${fileName}`; // Store at the root of the bucket
+async function uploadBackupToSupabase(blob) {
+    if (!blob) {
+        showNotification('No data to backup.', 'error');
+        return;
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 10); // e.g., "2025-04-06"
+    const filename = `MealCal_Backup_${timestamp}.xlsx`;
+    const bucketName = 'backup';
 
     try {
-        // Use the existing supabaseClient
-        const { data, error } = await supabaseClient
-            .storage
-            .from('backup') // Your bucket name
-            .upload(filePath, blob, {
-                cacheControl: '3600',
-                upsert: true, // Overwrite if file already exists for the same day
-                contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        showLoader();
+        const { data, error } = await supabaseClient.storage
+            .from(bucketName)
+            .upload(filename, blob, {
+                contentType: 'application/octet-stream',
+                upsert: true // Overwrite if file exists with the same name
             });
 
         if (error) {
-            // More specific Supabase storage error
-            console.error('Supabase Storage upload error:', error);
-            throw new Error(`Supabase Storage upload failed: ${error.message}`);
+            throw error;
         }
 
-        console.log('Backup uploaded successfully to Supabase Storage:', data);
-        return data;
-
-    } catch (err) {
-        console.error('Error during Supabase Storage upload:', err);
-        // Rethrow or handle as needed
-        throw err;
+        console.log('Backup uploaded successfully:', data);
+        showNotification('Backup uploaded successfully to Supabase!', 'success');
+    } catch (error) {
+        console.error('Error uploading backup to Supabase:', error.message);
+        showNotification('Failed to upload backup: ' + error.message, 'error');
+    } finally {
+        hideLoader();
     }
 }
+async function populateBackupFiles() {
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
+      document.getElementById('backup-download-container').classList.add('hidden');
+      return;
+    }
+  
+    document.getElementById('backup-download-container').classList.remove('hidden');
+    const select = document.getElementById('backup-file-select');
+    select.innerHTML = '<option value="">Select a backup file</option>';
+  
+    try {
+      console.log('Fetching backup files...');
+      const { data: files, error } = await supabaseClient.storage
+        .from('backup')
+        .list('', { sortBy: { column: 'created_at', order: 'desc' } });
+  
+      if (error) {
+        console.error('List error:', error);
+        throw error;
+      }
+  
+      console.log('Files retrieved:', files);
+  
+      if (!files || files.length === 0) {
+        console.log('No backup files found.');
+        select.innerHTML += '<option value="">No backups available</option>';
+        return;
+      }
+  
+      files.forEach(file => {
+        console.log('Processing file:', file);
+        const option = document.createElement('option');
+        option.value = file.name;
+        option.textContent = `${file.name} (${new Date(file.created_at).toLocaleDateString()})`;
+        select.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Error listing backups:', error.message);
+      showNotification('Failed to load backups: ' + error.message, 'error');
+    }
+  }
 
 
+  async function downloadBackupFile() {
+    const select = document.getElementById('backup-file-select');
+    const filename = select.value;
+    if (!filename) {
+      showNotification('Please select a backup file.', 'error');
+      return;
+    }
+  
+    try {
+      showLoader();
+      const { data, error } = await supabaseClient.storage
+        .from('backup')
+        .download(filename);
+      if (error) throw error;
+  
+      const url = window.URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showNotification('Backup downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error downloading backup:', error);
+      showNotification('Failed to download backup: ' + error.message, 'error');
+    } finally {
+      hideLoader();
+    }
+  }
+  
+  // Event listeners
+  document.getElementById('download-backup-btn').addEventListener('click', downloadBackupFile);
+  
+  // Call on app load or after login
+  document.addEventListener('DOMContentLoaded', () => {
+    populateBackupFiles(); // Or call this in updateUIForRole()
+  });
 
     // --- Update updateMobileUserInfo (Now updateSidebarUserInfo) ---
 function updateSidebarUserInfo() { // Renamed function
@@ -1052,6 +1138,19 @@ function updateUIForRole() {
     document.getElementById('user-overview').classList.toggle('hidden', isAdmin);
   
     elements.memberSelectContainer.classList.toggle('hidden', !(isAdmin || isManager));
+
+
+    if (currentUser.role === 'admin' || currentUser.role === 'manager') {
+        elements.exportAllDataBtn.style.display = 'block';
+        elements.manualBackupBtn.style.display = 'block';
+        populateBackupFiles(); // Ensure this is called
+      } else {
+        elements.exportAllDataBtn.style.display = 'none';
+        elements.manualBackupBtn.style.display = 'none';
+        document.getElementById('backup-download-container').classList.add('hidden');
+      }
+
+      
     if (isAdmin || isManager) {
       if (appState.members?.length > 0) {
         populateMemberSelect(isAdmin, isManager);

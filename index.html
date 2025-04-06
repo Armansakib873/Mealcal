@@ -173,15 +173,22 @@
                     
                     <button id="reset-messages-btn" class="btn danger hidden"><i class="fas fa-Cal-alt"></i>Reset Messages</button>
                     <button id="reset-month-btn" class="btn danger-btn"><i class="fas fa-Cal-alt"></i> Reset Month</button>
-               
-            </section>
-
-            <button id="export-all-data-btn" class="btn primary-btn">Export All Data</button>
-
-            <!-- Inside #admin-controls or another suitable section -->
+                   <!-- Inside #admin-controls or another suitable section -->
 <button id="manual-backup-btn" class="btn primary-btn"><i class="fas fa-cloud-upload-alt"></i> Manual Backup</button>
 
 
+<div id="backup-download-container" class="backup-download-container">
+    <h3>Download Backup</h3>
+    <select id="backup-file-select">
+      <option value="">Select a backup file</option>
+    </select>
+    <button id="download-backup-btn">Download Selected</button>
+  </div>
+
+            </section>
+
+           
+        
             <!-- Dashboard Section -->
             <section class="dashboard-section card" >
                 <h2 class="collapsible-header" id="dashboard-section">
@@ -363,7 +370,9 @@
                     </div>
 
                     <div class="export-summary">
-                        <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Data</button>
+                        <button id="export-all-data-btn" class="btn primary-btn">Export All Data</button>
+
+                        <button id="export-data-btn" class="btn primary-btn"><i class="fas fa-download"></i> Export Summary</Summary></button>
                         <select id="export-format">
                             <option value="xlsx">XLSX</option>
                             <option value="print">PRINT</option>
@@ -490,6 +499,33 @@
                     
                 </div>
             </div>
+
+
+            <footer class="footer">
+                <div class="footer-content">
+                    <div class="footer-section">
+                        <h3>MealCal</h3>
+                        <p>Your ultimate meal and expense management solution.</p>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Quick Links</h4>
+                        <ul>
+                            <li><a href="#dashboard-section">Dashboard</a></li>
+                            <li><a href="#user-overview-section">Personal Overview</a></li>
+                            <li><a href="#meal-tracker-section">Meal Tracker</a></li>
+                            <li><a href="#expenses-section">Expenses</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Contact Us</h4>
+                        <p>Email: support@mealcal.com</p>
+                        <p>Phone: +123-456-7890</p>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2025 MealCal. All rights reserved. | Developed by Md Arman Hossain</p>
+                </div>
+            </footer>
 
 
 

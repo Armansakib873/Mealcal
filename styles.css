@@ -3252,6 +3252,125 @@ body.dark-mode .notification-log .notification-separator {
     opacity: 1;
 }
 
+
+
+.footer {
+    background-color: #eaeaeaf6;
+    color: #4b4b4b;
+    padding: 20px 0;
+    text-align: center;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    padding: 20px;
+}
+
+.footer-section {
+    margin: 10px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.footer-section h3, .footer-section h4 {
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.footer-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-section ul li {
+    margin: 5px 0;
+}
+
+.footer-section ul li a {
+    color: #037794;
+    text-decoration: none;
+}
+
+.footer-section ul li a:hover {
+    text-decoration: underline;
+}
+
+.footer-bottom {
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+/* Base styles */
+.backup-download-container {
+    max-width: 400px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+  }
+  
+  /* Heading */
+  .backup-download-container h3 {
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    text-align: center;
+  }
+  
+  /* Dropdown */
+  #backup-file-select {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+  
+  /* Button */
+  #download-backup-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  #download-backup-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  /* Responsive tweaks */
+  @media (max-width: 768px) {
+    .backup-download-container {
+      margin: 20px 15px;
+      padding: 15px;
+    }
+  
+    .backup-download-container h3 {
+      font-size: 1.25rem;
+    }
+  
+    #download-backup-btn,
+    #backup-file-select {
+      font-size: 0.95rem;
+    }
+  }
+
+  #export-data-btn {
+    width: 100px;
+
+  }
+  
+
 /* --- Mobile-First Responsive Design --- */
 @media (max-width: 768px) {
 
@@ -3280,6 +3399,14 @@ body.dark-mode .notification-log .notification-separator {
         font-weight: 600;
 
     }
+
+    
+  #export-data-btn{
+    width: 100%;
+    margin-top: 20px;
+
+  }
+  
 
 
 
@@ -3318,6 +3445,7 @@ body.dark-mode .notification-log .notification-separator {
 
     .btn {
         width: 100%;
+        margin-top: 20px;
     }
 
     .dashboard-grid {
