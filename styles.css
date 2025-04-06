@@ -3458,7 +3458,7 @@ body.dark-mode .notification-log .notification-separator {
         flex-direction: column;
         align-items: center;
         color: var(--foreground); /* Toggle/input text color */
-        margin: 1rem;
+        margin: 0.8rem;
         width:100px;
         justify-content: center;
         align-items: center;
