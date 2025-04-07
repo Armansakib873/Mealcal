@@ -1477,9 +1477,9 @@ body.dark-mode #loading-animation {
 }
 
 .meal-count-box p {
-    font-size: 0.8rem !important;
-    font-weight: 600 !important;
-    color: rgb(77, 77, 77) !important;
+    font-size: 0.7rem !important;
+    font-weight: 500 !important;
+    color: rgba(77, 77, 77, 0.77) !important;
 
 }
 
@@ -3458,7 +3458,7 @@ body.dark-mode .notification-log .notification-separator {
     }
 
     .stat-box span {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         color: rgb(40, 39, 39);
         margin-top: var(--spacing-xs);
     }
@@ -3706,6 +3706,17 @@ body.dark-mode .notification-log .notification-separator {
         font-size: 1.6rem;
         color: var(--foreground);
    
+    }
+
+    .meal-date{
+        font-size: 0.7rem !important;
+        margin-top: 5px;
+    
+    }
+
+    .meal-date span {
+        font-size: 0.7rem;
+        color: rgba(179, 10, 10, 0.89);
     }
 
      .notification-log {

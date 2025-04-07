@@ -2166,6 +2166,25 @@ async function renderExpenses() {
     }
 }
 
+const dateSpan = document.getElementById('custom-date');
+if (dateSpan) {
+  dateSpan.textContent = getCustomDashboardDate();
+}
+
+function getCustomDashboardDate() {
+    const now = new Date();
+    const customDate = new Date(now);
+  
+    if (now.getHours() >= 20) {
+      // After 8:00 PM, shift to next day
+      customDate.setDate(customDate.getDate() + 1);
+    }
+  
+    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+    return customDate.toLocaleDateString('en-US', options); // Format: Mon, Apr 7, 2025
+  }
+  
+
     // --- Meal Tracker ---
     async function renderMealTracker() {
         elements.mealTableBody.innerHTML = '';
