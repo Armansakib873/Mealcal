@@ -1552,8 +1552,7 @@ body.dark-mode #loading-animation {
     opacity: 1;
     position: fixed !important;
     z-index: 1000;
-    transform: scale(1.5);
-    animation: scaleUpDown 4s infinite ease-in-out;
+
 }
 
 /* Notification Types */
@@ -3814,4 +3813,4 @@ body.dark-mode .notification-log .notification-separator {
 #load-backups-btn {
     padding: 5px 10px;
     margin-bottom: 10px;
-  }
+  }                                                   

@@ -926,7 +926,6 @@ async function uploadBackupToSupabase(blob) {
     const bucketName = 'backup';
 
     try {
-        showLoader();
         const { data, error } = await supabaseClient.storage
             .from(bucketName)
             .upload(filename, blob, {
@@ -939,12 +938,10 @@ async function uploadBackupToSupabase(blob) {
         }
 
         console.log('Backup uploaded successfully:', data);
-        showNotification('Backup uploaded successfully to Supabase!', 'success');
     } catch (error) {
         console.error('Error uploading backup to Supabase:', error.message);
         showNotification('Failed to upload backup: ' + error.message, 'error');
     } finally {
-        hideLoader();
     }
 }
 async function populateBackupFiles() {
@@ -986,6 +983,96 @@ async function populateBackupFiles() {
       showNotification('Failed to load backups: ' + error.message, 'error');
     }
   }
+
+
+// Debounce utility (if not already present)
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Revised Auto-Backup Function (Skips meal toggle changes)
+async function autoBackupOnChange(changeType, tableName, payload) {
+    console.log(`autoBackupOnChange called with: changeType=${changeType}, tableName=${tableName}`, payload);
+    
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
+        console.log('Auto-backup skipped: User lacks admin/manager privileges.');
+        return;
+    }
+    
+    // Skip if the change is from the meals table
+    if (tableName === 'meals') {
+        console.log('Auto-backup skipped: Changes to meals table ignored.');
+        return;
+    }
+    
+    // For members table, skip if only day_status or night_status changed
+    if (tableName === 'members' && changeType === 'UPDATE') {
+        try {
+            const oldData = payload.old || {};
+            const newData = payload.new || {};
+            
+            console.log('Checking for meal status changes only:');
+            console.log('Old data:', oldData);
+            console.log('New data:', newData);
+            
+            // Get changed keys
+            const changedKeys = [];
+            for (const key in newData) {
+                if (JSON.stringify(newData[key]) !== JSON.stringify(oldData[key])) {
+                    changedKeys.push(key);
+                }
+            }
+            
+            console.log('Changed keys:', changedKeys);
+            
+            // If only day_status or night_status (or both) changed, skip backup
+            const isOnlyMealStatusChange = changedKeys.length > 0 && 
+                changedKeys.every(key => key === 'day_status' || key === 'night_status');
+                
+            if (isOnlyMealStatusChange) {
+                console.log('Auto-backup skipped: Only meal status (day_status/night_status) changed in members.');
+                return;
+            }
+        } catch (error) {
+            console.error('Error in change detection logic:', error);
+            // Continue with backup as a failsafe
+        }
+    }
+    
+    console.log(`Auto-backup triggered by ${changeType} on ${tableName}`);
+    
+    try {
+        showNotification('Auto-backup started due to data change...', 'info');
+        const blob = await exportAllDataToXLSX(true); // Generate blob without downloading
+        if (blob) {
+            await uploadBackupToSupabase(blob);
+            console.log('Auto-backup completed successfully');
+        } else {
+            throw new Error('Failed to generate backup blob');
+        }
+    } catch (error) {
+        console.error('Auto-backup failed:', error.message);
+        showNotification(`Auto-backup failed: ${error.message}`, 'error');
+    }
+}
+
+// Debounced version to prevent spamming backups on rapid changes
+const debouncedAutoBackup = debounce((changeType, tableName, payload) => {
+    // Wrap the call in a try-catch to ensure debounce doesn't swallow errors
+    try {
+        autoBackupOnChange(changeType, tableName, payload);
+    } catch (error) {
+        console.error('Error in debounced autoBackup:', error);
+    }
+}, 5000);
 
 
   async function downloadBackupFile() {
@@ -1825,26 +1912,58 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
             .update(userUpdate)
             .eq('id', user.id);
     
-        const deposits = {};
-        elements.editDepositFields.querySelectorAll('input').forEach(input => {
-            deposits[input.dataset.label] = parseFloat(input.value) || 0;
-        });
-        await supabaseClient.from('deposits').delete().eq('member_id', editingMemberId);
-        const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
-            member_id: editingMemberId,
-            label,
-            amount
-        }));
-        if (depositEntries.length > 0) {
-            await supabaseClient.from('deposits').insert(depositEntries);
-            depositEntries.forEach(entry => {
-                showNotification(`${name} deposits BDT ${entry.amount} edited`, 'success', false, {
-                    userName: name,
-                    amount: entry.amount,
-                    type: 'deposit_edited'
-                });
+            const deposits = {};
+            elements.editDepositFields.querySelectorAll('input').forEach(input => {
+                const amount = parseFloat(input.value) || 0;
+                // Only include non-zero deposits
+                if (amount > 0) {
+                    deposits[input.dataset.label] = amount;
+                }
             });
-        }
+            
+            // Get existing deposits for comparison
+            const existingDeposits = appState.deposits.filter(d => d.member_id === editingMemberId)
+                .reduce((acc, dep) => {
+                    acc[dep.label] = dep.amount;
+                    return acc;
+                }, {});
+            
+            // Delete all existing deposits for this member
+            await supabaseClient.from('deposits').delete().eq('member_id', editingMemberId);
+            
+            // Only insert non-zero deposits
+            const depositEntries = Object.entries(deposits).map(([label, amount]) => ({
+                member_id: editingMemberId,
+                label,
+                amount
+            }));
+            
+            if (depositEntries.length > 0) {
+                await supabaseClient.from('deposits').insert(depositEntries);
+                
+                // Only show notifications for deposits that actually changed
+                depositEntries.forEach(entry => {
+                    const previousAmount = existingDeposits[entry.label] || 0;
+                    if (entry.amount !== previousAmount) {
+                        showNotification(`${name} deposits BDT ${entry.amount} edited`, 'success', false, {
+                            userName: name,
+                            amount: entry.amount,
+                            type: 'deposit_edited'
+                        });
+                    }
+                });
+            }
+            
+            // Show notifications for deleted deposits (set to zero)
+            Object.entries(existingDeposits).forEach(([label, amount]) => {
+                if (amount > 0 && !deposits[label]) {
+                    showNotification(`${name} deposit ${label} removed`, 'info', false, {
+                        userName: name,
+                        label: label,
+                        type: 'deposit_removed'
+                    });
+                }
+            });
     
         // Targeted UI update
         await renderMembers();
@@ -2801,7 +2920,6 @@ function setupMessageSubscription() {
         }
     );
 }
-
 function setupRealtimeSubscriptions() {
     console.log('Setting up real-time subscriptions...');
 
@@ -2818,26 +2936,46 @@ function setupRealtimeSubscriptions() {
                 if (memberIndex !== -1) {
                     appState.members[memberIndex] = { ...appState.members[memberIndex], ...updatedMember };
                     debouncedUpdateAllViews();
+                    debouncedAutoBackup(payload.eventType, 'members'); // Trigger backup
                 }
+            } else if (payload.eventType === 'INSERT') {
+                if (!appState.members.some(m => m.id === payload.new.id)) {
+                    appState.members.push(payload.new);
+                    debouncedUpdateAllViews();
+                    debouncedAutoBackup(payload.eventType, 'members'); // Trigger backup
+                }
+            } else if (payload.eventType === 'DELETE') {
+                appState.members = appState.members.filter(m => m.id !== payload.old.id);
+                debouncedUpdateAllViews();
+                debouncedAutoBackup(payload.eventType, 'members'); // Trigger backup
             }
         })
         .subscribe();
 
-// In setupRealtimeSubscriptions
-const depositsChannel = supabaseClient.channel('public:deposits')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
-        console.log('Deposits table updated:', payload);
-        if (isInitializing) return; // Skip during init
-        if (payload.eventType === 'INSERT') {
-            if (!appState.deposits.some(d => d.id === payload.new.id)) {
-                appState.deposits.push(payload.new);
+    const depositsChannel = supabaseClient.channel('public:deposits')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
+            console.log('Deposits table updated:', payload);
+            if (isInitializing) return; // Skip during init
+            if (payload.eventType === 'INSERT') {
+                if (!appState.deposits.some(d => d.id === payload.new.id)) {
+                    appState.deposits.push(payload.new);
+                    debouncedUpdateAllViews();
+                    debouncedAutoBackup(payload.eventType, 'deposits'); // Trigger backup
+                }
+            } else if (payload.eventType === 'DELETE') {
+                appState.deposits = appState.deposits.filter(d => d.id !== payload.old.id);
+                debouncedUpdateAllViews();
+                debouncedAutoBackup(payload.eventType, 'deposits'); // Trigger backup
+            } else if (payload.eventType === 'UPDATE') {
+                const depositIndex = appState.deposits.findIndex(d => d.id === payload.new.id);
+                if (depositIndex !== -1) {
+                    appState.deposits[depositIndex] = payload.new;
+                    debouncedUpdateAllViews();
+                    debouncedAutoBackup(payload.eventType, 'deposits'); // Trigger backup
+                }
             }
-        } else if (payload.eventType === 'DELETE') {
-            appState.deposits = appState.deposits.filter(d => d.id !== payload.old.id);
-        }
-        debouncedUpdateAllViews();
-    })
-    .subscribe();
+        })
+        .subscribe();
 
     const expensesChannel = supabaseClient.channel('public:expenses')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async (payload) => {
@@ -2845,14 +2983,49 @@ const depositsChannel = supabaseClient.channel('public:deposits')
             if (isInitializing) return; // Skip during init
             if (payload.eventType === 'INSERT') {
                 appState.expenses.push(payload.new);
+                debouncedUpdateAllViews();
+                debouncedAutoBackup(payload.eventType, 'expenses'); // Trigger backup
+            } else if (payload.eventType === 'DELETE') {
+                appState.expenses = appState.expenses.filter(e => e.id !== payload.old.id);
+                debouncedUpdateAllViews();
+                debouncedAutoBackup(payload.eventType, 'expenses'); // Trigger backup
+            } else if (payload.eventType === 'UPDATE') {
+                const expenseIndex = appState.expenses.findIndex(e => e.id === payload.new.id);
+                if (expenseIndex !== -1) {
+                    appState.expenses[expenseIndex] = payload.new;
+                    debouncedUpdateAllViews();
+                    debouncedAutoBackup(payload.eventType, 'expenses'); // Trigger backup
+                }
             }
-            debouncedUpdateAllViews();
         })
         .subscribe();
 
-    return [membersChannel, depositsChannel, expensesChannel];
-}
+    // Meals subscription (for UI updates only, no backup)
+    const mealsChannel = supabaseClient.channel('public:meals')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'meals' }, async (payload) => {
+            console.log('Meals table updated:', payload);
+            if (isInitializing) return; // Skip during init
+            if (payload.eventType === 'INSERT') {
+                appState.meals.push(payload.new);
+                debouncedUpdateAllViews();
+                // No backup triggered here
+            } else if (payload.eventType === 'DELETE') {
+                appState.meals = appState.meals.filter(m => m.id !== payload.old.id);
+                debouncedUpdateAllViews();
+                // No backup triggered here
+            } else if (payload.eventType === 'UPDATE') {
+                const mealIndex = appState.meals.findIndex(m => m.id === payload.new.id);
+                if (mealIndex !== -1) {
+                    appState.meals[mealIndex] = payload.new;
+                    debouncedUpdateAllViews();
+                    // No backup triggered here
+                }
+            }
+        })
+        .subscribe();
 
+    return [membersChannel, depositsChannel, expensesChannel, mealsChannel];
+}
 
 function debounce(func, wait) {
     let timeout;
