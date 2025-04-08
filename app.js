@@ -1075,6 +1075,73 @@ const debouncedAutoBackup = debounce((changeType, tableName, payload) => {
 }, 5000);
 
 
+// Function to delete backup files older than 15 days
+async function deleteOldBackups() {
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
+        console.log('Delete old backups skipped: User lacks admin/manager privileges.');
+        return;
+    }
+
+    console.log('Checking for backup files older than 15 days...');
+
+    try {
+        // Get current date (April 08, 2025, as per your system)
+        const currentDate = new Date('2025-04-08');
+        const cutoffDate = new Date(currentDate);
+        cutoffDate.setDate(currentDate.getDate() - 15); // 15 days ago
+
+        // List all files in the 'backup' bucket
+        const { data: files, error: listError } = await supabaseClient.storage
+            .from('backup')
+            .list('', { sortBy: { column: 'created_at', order: 'desc' } });
+
+        if (listError) {
+            throw new Error(`Failed to list backups: ${listError.message}`);
+        }
+
+        if (!files || files.length === 0) {
+            console.log('No backup files found.');
+            return;
+        }
+
+        // Filter files older than 15 days
+        const filesToDelete = files.filter(file => {
+            // Skip placeholder files
+            if (file.name === '.emptyFolderPlaceholder') return false;
+
+            const fileDate = new Date(file.created_at);
+            return fileDate < cutoffDate;
+        });
+
+        if (filesToDelete.length === 0) {
+            console.log('No backup files older than 15 days found.');
+            return;
+        }
+
+        // Delete each old file
+        const deletePromises = filesToDelete.map(file =>
+            supabaseClient.storage
+                .from('backup')
+                .remove([file.name])
+                .then(({ error }) => {
+                    if (error) {
+                        console.error(`Failed to delete ${file.name}: ${error.message}`);
+                    } else {
+                        console.log(`Deleted old backup: ${file.name} (created ${file.created_at})`);
+                    }
+                })
+        );
+
+        await Promise.all(deletePromises);
+        showNotification(`Deleted ${filesToDelete.length} old backup file(s).`, 'success');
+
+    } catch (error) {
+        console.error('Error deleting old backups:', error.message);
+        showNotification(`Failed to delete old backups: ${error.message}`, 'error');
+    }
+}
+
+
   async function downloadBackupFile() {
     const select = document.getElementById('backup-file-select');
     const filename = select.value;
@@ -3702,7 +3769,8 @@ try {
         await resetMessages();
       }
     });
-
+    await deleteOldBackups(); // Run once on load
+    setInterval(deleteOldBackups, 24 * 60 * 60 * 1000); // Run every 24 hours
     await showAnnouncementPopup();
     isInitializing = false; // Mark initialization complete
   } else {
