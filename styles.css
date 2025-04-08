@@ -2486,6 +2486,14 @@ body.dark-mode #loading-animation {
 }
 
 
+#manual-backup-btn{
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+#reset-messages-btn {
+    margin-top: 15px;
+}
 
 
 .data-table input[type="number"] {
@@ -3811,6 +3819,14 @@ body.dark-mode .notification-log .notification-separator {
 }
 
 #load-backups-btn {
-    padding: 5px 10px;
-    margin-bottom: 10px;
-  }                                                   
+    padding: 10px 20px;
+    margin-bottom: 15px;
+    background-color: #4CAF50;  /* Green background */
+    color: white;               /* White text */
+    border: none;               /* No border */
+    border-radius: 10px;         /* Rounded corners */
+    font-size: 12px;   
+    margin-top: 15px;         /* Larger text */
+    cursor: pointer;           /* Pointer cursor on hover */
+    transition: background-color 0.3s ease; /* Smooth color transition */
+}
