@@ -1216,56 +1216,8 @@ body.dark-mode #loading-animation {
     color: var(--foreground);
     border-radius: 0;
 }
-
-
-.dashboard-toggle .stat-box h3{
-    padding: 30px 100px !important;
-}
-
-.dashboard-tabs {
-    display: none;  /* Hidden by default on larger screens */
-    gap: var(--spacing-sm);
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: var(--spacing-sm);
-    scrollbar-width: none;
-}
-.dashboard-tabs::-webkit-scrollbar {
+.dashboard-tabs{
     display: none;
-}
-
-.tab-btn {
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: none;
-    border-radius: var(--radius-sm);
-    background: var(--light);
-    cursor: pointer;
-    transition: background-color var(--transition-fast), color var(--transition-fast);
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--secondary);
-    white-space: nowrap;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.tab-btn.active {
-    background: var(--primary);
-    color: var(--light);
-    font-weight: 600;
-}
-
-.tab-btn:active {
-    background: var(--primary-active);
-    color: var(--light);
-}
-
-.tab-content {
-    display: none;
-    color: var(--foreground);
-}
-
-.tab-content:not(.hidden) {
-    display: block;
 }
 
 /* Modify existing .dashboard-grid */
@@ -3169,7 +3121,7 @@ body.dark-mode .notification-log .notification-separator {
 .sidebar-link {
     display: flex;
     align-items: center;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 5px 10px;
     color: var(--foreground);
     text-decoration: none;
     transition: background-color var(--transition-fast), color var(--transition-fast);
@@ -3373,7 +3325,6 @@ body.dark-mode .notification-log .notification-separator {
     border: var(--border-width) solid var(--border-color);
     border-radius: var(--radius-md);
     background-color:rgba(220, 232, 246, 0.681);
-    flex-basis: calc(50% - var(--spacing-lg)/2); /* Two columns roughly */
     min-width: 310px;
 }
 
