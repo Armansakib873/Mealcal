@@ -20,7 +20,7 @@
     --foreground: #212529;
     --light: #ffffff;
     --border: #e2e8f0;
-    --dash: #d2faf990;
+    --dash: 	#ebfffac6;
     --dash-2: #79928f17;
     --dash-3: rgba(247, 245, 212, 0.556);
     --shadow-light: rgba(0, 0, 0, 0.1);
@@ -1320,10 +1320,10 @@ body.dark-mode #loading-animation {
     margin-bottom: 0;
     padding: 3px 10px;
     color: var(--foreground);
-    background-color: #f7f4d417;
+
     border-radius: var(--radius-lg);
-    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.1), 
-    inset -3px -3px 6px rgba(255, 255, 255, 0.279);
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.053), 
+     -3px -3px 6px rgba(255, 255, 255, 0.167);
     transition: all 0.3s ease;
 }
 
@@ -1413,14 +1413,14 @@ body.dark-mode #loading-animation {
 .day-meal, .night-meal {
     padding: 8px;
     border-radius: var(--radius-lg);
-    background: linear-gradient(145deg, #f4de5364, #dceaee);
+    background: linear-gradient(145deg, #f6f1cd52, #cbcbcbd4);
     box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
                 inset -3px -3px 6px rgba(255, 255, 255, 0.5);
     transition: transform 0.2s ease-in-out;
 }
 
 .night-meal {
-    background: linear-gradient(145deg, #42360173, #dfdfd490);
+    background: linear-gradient(145deg, #53504273, #dfdfd490);
 }
 
 .meal-count-box p {
