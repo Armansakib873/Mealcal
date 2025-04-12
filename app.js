@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 userDayToggle: document.getElementById('user-day-toggle'),
 userNightToggle: document.getElementById('user-night-toggle'),
 todayDayCount: document.getElementById('today-day-count'),
-    todayNightCount: document.getElementById('today-night-count'),
+   
     totalDeposits: document.getElementById('total-deposits'), // Example, adjust as needed
     totalExpenditure: document.getElementById('total-expenditure'),
     currentBalance: document.getElementById('current-balance'),
@@ -2358,7 +2358,7 @@ const dateSpan = document.getElementById('custom-date');
 if (dateSpan) {
   dateSpan.textContent = getCustomDashboardDate();
 }
-// hi
+
 function getCustomDashboardDate() {
     const now = new Date();
     const customDate = new Date(now);
@@ -2371,6 +2371,30 @@ function getCustomDashboardDate() {
     const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
     return customDate.toLocaleDateString('en-US', options); // Format: Mon, Apr 7, 2025
   }
+
+  const dateSpan2 = document.getElementById('custom-date2');
+if (dateSpan2) {
+  dateSpan2.textContent = getCustomDashboardDate2();
+}
+
+function getCustomDashboardDate2() {
+  const now = new Date();
+  const customDate = new Date(now);
+  customDate.setDate(customDate.getDate() + 1); // Always one day ahead
+
+  const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+  return customDate.toLocaleDateString('en-US', options); // Format: Tue, Apr 8, 2025
+}
+
+document.querySelectorAll('.custom-date').forEach(span => {
+    span.textContent = getCustomDashboardDate();
+});
+
+document.querySelectorAll('.custom-date2').forEach(span => {
+    span.textContent = getCustomDashboardDate2();
+});
+
+
   
 
     // --- Meal Tracker ---
@@ -2585,23 +2609,39 @@ function getCustomDashboardDate() {
 
 
     async function updateTodayMealCard() {
-        const today = new Date().toLocaleString('en-US', { weekday: 'long' }); // e.g., "Sunday"
-        const plan = appState.meal_plans.find(p => p.day_name === today) || { day_meal: 'Not set', night_meal: 'Not set' };
+        // Get day name for night meal (shifts after 8 PM)
+        const now = new Date();
+        const nightDate = new Date(now);
+        if (now.getHours() >= 20) {
+            nightDate.setDate(nightDate.getDate() + 1);
+        }
+        const nightDayName = nightDate.toLocaleString('en-US', { weekday: 'long' });
+    
+        // Get day name for day meal (always +2 days)
+        const dayDate = new Date(now);
+        dayDate.setDate(dayDate.getDate() + 1);
+        const dayDayName = dayDate.toLocaleString('en-US', { weekday: 'long' });
+    
+        // Find matching meal plan for each
+        const dayPlan = appState.meal_plans.find(p => p.day_name === dayDayName) || { day_meal: 'Not set' };
+        const nightPlan = appState.meal_plans.find(p => p.day_name === nightDayName) || { night_meal: 'Not set' };
+    
         if (elements.todayMealCard) {
             elements.todayMealCard.innerHTML = `
                 <h3>Today's Meal Plan</h3>
-                <p>Day ${plan.day_meal || 'Not set'}</p>
-                <p>Night ${plan.night_meal || 'Not set'}</p>
+                <p>Day: ${dayPlan.day_meal || 'Not set'}</p>
+                <p>Night: ${nightPlan.night_meal || 'Not set'}</p>
             `;
         } else {
-            // Fallback to existing elements if no specific card
-            elements.todayDayCount.innerHTML = `<div class="m-count">${appState.members.filter(m => m.day_status).length}</div> (${plan.day_meal || 'Not set'})`;
-            elements.todayNightCount.innerHTML = `<div class="m-count">${appState.members.filter(m => m.night_status).length}</div> (${plan.night_meal || 'Not set'})`;
-            
-            
+            // fallback to counts + meal info
+            const totalDay = appState.members.filter(m => m.day_status).length;
+            const totalNight = appState.members.filter(m => m.night_status).length;
+    
+            elements.todayDayCount.innerHTML = `<div class="m-count">${totalDay}</div> (${dayPlan.day_meal || 'Not set'})`;
+            elements.todayNightCount.innerHTML = `<div class="m-count">${totalNight}</div> (${nightPlan.night_meal || 'Not set'})`;
         }
     }
-
+    
     async function updateMealToggleCard() {
         if (currentUser?.role === 'admin' || !currentUser?.member_id) {
             elements.mealToggleCard.style.display = 'none';

@@ -497,7 +497,7 @@ body.dark-mode .collapsible-header {
 }
 
 .collapsible-content.expanded {
-    max-height: 1000px; /* Adjust based on your expected max content height */
+    max-height: 1200px; /* Adjust based on your expected max content height */
     opacity: 1;
     transform: scaleY(1);
     padding: var(--spacing-md);
@@ -1236,6 +1236,7 @@ body.dark-mode #loading-animation {
     .stat-box {
         min-height: 110px; /* Slightly smaller */
         padding: var(--spacing-sm);
+        padding-bottom: 50px !important;
     }
     .stat-box i {
         font-size: 1.6rem;
@@ -1276,6 +1277,7 @@ body.dark-mode #loading-animation {
     background: var(--dash);
     color: var(--foreground);
     padding: var(--spacing-md);
+
    
     border-radius: var(--radius-md);
     text-align: center;
@@ -1337,6 +1339,22 @@ body.dark-mode #loading-animation {
     box-shadow: none !important;
 }
 
+.meal-date{
+    font-size: 0.8rem !important;
+    color: rgba(141, 0, 0, 0.71) !important;
+    display: flex;
+    justify-content: space-between;
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 10px !important;
+    box-shadow: none !important;
+}
+
+
+.custom-date, .custom-date2{
+    color: rgba(141, 0, 0, 0.71) !important;
+    font-size: 0.7rem !important;
+}
 
 #current-balance-box{
     grid-column: span 2;
@@ -1364,6 +1382,11 @@ body.dark-mode #loading-animation {
     color: #00585d;
 }
 
+
+#meal-toggle-card{
+    align-content: center !important;
+
+}
 
 .meal-count-box {
     grid-column: span 2;
@@ -1409,7 +1432,7 @@ body.dark-mode #loading-animation {
 
 .meal-count span {
 
-    font-size: 1rem;
+    font-size: 2rem;
     color: var(--secondary);
     font-weight: bold;
 }
@@ -2577,7 +2600,6 @@ body.dark-mode #loading-animation {
     #summary-table .toggle-btn {
         padding: 3px 6px;
         font-size: 0.7rem;
-        min-width: 40px;
     }
 }
 
