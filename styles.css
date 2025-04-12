@@ -1973,6 +1973,11 @@ body.dark-mode #loading-animation {
     box-shadow: 0 4px 10px rgba(71, 118, 230, 0.2);
 }
 
+#expense-table2{
+    height: 600px;
+    overflow: scroll !important;
+}
+
 @media (prefers-color-scheme: dark) {
     .member-card {
         background: linear-gradient(100deg, var(--dash), var(--dash-2));
@@ -2010,7 +2015,8 @@ body.dark-mode #loading-animation {
 }
 /* --- Tables --- */
 .table-wrapper {
-    overflow-x: auto;
+    overflow-x: auto; /* Enable horizontal scrolling */
+    overflow-y: auto; /* Keep vertical scrolling if needed */
     -webkit-overflow-scrolling: touch;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
@@ -2018,6 +2024,7 @@ body.dark-mode #loading-animation {
     background: var(--light);
     margin-top: var(--spacing-md);
     color: var(--foreground);
+    max-width: 100%; /* Prevent wrapper from exceeding parent */
 }
 
 /* Modify existing .data-table */
@@ -2028,6 +2035,9 @@ body.dark-mode #loading-animation {
     background-color: var(--light);
     color: var(--foreground);
 }
+
+
+
 
 /* Add desktop-specific styling */
 @media (min-width: 769px) {
