@@ -497,12 +497,15 @@ body.dark-mode .collapsible-header {
 }
 
 .collapsible-content.expanded {
-    max-height: 1200px; /* Adjust based on your expected max content height */
+    max-height: 1500px; /* Adjust based on your expected max content height */
     opacity: 1;
     transform: scaleY(1);
     padding: var(--spacing-md);
 }
 
+#edit-add-deposit-btn{
+    display: none;
+}
 
 /* --- Header --- */
 .header {

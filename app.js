@@ -432,6 +432,82 @@ function formatDateForNotificationLog(dateString) {
         return `Current Cycle: ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
     }
 
+
+    async function resequenceDeposits(memberId) {
+        const memberDeposits = appState.deposits.filter(d => d.member_id === memberId);
+        // Sort by existing label index or creation time to maintain logical order
+        memberDeposits.sort((a, b) => {
+            const indexA = depositLabels.indexOf(a.label);
+            const indexB = depositLabels.indexOf(b.label);
+            return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+        });
+    
+        // Assign new sequential labels
+        const updates = memberDeposits.map((deposit, index) => ({
+            id: deposit.id,
+            label: depositLabels[index]
+        }));
+    
+        // Update Supabase
+        const { error } = await supabaseClient
+            .from('deposits')
+            .upsert(updates, { onConflict: 'id' });
+    
+        if (error) {
+            console.error('Error resequencing deposits:', error.message);
+        
+            return false;
+        }
+    
+        // Update appState
+        updates.forEach(update => {
+            const deposit = appState.deposits.find(d => d.id === update.id);
+            if (deposit) deposit.label = update.label;
+        });
+    
+        return true;
+    }
+
+    async function addDeposit(memberId, amount) {
+        const memberDeposits = appState.deposits.filter(d => d.member_id === memberId);
+        // Sort to ensure correct order
+        memberDeposits.sort((a, b) => {
+            const indexA = depositLabels.indexOf(a.label);
+            const indexB = depositLabels.indexOf(b.label);
+            return indexA - indexB;
+        });
+        // Find next label
+        let nextLabelIndex = memberDeposits.length;
+        if (nextLabelIndex >= depositLabels.length) {
+            showNotification('Maximum deposit limit reached.', 'error');
+            return null;
+        }
+        const label = depositLabels[nextLabelIndex];
+    
+        const { data, error } = await supabaseClient
+            .from('deposits')
+            .insert([{ member_id: memberId, amount, label }])
+            .select()
+            .single();
+    
+        if (error) {
+            console.error('Error adding deposit:', error.message);
+            showNotification('Failed to add deposit.', 'error');
+            return null;
+        }
+    
+        appState.deposits.push(data);
+        await resequenceDeposits(memberId); // Ensure sequence after addition
+        showNotification(`Added ${label} deposit of ${formatCurrency(amount)}`, 'success', false, {
+            type: 'deposit_added',
+            userName: appState.members.find(m => m.id === memberId)?.name,
+            amount,
+            editor: currentUser.username
+        });
+    
+        return data;
+    }
+
     // --- Authentication Forms ---
     async function createAuthForms() {
         const { data: users, error } = await supabaseClient.from('users').select('username');
@@ -2041,36 +2117,43 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
 
     async function editMember(id) {
         if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') return;
+    
         const member = appState.members.find(m => m.id === id);
         const user = appState.users.find(u => u.member_id === id);
-
+    
         editingMemberId = id;
         document.getElementById('edit-member-name').value = member.name;
         document.getElementById('edit-member-username').value = user.username;
         document.getElementById('edit-pre-month-balance').value = member.pre_month_balance;
-
+    
         // Optionally restrict password editing for managers
         if (currentUser.role === 'manager') {
             document.getElementById('edit-member-password').disabled = true;
         } else {
-            document.getElementById('edit-member-password').value = ''; // Allow password edit for admins
+            document.getElementById('edit-member-password').value = '';
             document.getElementById('edit-member-password').disabled = false;
         }
-
+    
         elements.editDepositFields.innerHTML = '';
         const memberDeposits = appState.deposits.filter(d => d.member_id === id);
-        memberDeposits.forEach(dep => {
+        const depositLabels = ['1st', '2nd', '3rd', '4th', '5th'];
+    
+        depositLabels.forEach(label => {
+            const dep = memberDeposits.find(d => d.label === label) || { amount: '', label };
             const div = document.createElement('div');
             div.className = 'form-group';
             div.innerHTML = `
-                <label for="edit-deposit-${dep.label}">${dep.label}:</label>
-                <input type="number" id="edit-deposit-${dep.label}" class="input-field" value="${dep.amount}" step="1" data-label="${dep.label}">
+                <label for="edit-deposit-${label}">${label}:</label>
+                <input type="number" id="edit-deposit-${label}" class="input-field" value="${dep.amount}" step="1" data-label="${label}">
             `;
             elements.editDepositFields.appendChild(div);
         });
-
+    
         openModal(elements.editMemberModal);
     }
+    
+
+
 
     async function deleteMember(id) {
         if (currentUser.role !== 'admin') return;
@@ -2687,7 +2770,7 @@ document.querySelectorAll('.custom-date2').forEach(span => {
     }
     // --- User Overview ---
     async function updateUserOverview() {
-        if (currentUser.role === 'admin') return; // Skip for admins
+        if (currentUser.role === 'admin') return;
     
         if (!currentUser.member_id) {
             elements.userName.textContent = currentUser.username;
@@ -2707,7 +2790,8 @@ document.querySelectorAll('.custom-date2').forEach(span => {
         const balance = totalDeposit - totalCost;
         const balanceClass = balance >= 0 ? 'positive' : 'negative';
     
-        const deposits = appState.deposits.filter(d => d.member_id === member.id);
+        let deposits = appState.deposits.filter(d => d.member_id === member.id);
+        deposits.sort((a, b) => depositLabels.indexOf(a.label) - depositLabels.indexOf(b.label));
     
         elements.userName.textContent = member.name;
         elements.userDeposit.textContent = formatCurrency(totalDeposit);
@@ -2722,16 +2806,13 @@ document.querySelectorAll('.custom-date2').forEach(span => {
     
         if (balance < 0 && currentUser.role === 'user' && !appState.hasShownNegativeBalanceWarning) {
             if (appState.isAnnouncementPopupOpen) {
-                // Delay the warning until the announcement is closed
                 appState.showBalanceWarningAfterPopup = true;
             } else {
                 showNotification('Warning: Your balance is negative!', 'error');
                 appState.hasShownNegativeBalanceWarning = true;
             }
         }
-        
     }
-
     // --- Summary ---
     async function renderSummary() {
         elements.summaryTableBody.innerHTML = '';
@@ -3059,26 +3140,30 @@ function setupRealtimeSubscriptions() {
         })
         .subscribe();
 
-    const depositsChannel = supabaseClient.channel('public:deposits')
+        const depositsChannel = supabaseClient.channel('public:deposits')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, async (payload) => {
             console.log('Deposits table updated:', payload);
-            if (isInitializing) return; // Skip during init
+            if (isInitializing) return;
             if (payload.eventType === 'INSERT') {
                 if (!appState.deposits.some(d => d.id === payload.new.id)) {
                     appState.deposits.push(payload.new);
+                    await resequenceDeposits(payload.new.member_id);
                     debouncedUpdateAllViews();
-                    debouncedAutoBackup(payload.eventType, 'deposits'); // Trigger backup
+                    debouncedAutoBackup(payload.eventType, 'deposits');
                 }
             } else if (payload.eventType === 'DELETE') {
+                const memberId = appState.deposits.find(d => d.id === payload.old.id)?.member_id;
                 appState.deposits = appState.deposits.filter(d => d.id !== payload.old.id);
+                if (memberId) await resequenceDeposits(memberId);
                 debouncedUpdateAllViews();
-                debouncedAutoBackup(payload.eventType, 'deposits'); // Trigger backup
+                debouncedAutoBackup(payload.eventType, 'deposits');
             } else if (payload.eventType === 'UPDATE') {
                 const depositIndex = appState.deposits.findIndex(d => d.id === payload.new.id);
                 if (depositIndex !== -1) {
                     appState.deposits[depositIndex] = payload.new;
+                    await resequenceDeposits(payload.new.member_id);
                     debouncedUpdateAllViews();
-                    debouncedAutoBackup(payload.eventType, 'deposits'); // Trigger backup
+                    debouncedAutoBackup(payload.eventType, 'deposits');
                 }
             }
         })
