@@ -720,9 +720,10 @@ async function exportAllDataToXLSX(returnBlobOnly = false) {
 
         // Summary Sheet
         const summaryHeaders = [
-            'Name', 'Day', 'Night', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance',
+            'Name', 'Night', 'Day', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance',
             'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'
         ];
+
         const summarySheetData = [
             summaryHeaders,
             ...fullSummary.map(row => [
@@ -862,10 +863,10 @@ async function generateXLSXBlob() {
     const expensesData = prepareExpensesData();
 
     // Summary Sheet
-    const summaryHeaders = [
-        'Name', 'Day', 'Night', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance',
-        'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'
-    ];
+const summaryHeaders = [
+    'Name', 'Night', 'Day', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance',
+    'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'
+];
     const summarySheetData = [
         summaryHeaders,
         ...fullSummary.map(row => [
@@ -2157,8 +2158,9 @@ document.getElementById('clear-all-announcements-btn').addEventListener('click',
                 <div>Bazar<span class="total-bazar"> ${totalBazar}</span></div>
                 </div>
                 <div class="toggles">
+                <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
                     <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
-                    <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
+                    
                 </div>
                 ${(isAdmin || isManager) ? `
                 <div class="actions">
@@ -2600,7 +2602,6 @@ function getCustomDashboardDate() {
         }
     }
 
-
     async function updateMealToggleCard() {
         if (currentUser?.role === 'admin' || !currentUser?.member_id) {
             elements.mealToggleCard.style.display = 'none';
@@ -2613,36 +2614,36 @@ function getCustomDashboardDate() {
         elements.mealToggleCard.style.display = 'block';
     
         const isAllowed = isToggleTimeAllowed();
-        const dayBtn = elements.userDayToggle;
         const nightBtn = elements.userNightToggle;
+        const dayBtn = elements.userDayToggle;
     
-        // Update button states
-        dayBtn.classList.toggle('on', member.day_status);
-        dayBtn.classList.toggle('off', !member.day_status);
-        dayBtn.textContent = `Day ${member.day_status ? 'On' : 'Off'}`;
-        dayBtn.classList.toggle('disabled', !isAllowed);
-    
+        // Update button states (Night first)
         nightBtn.classList.toggle('on', member.night_status);
         nightBtn.classList.toggle('off', !member.night_status);
         nightBtn.textContent = `Night ${member.night_status ? 'On' : 'Off'}`;
         nightBtn.classList.toggle('disabled', !isAllowed);
     
-        // Remove and reattach event listeners to prevent duplicates
-        const dayBtnClone = dayBtn.cloneNode(true);
-        const nightBtnClone = nightBtn.cloneNode(true);
-        dayBtn.parentNode.replaceChild(dayBtnClone, dayBtn);
-        nightBtn.parentNode.replaceChild(nightBtnClone, nightBtn);
+        dayBtn.classList.toggle('on', member.day_status);
+        dayBtn.classList.toggle('off', !member.day_status);
+        dayBtn.textContent = `Day ${member.day_status ? 'On' : 'Off'}`;
+        dayBtn.classList.toggle('disabled', !isAllowed);
     
-        elements.userDayToggle = dayBtnClone;
+        // Remove and reattach event listeners to prevent duplicates
+        const nightBtnClone = nightBtn.cloneNode(true);
+        const dayBtnClone = dayBtn.cloneNode(true);
+        nightBtn.parentNode.replaceChild(nightBtnClone, nightBtn);
+        dayBtn.parentNode.replaceChild(dayBtnClone, dayBtn);
+    
         elements.userNightToggle = nightBtnClone;
+        elements.userDayToggle = dayBtnClone;
     
         if (isAllowed) {
-            dayBtnClone.addEventListener('click', () => toggleMealStatus(member, 'day'));
             nightBtnClone.addEventListener('click', () => toggleMealStatus(member, 'night'));
+            dayBtnClone.addEventListener('click', () => toggleMealStatus(member, 'day'));
         }
     
         // Ensure dashboard counts are in sync
-        await updateDashboard(); // Add this to sync counts
+        await updateDashboard();
     }
     // --- User Overview ---
     async function updateUserOverview() {
@@ -2706,28 +2707,28 @@ function getCustomDashboardDate() {
             const depositMap = Object.fromEntries(memberDeposits.map(d => [d.label, d.amount]));
     
             const isAdminOrManager = currentUser.role === 'admin' || currentUser.role === 'manager';
-            const isAllowed = isToggleTimeAllowed() || isAdminOrManager; // Admins/managers bypass time restriction
+            const isAllowed = isToggleTimeAllowed() || isAdminOrManager;
             const toggleClass = isAllowed && isAdminOrManager ? '' : 'restricted';
-            const disabledAttr = isAdminOrManager ? '' : 'disabled'; // Disable buttons for regular users
+            const disabledAttr = isAdminOrManager ? '' : 'disabled';
     
             const row = document.createElement('tr');
             row.dataset.memberId = member.id;
             row.innerHTML = `
                 <td>${member.name}</td>
                 <td>
-                    <button class="toggle-btn day-toggle ${member.day_status ? 'on meal-on' : 'off meal-off'} ${toggleClass}" 
-                            data-state="${member.day_status ? 'on' : 'off'}" 
-                            data-type="day" 
-                            ${disabledAttr}>
-                        Day ${member.day_status ? 'On' : 'Off'}
-                    </button>
-                </td>
-                <td>
                     <button class="toggle-btn night-toggle ${member.night_status ? 'on meal-on' : 'off meal-off'} ${toggleClass}" 
                             data-state="${member.night_status ? 'on' : 'off'}" 
                             data-type="night" 
                             ${disabledAttr}>
                         Night ${member.night_status ? 'On' : 'Off'}
+                    </button>
+                </td>
+                <td>
+                    <button class="toggle-btn day-toggle ${member.day_status ? 'on meal-on' : 'off meal-off'} ${toggleClass}" 
+                            data-state="${member.day_status ? 'on' : 'off'}" 
+                            data-type="day" 
+                            ${disabledAttr}>
+                        Day ${member.day_status ? 'On' : 'Off'}
                     </button>
                 </td>
                 <td>${totalMeals}</td>
@@ -2745,7 +2746,6 @@ function getCustomDashboardDate() {
             elements.summaryTableBody.appendChild(row);
         }
     
-        // Add event listeners to toggles only for admins/managers
         if (currentUser.role === 'admin' || currentUser.role === 'manager') {
             initializeToggleListeners();
         }
@@ -3326,7 +3326,7 @@ async function exportToJPG(fullSummary, balanceData) {
         const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
         // Define table headers
-        const fullHeaders = ['Name', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
+        const fullHeaders = ['Name', 'Night', 'Day', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
 
         // Generate Full Summary Table Rows
         const fullTableRows = fullSummary.map((row, index) => `
@@ -3436,6 +3436,8 @@ function extractFullSummaryFromTable(table) {
 
         fullSummary.push({
             Name: cells[0].textContent,
+            Night: cells[1].textContent.includes('On') ? 'On' : 'Off',
+            Day: cells[2].textContent.includes('On') ? 'On' : 'Off',
             'Total Meals': parseInt(cells[3].textContent) || 0,
             'Total Cost': parseFloat(cells[4].textContent.replace('৳', '')) || 0,
             'Total Deposit': parseFloat(cells[5].textContent.replace('৳', '')) || 0,
@@ -3547,7 +3549,7 @@ function printSummary(fullSummary, balanceData) {
     }
 
     const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const fullHeaders = ['Name', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
+    const fullHeaders = ['Name', 'Night', 'Day', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
     const fullTableRows = fullSummary.map(row => `
         <tr>
             <td>${row.Name}</td>
@@ -3655,22 +3657,22 @@ function printSummary(fullSummary, balanceData) {
     async function updateMemberCard(memberId) {
         const card = elements.membersList.querySelector(`.member-card[data-id="${memberId}"]`);
         if (!card) return;
-
+    
         const member = appState.members.find(m => m.id === memberId);
         if (!member) return;
-
+    
         const [totalMeals, totalDeposit, totalCost, totalBazar] = await Promise.all([
             calculateTotalMeals(memberId),
             calculateTotalDeposit(memberId),
             calculateTotalCost(memberId),
             calculateTotalBazar(memberId)
         ]);
-
+    
         const balance = totalDeposit - totalCost;
         const balanceClass = balance >= 0 ? 'positive' : 'negative';
         const isOwnCard = currentUser.role === 'user' && member.id === currentUser.member_id;
         const toggleClass = isOwnCard ? `user-toggle ${isToggleTimeAllowed() ? '' : 'disabled'}` : '';
-
+    
         card.innerHTML = `
             <h3>${member.name}</h3>
             <div>Total Deposit: ${formatCurrency(totalDeposit)}</div>
@@ -3678,8 +3680,8 @@ function printSummary(fullSummary, balanceData) {
             <div>Total Meals: <span class="total-meals">${totalMeals}</span></div>
             <div>Total Bazar: ${totalBazar}</div>
             <div class="toggles">
-                <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
                 <button class="toggle-btn ${member.night_status ? 'on' : 'off'} ${toggleClass}" data-type="night">Night ${member.night_status ? '' : '(Off)'}</button>
+                <button class="toggle-btn ${member.day_status ? 'on' : 'off'} ${toggleClass}" data-type="day">Day ${member.day_status ? '' : '(Off)'}</button>
             </div>
             ${(currentUser.role === 'admin' || currentUser.role === 'manager') ? `
             <div class="actions">
@@ -3691,16 +3693,16 @@ function printSummary(fullSummary, balanceData) {
                 `}
             </div>` : ''}
         `;
-
+    
         if (balance < 0 && currentUser.role === 'user') {
             showNotification('Warning: Your balance is negative!', 'error');
         }
-
+    
         const toggleButtons = card.querySelectorAll('.toggle-btn');
         toggleButtons.forEach(btn => {
             btn.addEventListener('click', () => toggleMealStatus(member, btn.dataset.type));
         });
-
+    
         if (currentUser.role === 'admin') {
             card.querySelector('.edit-btn').addEventListener('click', () => editMember(member.id));
             card.querySelector('.delete-btn').addEventListener('click', () => deleteMember(member.id));

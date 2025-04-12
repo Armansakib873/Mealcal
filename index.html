@@ -207,14 +207,15 @@
                                 <i class="fas fa-utensils"></i>
                                 <h3>Today's Meal Plan</h3>
                                 <div class="meal-count">
-                                    <div class="day-meal">
-                                        <span><i class="fas fa-sun"></i>Day</span>
-                                        <p id="today-day-count"></p>
-                                    </div>
                                     <div class="night-meal">
                                         <span><i class="fas fa-moon"></i>Night</span>
                                         <p id="today-night-count"></p>
                                     </div>
+                                    <div class="day-meal">
+                                        <span><i class="fas fa-sun"></i>Day</span>
+                                        <p id="today-day-count"></p>
+                                    </div>
+
                                 </div>
                             </div>
 
@@ -224,8 +225,9 @@
                                <p class="meal-date">Toggle meal for <span id="custom-date"></span></p>
 
                                 <div class="toggle-container">
-                                    <button class="toggle-btn" id="user-day-toggle" aria-pressed="false">Day</button>
                                     <button class="toggle-btn" id="user-night-toggle"> Night</button>
+                                    <button class="toggle-btn" id="user-day-toggle" aria-pressed="false">Day</button>
+
                                 </div>
                             </div>
 
@@ -349,8 +351,8 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
-                                    <th>Day</th>
                                     <th>Night</th>
+                                    <th>Day</th>
                                     <th>Total Meals</th>
                                     <th>Total Cost</th>
                                     <th>Total Deposit</th>
@@ -367,8 +369,9 @@
                             <tbody>
                                 <tr>
                                   <td>User Name</td>
+                                   <td><button class="toggle-btn night-toggle" data-state="off"><i class="fas fa-moon"></i>Off</button></td>
                                   <td><button class="toggle-btn day-toggle" data-state="off"><i class="fas fa-sun"></i>Off</button></td>
-                                  <td><button class="toggle-btn night-toggle" data-state="off"><i class="fas fa-moon"></i>Off</button></td>
+                                 
                                   <!-- Other cells -->
                                 </tr>
                               </tbody>
