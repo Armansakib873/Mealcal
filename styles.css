@@ -2007,6 +2007,13 @@ body.dark-mode #loading-animation {
 
 @media (prefers-color-scheme: dark) {
     .member-card {
+        background-image: url('bg_optimized.webp');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center center;
+        box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
+                    inset -3px -3px 6px rgba(255, 255, 255, 0.5);
+
 
         padding: 15px;
         padding-bottom: 20px;
