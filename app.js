@@ -2537,7 +2537,6 @@ function getCustomDashboardDate() {
   }
   
 
-
 document.querySelectorAll('.custom-date').forEach(span => {
     span.textContent = getCustomDashboardDate();
 });
@@ -2759,38 +2758,33 @@ document.querySelectorAll('.custom-date2').forEach(span => {
     }
     // In setupRealtimeSubscriptions, update the UI update calls to use debouncing where needed
 
+
     async function updateTodayMealCard() {
+        // Get day name for night meal (shifts after 8 PM)
         const now = new Date();
-        const hours = now.getHours();
-        console.log('Current time:', now, 'Hours:', hours);
-    
         const nightDate = new Date(now);
-        if (hours >= 20) {
+        if (now.getHours() >= 20) {
             nightDate.setDate(nightDate.getDate() + 1);
         }
         const nightDayName = nightDate.toLocaleString('en-US', { weekday: 'long' });
-        console.log('Night date:', nightDate, 'Night day name:', nightDayName);
     
+        // Get day name for day meal (always +2 days)
         const dayDate = new Date(now);
-        if (hours >= 20) {
-            dayDate.setDate(dayDate.getDate() + 2);
-        } else {
-            dayDate.setDate(dayDate.getDate() + 1);
-        }
+        dayDate.setDate(dayDate.getDate() + 1);
         const dayDayName = dayDate.toLocaleString('en-US', { weekday: 'long' });
-        console.log('Day date:', dayDate, 'Day day name:', dayDayName);
     
+        // Find matching meal plan for each
         const dayPlan = appState.meal_plans.find(p => p.day_name === dayDayName) || { day_meal: 'Not set' };
         const nightPlan = appState.meal_plans.find(p => p.day_name === nightDayName) || { night_meal: 'Not set' };
-        console.log('Day plan:', dayPlan, 'Night plan:', nightPlan);
     
         if (elements.todayMealCard) {
             elements.todayMealCard.innerHTML = `
                 <h3>Today's Meal Plan</h3>
-                <p>Day (${dayDayName}): ${dayPlan.day_meal || 'Not set'}</p>
-                <p>Night (${nightDayName}): ${nightPlan.night_meal || 'Not set'}</p>
+                <p>Day: ${dayPlan.day_meal || 'Not set'}</p>
+                <p>Night: ${nightPlan.night_meal || 'Not set'}</p>
             `;
         } else {
+            // fallback to counts + meal info
             const totalDay = appState.members.filter(m => m.day_status).length;
             const totalNight = appState.members.filter(m => m.night_status).length;
     
@@ -2798,8 +2792,7 @@ document.querySelectorAll('.custom-date2').forEach(span => {
             elements.todayNightCount.innerHTML = `<div class="m-count">${totalNight}</div> (${nightPlan.night_meal || 'Not set'})`;
         }
     }
-
-
+    
     async function updateMealToggleCard() {
         if (currentUser?.role === 'admin' || !currentUser?.member_id) {
             elements.mealToggleCard.style.display = 'none';
@@ -3017,14 +3010,11 @@ document.querySelectorAll('.custom-date2').forEach(span => {
         });
     }
     
-function startRestrictionCheck() {
-    updateToggleRestrictions();
-    updateTodayMealCard(); // Add this
-    setInterval(() => {
+    function startRestrictionCheck() {
         updateToggleRestrictions();
-        updateTodayMealCard(); // Add this
-    }, 60000); // Check every minute
-}
+        setInterval(updateToggleRestrictions, 60000); // Check every minute
+    }
+
 
 
     async function fetchMealPlans() {
