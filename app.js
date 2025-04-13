@@ -2546,64 +2546,68 @@ document.querySelectorAll('.custom-date2').forEach(span => {
 });
 
 
-  
+  // --- Meal Tracker ---
+async function renderMealTracker() {
+    elements.mealTableBody.innerHTML = '';
+    const daysInMonth = 31;
 
-    // --- Meal Tracker ---
-    async function renderMealTracker() {
-        elements.mealTableBody.innerHTML = '';
-        const daysInMonth = 31;
+    const headerRow = document.createElement('tr');
+    headerRow.innerHTML = '<th>Name</th>' +
+        Array.from({ length: daysInMonth }, (_, i) => `<th>${i + 1}</th>`).join('') +
+        '<th>Total</th>';
+    elements.mealTableBody.appendChild(headerRow);
 
-        const headerRow = document.createElement('tr');
-        headerRow.innerHTML = '<th>Name</th>' + Array.from({ length: daysInMonth }, (_, i) => `<th>${i + 1}</th>`).join('') + '<th>Total</th>';
-        elements.mealTableBody.appendChild(headerRow);
+    // ✅ Everyone can see all members
+    const visibleMembers = appState.members;
 
-        const visibleMembers = currentUser.role === 'admin' || currentUser.role === 'manager'
-            ? appState.members
-            : appState.members.filter(m => m.id === currentUser.member_id);
+    for (const member of visibleMembers) {
+        const row = document.createElement('tr');
+        row.dataset.memberId = member.id;
+        row.innerHTML = `<td>${member.name}</td>`;
 
-        for (const member of visibleMembers) {
-            const row = document.createElement('tr');
-            row.dataset.memberId = member.id;
-            row.innerHTML = `<td>${member.name}</td>`;
+        const memberMeals = appState.meals.filter(m => m.member_id === member.id);
+        const mealData = {};
+        memberMeals.forEach(m => mealData[m.day] = m.count);
 
-            const memberMeals = appState.meals.filter(m => m.member_id === member.id);
-            const mealData = {};
-            memberMeals.forEach(m => mealData[m.day] = m.count);
+        for (let i = 1; i <= daysInMonth; i++) {
+            const cell = document.createElement('td');
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = 0;
+            input.value = mealData[i] || 0;
 
-            for (let i = 1; i <= daysInMonth; i++) {
-                const cell = document.createElement('td');
-                const input = document.createElement('input');
-                input.type = 'number';
-                input.min = 0;
-                input.value = mealData[i] || 0;
-                input.disabled = currentUser.role === 'user' && !currentUser.can_edit;
-                input.addEventListener('change', async () => {
-                    const newCount = parseInt(input.value) || 0;
-                    const existingMeal = appState.meals.find(m => m.member_id === member.id && m.day === i);
-                    if (existingMeal) {
-                        await supabaseClient.from('meals')
-                            .update({ count: newCount })
-                            .eq('id', existingMeal.id);
-                    } else {
-                        await supabaseClient.from('meals')
-                            .insert([{ member_id: member.id, day: i, count: newCount }]);
-                    }
-                    await fetchAllData();
-                    updateTotalMeals(row, member.id);
-                    await updateDashboard();
-                });
-                cell.appendChild(input);
-                row.appendChild(cell);
-            }
+            // ✅ Only admin or manager can edit
+            input.disabled = !(currentUser.role === 'admin' || currentUser.role === 'manager');
 
-            const totalCell = document.createElement('td');
-            totalCell.className = 'total-meals';
-            totalCell.textContent = await calculateTotalMeals(member.id);
-            row.appendChild(totalCell);
+            input.addEventListener('change', async () => {
+                const newCount = parseInt(input.value) || 0;
+                const existingMeal = appState.meals.find(m => m.member_id === member.id && m.day === i);
+                if (existingMeal) {
+                    await supabaseClient.from('meals')
+                        .update({ count: newCount })
+                        .eq('id', existingMeal.id);
+                } else {
+                    await supabaseClient.from('meals')
+                        .insert([{ member_id: member.id, day: i, count: newCount }]);
+                }
+                await fetchAllData();
+                updateTotalMeals(row, member.id);
+                await updateDashboard();
+            });
 
-            elements.mealTableBody.appendChild(row);
+            cell.appendChild(input);
+            row.appendChild(cell);
         }
+
+        const totalCell = document.createElement('td');
+        totalCell.className = 'total-meals';
+        totalCell.textContent = await calculateTotalMeals(member.id);
+        row.appendChild(totalCell);
+
+        elements.mealTableBody.appendChild(row);
     }
+}
+
 
     async function updateTotalMeals(row, memberId) {
         const totalCell = row.querySelector('.total-meals');
