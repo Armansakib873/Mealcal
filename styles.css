@@ -483,14 +483,13 @@ body.dark-mode .collapsible-header {
     transform-origin: top;
     border-bottom-left-radius: var(--radius-lg);
     border-bottom-right-radius: var(--radius-lg);
-    
-    /* ✅ Background image directly */
-    background-image: url('bg2.jpg');
+
+    background-image: url('bg2_optimized.webp');
+
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center center;
     
-    /* ✅ Smoothed transitions */
     transition: 
         max-height 0.5s ease,
         opacity 0.4s ease,
@@ -499,7 +498,6 @@ body.dark-mode .collapsible-header {
         background-position 0s; /* no lag */
 }
 
-/* ✅ Expanded state */
 .collapsible-content.expanded {
     max-height: 999px; /* Safe max height, big enough for any content */
     opacity: 1;
@@ -507,7 +505,6 @@ body.dark-mode .collapsible-header {
     padding: var(--spacing-md);
 }
 
-/* 🔥 Optional: Add a semi-dark overlay if needed */
 .collapsible-content::after {
     content: '';
     position: absolute;
@@ -1303,9 +1300,9 @@ body.dark-mode #loading-animation {
 
 
 .stat-box {
-    background-image: url('bg.jpg'); 
-    background-size: cover;                 /* Scale image to cover the whole area */
-    background-repeat: no-repeat;           /* Prevent image repetition */
+    background-image: url('bg_optimized.webp'); 
+    background-size: cover;        
+    background-repeat: no-repeat; 
     background-position: center center; 
     color: var(--foreground);
     padding: var(--spacing-md);
