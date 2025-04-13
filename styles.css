@@ -484,7 +484,7 @@ body.dark-mode .collapsible-header {
     border-bottom-left-radius: var(--radius-lg);
     border-bottom-right-radius: var(--radius-lg);
 
-    background-image: url('bg3.png');
+    background-image: url('bg2_optimized.webp');
 
     background-size: cover;
     background-repeat: no-repeat;
@@ -498,19 +498,12 @@ body.dark-mode .collapsible-header {
         background-position 0s; /* no lag */
 }
 
+
 .collapsible-content.expanded {
     max-height: 999px; /* Safe max height, big enough for any content */
     opacity: 1;
     transform: scaleY(1);
     padding: var(--spacing-md);
-}
-
-.collapsible-content::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-color: rgba(255, 255, 255, 0.1); /* light or dark overlay */
-    pointer-events: none;
 }
 
 
@@ -3704,7 +3697,6 @@ body.dark-mode .notification-log .notification-separator {
         padding: var(--spacing-md);
         padding-bottom:30px ;
         color: var(--foreground);
-        border: 1px solid var(--border);
     }
 
     .stat-box i {
