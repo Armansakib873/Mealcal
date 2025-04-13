@@ -1647,39 +1647,72 @@ elements.sidebar.addEventListener('click', (event) => {
       }
 
 
-      async function refreshApp() {
-        console.log('Refreshing app data'); // Debug
-    
-        try {
-            // Preserve currentUser
-            const savedUser = { ...currentUser };
-    
-            // Clear appState except currentUser
-            appState.members = [];
-            appState.deposits = [];
-            appState.meals = [];
-            appState.expenses = [];
-            appState.notifications = [];
-            appState.hasShownNegativeBalanceWarning = false;
-            appState.showBalanceWarningAfterPopup = false;
-            appState.isAnnouncementPopupOpen = false;
-    
-            // Restore currentUser
-            currentUser = savedUser;
-    
-            // Refetch all data
-            await fetchAllData();
-    
-            // Update UI
-            await updateAllViews();
-    
-            showNotification('Data refreshed successfully!', 'success');
-        } catch (error) {
-            console.error('Error refreshing app:', error.message);
-            showNotification('Failed to refresh data.', 'error');
-        } finally {
+     async function refreshApp() {
+    console.log('Refreshing app data');
+
+    try {
+        const savedUser = sessionStorage.getItem('mealcal_currentUser');
+        localStorage.clear();
+        for (let key in sessionStorage) {
+            if (key !== 'mealcal_currentUser') {
+                sessionStorage.removeItem(key);
+            }
         }
+        if (savedUser) {
+            sessionStorage.setItem('mealcal_currentUser', savedUser);
+        }
+
+        appState = {
+            members: [],
+            deposits: [],
+            meals: [],
+            expenses: [],
+            notifications: [],
+            users: [],
+            meal_plans: [],
+            messages: [],
+            lastUpdated: null,
+            user_settings: [],
+            announcements: [],
+            user_announcement_views: [],
+            hasShownNegativeBalanceWarning: false,
+            hasShownThresholdWarning: {},
+            isAnnouncementPopupOpen: false,
+            isDataFetched: false // Reset flag
+        };
+        currentUser = savedUser ? JSON.parse(savedUser) : currentUser;
+
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            console.log('Sending clear-cache message to service worker');
+            const cacheCleared = new Promise((resolve) => {
+                const messageChannel = new MessageChannel();
+                messageChannel.port1.onmessage = (event) => {
+                    if (event.data.action === 'cache-cleared') {
+                        console.log('Received cache-cleared confirmation');
+                        resolve();
+                    }
+                };
+                navigator.serviceWorker.controller.postMessage(
+                    { action: 'clear-cache' },
+                    [messageChannel.port2]
+                );
+                setTimeout(resolve, 5000);
+            });
+            await cacheCleared;
+        }
+
+        await fetchAllData();
+        await updateAllViews();
+        initializeSidebarState();
+        updateSidebarUserInfo();
+        startRestrictionCheck();
+        showNotification('Data refreshed successfully!', 'success');
+    } catch (error) {
+        console.error('Error refreshing app:', error.message);
+        showNotification('Failed to refresh data: ' + error.message, 'error');
+    } finally {
     }
+}
 
     // --- announcements ---
     async function showAnnouncementPopup() {
