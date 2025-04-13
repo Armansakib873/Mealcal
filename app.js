@@ -2508,32 +2508,34 @@ const dateSpan = document.getElementById('custom-date');
 if (dateSpan) {
   dateSpan.textContent = getCustomDashboardDate();
 }
-
 function getCustomDashboardDate() {
-  const now = new Date();
-  const customDate = new Date(now);
-
-  if (now.getHours() >= 20) {
-    customDate.setDate(customDate.getDate() + 1);
+    const now = new Date();
+    const customDate = new Date(now);
+  
+    if (now.getHours() >= 20) {
+      customDate.setDate(customDate.getDate() + 1);
+    }
+  
+    const options = { weekday: 'short', month: 'short', day: 'numeric' };
+    return customDate.toLocaleDateString('en-US', options); // Format: Tue, Apr 8
   }
-
-  const options = { weekday: 'short', month: 'short', day: 'numeric' };
-  return customDate.toLocaleDateString('en-US', options); // Format: Tue, Apr 8
-}
-
-const dateSpan2 = document.getElementById('custom-date2');
-if (dateSpan2) {
-  dateSpan2.textContent = getCustomDashboardDate2();
-}
-
-function getCustomDashboardDate2() {
-  const now = new Date();
-  const customDate = new Date(now);
-  customDate.setDate(customDate.getDate() + 1); // Always one day ahead
-
-  const options = { weekday: 'short', month: 'short', day: 'numeric' };
-  return customDate.toLocaleDateString('en-US', options); // Format: Wed, Apr 9
-}
+  
+  function getCustomDashboardDate2() {
+    const now = new Date();
+    const customDate = new Date(now);
+  
+    // Date is already shifted once in first function after 8PM,
+    // so we shift it one more day forward here, but only if it's after 8PM
+    if (now.getHours() >= 20) {
+      customDate.setDate(customDate.getDate() + 2);
+    } else {
+      customDate.setDate(customDate.getDate() + 1);
+    }
+  
+    const options = { weekday: 'short', month: 'short', day: 'numeric' };
+    return customDate.toLocaleDateString('en-US', options); // Format: Wed, Apr 9
+  }
+  
 
 
 document.querySelectorAll('.custom-date').forEach(span => {
@@ -2757,33 +2759,38 @@ document.querySelectorAll('.custom-date2').forEach(span => {
     }
     // In setupRealtimeSubscriptions, update the UI update calls to use debouncing where needed
 
-
     async function updateTodayMealCard() {
-        // Get day name for night meal (shifts after 8 PM)
         const now = new Date();
+        const hours = now.getHours();
+        console.log('Current time:', now, 'Hours:', hours);
+    
         const nightDate = new Date(now);
-        if (now.getHours() >= 20) {
+        if (hours >= 20) {
             nightDate.setDate(nightDate.getDate() + 1);
         }
         const nightDayName = nightDate.toLocaleString('en-US', { weekday: 'long' });
+        console.log('Night date:', nightDate, 'Night day name:', nightDayName);
     
-        // Get day name for day meal (always +2 days)
         const dayDate = new Date(now);
-        dayDate.setDate(dayDate.getDate() + 1);
+        if (hours >= 20) {
+            dayDate.setDate(dayDate.getDate() + 2);
+        } else {
+            dayDate.setDate(dayDate.getDate() + 1);
+        }
         const dayDayName = dayDate.toLocaleString('en-US', { weekday: 'long' });
+        console.log('Day date:', dayDate, 'Day day name:', dayDayName);
     
-        // Find matching meal plan for each
         const dayPlan = appState.meal_plans.find(p => p.day_name === dayDayName) || { day_meal: 'Not set' };
         const nightPlan = appState.meal_plans.find(p => p.day_name === nightDayName) || { night_meal: 'Not set' };
+        console.log('Day plan:', dayPlan, 'Night plan:', nightPlan);
     
         if (elements.todayMealCard) {
             elements.todayMealCard.innerHTML = `
                 <h3>Today's Meal Plan</h3>
-                <p>Day: ${dayPlan.day_meal || 'Not set'}</p>
-                <p>Night: ${nightPlan.night_meal || 'Not set'}</p>
+                <p>Day (${dayDayName}): ${dayPlan.day_meal || 'Not set'}</p>
+                <p>Night (${nightDayName}): ${nightPlan.night_meal || 'Not set'}</p>
             `;
         } else {
-            // fallback to counts + meal info
             const totalDay = appState.members.filter(m => m.day_status).length;
             const totalNight = appState.members.filter(m => m.night_status).length;
     
@@ -2791,7 +2798,8 @@ document.querySelectorAll('.custom-date2').forEach(span => {
             elements.todayNightCount.innerHTML = `<div class="m-count">${totalNight}</div> (${nightPlan.night_meal || 'Not set'})`;
         }
     }
-    
+
+
     async function updateMealToggleCard() {
         if (currentUser?.role === 'admin' || !currentUser?.member_id) {
             elements.mealToggleCard.style.display = 'none';
@@ -3009,11 +3017,14 @@ document.querySelectorAll('.custom-date2').forEach(span => {
         });
     }
     
-    function startRestrictionCheck() {
+function startRestrictionCheck() {
+    updateToggleRestrictions();
+    updateTodayMealCard(); // Add this
+    setInterval(() => {
         updateToggleRestrictions();
-        setInterval(updateToggleRestrictions, 60000); // Check every minute
-    }
-
+        updateTodayMealCard(); // Add this
+    }, 60000); // Check every minute
+}
 
 
     async function fetchMealPlans() {
