@@ -484,7 +484,7 @@ body.dark-mode .collapsible-header {
     border-bottom-left-radius: var(--radius-lg);
     border-bottom-right-radius: var(--radius-lg);
 
-    background-image: url('bg2_optimized.webp');
+    background-image: url('bg3.png');
 
     background-size: cover;
     background-repeat: no-repeat;
@@ -1360,12 +1360,6 @@ body.dark-mode #loading-animation {
     transition: all 0.3s ease;
 }
 
-/* Styling for 3D effect */
-.stat-box p:hover {
-    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
-                inset -3px -3px 6px rgba(255, 255, 255, 0.5);
-    
-}
 
 .meal-count p {
     background-color: #ffffff00 !important;
