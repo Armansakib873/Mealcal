@@ -1064,6 +1064,7 @@ async function populateBackupFiles() {
 
 // Debounce utility (if not already present)
 function debounce(func, wait) {
+    
     let timeout;
     return function executedFunction(...args) {
         const later = () => {
@@ -2537,6 +2538,7 @@ function getCustomDashboardDate() {
   }
   
 
+
 document.querySelectorAll('.custom-date').forEach(span => {
     span.textContent = getCustomDashboardDate();
 });
@@ -2546,6 +2548,9 @@ document.querySelectorAll('.custom-date2').forEach(span => {
 });
 
 
+  
+
+    // --- Meal Tracker ---
   // --- Meal Tracker ---
 async function renderMealTracker() {
     elements.mealTableBody.innerHTML = '';
@@ -2762,33 +2767,38 @@ async function renderMealTracker() {
     }
     // In setupRealtimeSubscriptions, update the UI update calls to use debouncing where needed
 
-
     async function updateTodayMealCard() {
-        // Get day name for night meal (shifts after 8 PM)
         const now = new Date();
+        const hours = now.getHours();
+        console.log('Current time:', now, 'Hours:', hours);
+    
         const nightDate = new Date(now);
-        if (now.getHours() >= 20) {
+        if (hours >= 20) {
             nightDate.setDate(nightDate.getDate() + 1);
         }
         const nightDayName = nightDate.toLocaleString('en-US', { weekday: 'long' });
+        console.log('Night date:', nightDate, 'Night day name:', nightDayName);
     
-        // Get day name for day meal (always +2 days)
         const dayDate = new Date(now);
-        dayDate.setDate(dayDate.getDate() + 1);
+        if (hours >= 20) {
+            dayDate.setDate(dayDate.getDate() + 2);
+        } else {
+            dayDate.setDate(dayDate.getDate() + 1);
+        }
         const dayDayName = dayDate.toLocaleString('en-US', { weekday: 'long' });
+        console.log('Day date:', dayDate, 'Day day name:', dayDayName);
     
-        // Find matching meal plan for each
         const dayPlan = appState.meal_plans.find(p => p.day_name === dayDayName) || { day_meal: 'Not set' };
         const nightPlan = appState.meal_plans.find(p => p.day_name === nightDayName) || { night_meal: 'Not set' };
+        console.log('Day plan:', dayPlan, 'Night plan:', nightPlan);
     
         if (elements.todayMealCard) {
             elements.todayMealCard.innerHTML = `
                 <h3>Today's Meal Plan</h3>
-                <p>Day: ${dayPlan.day_meal || 'Not set'}</p>
-                <p>Night: ${nightPlan.night_meal || 'Not set'}</p>
+                <p>Day (${dayDayName}): ${dayPlan.day_meal || 'Not set'}</p>
+                <p>Night (${nightDayName}): ${nightPlan.night_meal || 'Not set'}</p>
             `;
         } else {
-            // fallback to counts + meal info
             const totalDay = appState.members.filter(m => m.day_status).length;
             const totalNight = appState.members.filter(m => m.night_status).length;
     
@@ -2796,7 +2806,8 @@ async function renderMealTracker() {
             elements.todayNightCount.innerHTML = `<div class="m-count">${totalNight}</div> (${nightPlan.night_meal || 'Not set'})`;
         }
     }
-    
+
+
     async function updateMealToggleCard() {
         if (currentUser?.role === 'admin' || !currentUser?.member_id) {
             elements.mealToggleCard.style.display = 'none';
@@ -3014,11 +3025,14 @@ async function renderMealTracker() {
         });
     }
     
-    function startRestrictionCheck() {
+function startRestrictionCheck() {
+    updateToggleRestrictions();
+    updateTodayMealCard(); // Add this
+    setInterval(() => {
         updateToggleRestrictions();
-        setInterval(updateToggleRestrictions, 60000); // Check every minute
-    }
-
+        updateTodayMealCard(); // Add this
+    }, 60000); // Check every minute
+}
 
 
     async function fetchMealPlans() {
@@ -3042,10 +3056,9 @@ async function renderMealTracker() {
         const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'manager';
     
         // Ensure all days exist in appState.meal_plans
-        days.forEach(async (day) => {
+        for (const day of days) {
             let plan = appState.meal_plans.find(p => p.day_name === day);
             if (!plan) {
-                // Insert default if missing
                 const { data, error } = await supabaseClient
                     .from('meal_plans')
                     .insert([{ day_name: day, day_meal: '', night_meal: '' }])
@@ -3059,11 +3072,13 @@ async function renderMealTracker() {
     
             const row = document.createElement('tr');
             row.dataset.day = day;
+    
             row.innerHTML = `
                 <td>${day}</td>
-                <td><input type="text" class="day-meal" value="${plan.day_meal || ''}" ${canEdit ? '' : 'disabled'}</td>
-                <td><input type="text" class="night-meal" value="${plan.night_meal || ''}" ${canEdit ? '' : 'disabled'}</td>
+                <td><input type="text" class="day-meal" value="${plan.day_meal || ''}" ${canEdit ? '' : 'disabled'}></td>
+                <td><input type="text" class="night-meal" value="${plan.night_meal || ''}" ${canEdit ? '' : 'disabled'}></td>
             `;
+    
             tbody.appendChild(row);
     
             if (canEdit) {
@@ -3079,12 +3094,13 @@ async function renderMealTracker() {
                         plan[field] = newValue;
                         showNotification(`${day} ${field.replace('_', ' ')} updated to "${newValue}"`, 'success');
                         await updateTodayMealCard();
-                        await updateMealToggleCard(); // Add this line
+                        await updateMealToggleCard();
                     });
                 });
             }
-        });
+        }
     }
+    
 //messages section
 
 async function renderMessages() {

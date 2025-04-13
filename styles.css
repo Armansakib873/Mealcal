@@ -2180,6 +2180,7 @@ body.dark-mode #loading-animation {
     min-width: 100%;
     width: auto; /* Allow table to expand based on content */
     border-collapse: collapse;
+
     table-layout: fixed; /* Creates more predictable column widths */
 }
 
@@ -2194,6 +2195,7 @@ body.dark-mode #loading-animation {
 #meal-planner-table th {
     background-color: #f7fafc;
     position: sticky; /* Make headers sticky */
+
     top: 0;
     z-index: 10;
     white-space: nowrap;
