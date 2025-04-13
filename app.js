@@ -2443,19 +2443,18 @@ if (dateSpan) {
 }
 
 function getCustomDashboardDate() {
-    const now = new Date();
-    const customDate = new Date(now);
-  
-    if (now.getHours() >= 20) {
-      // After 8:00 PM, shift to next day
-      customDate.setDate(customDate.getDate() + 1);
-    }
-  
-    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-    return customDate.toLocaleDateString('en-US', options); // Format: Mon, Apr 7, 2025
+  const now = new Date();
+  const customDate = new Date(now);
+
+  if (now.getHours() >= 20) {
+    customDate.setDate(customDate.getDate() + 1);
   }
 
-  const dateSpan2 = document.getElementById('custom-date2');
+  const options = { weekday: 'short', month: 'short', day: 'numeric' };
+  return customDate.toLocaleDateString('en-US', options); // Format: Tue, Apr 8
+}
+
+const dateSpan2 = document.getElementById('custom-date2');
 if (dateSpan2) {
   dateSpan2.textContent = getCustomDashboardDate2();
 }
@@ -2465,9 +2464,10 @@ function getCustomDashboardDate2() {
   const customDate = new Date(now);
   customDate.setDate(customDate.getDate() + 1); // Always one day ahead
 
-  const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-  return customDate.toLocaleDateString('en-US', options); // Format: Tue, Apr 8, 2025
+  const options = { weekday: 'short', month: 'short', day: 'numeric' };
+  return customDate.toLocaleDateString('en-US', options); // Format: Wed, Apr 9
 }
+
 
 document.querySelectorAll('.custom-date').forEach(span => {
     span.textContent = getCustomDashboardDate();
@@ -2801,7 +2801,15 @@ document.querySelectorAll('.custom-date2').forEach(span => {
     
         elements.depositHistoryList.innerHTML = `
             <li>Pre-Month: <p>${formatCurrency(member.pre_month_balance)}</p></li>
-            ${deposits.map(d => `<li>${d.label}: <p>${formatCurrency(d.amount)}</p></li>`).join('')}
+            ${deposits.map(d => `
+                <li>
+         
+                    ${d.label}: <p>${formatCurrency(d.amount)}</p>
+                             <span class="deposit-date">${formatDate(d.created_at)}</span>
+
+                  
+                </li>
+            `).join('')}
         `;
     
         if (balance < 0 && currentUser.role === 'user' && !appState.hasShownNegativeBalanceWarning) {

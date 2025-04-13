@@ -197,6 +197,7 @@ body.dark-mode .notification-log-list .log-entry:nth-child(odd) {
 *,
 *::before,
 *::after {
+
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -357,7 +358,8 @@ body.dark-mode .loader-icon {
 
 @media (min-width: 769px) {
   .main-container {
-    padding-top: 0; /*Remove padding from desktop*/
+    padding: 0;
+    padding-right:  10px;
   }
 }
 .card {
@@ -472,13 +474,6 @@ body.dark-mode .collapsible-header {
     flex-shrink: 0;
 }
 
-.collapsible-header .toggle-icon {
-    color: var(--foreground-muted);
-    transition: transform var(--transition-normal) var(--transition-ease);
-    flex-shrink: 0; /* Prevent icon shrinking */
-    font-size: 0.9rem;
-}
-
 .collapsible-content {
     overflow: hidden;
     max-height: 0;
@@ -488,13 +483,39 @@ body.dark-mode .collapsible-header {
     transform-origin: top;
     border-bottom-left-radius: var(--radius-lg);
     border-bottom-right-radius: var(--radius-lg);
-    background-color: rgba(239, 239, 239, 0.778);
+    
+    /* ✅ Background image directly */
+    background-image: url('bg2.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+    
+    /* ✅ Smoothed transitions */
     transition: 
         max-height 0.5s ease,
         opacity 0.4s ease,
         padding 0.4s ease,
-        transform 0.4s ease;
+        transform 0.4s ease,
+        background-position 0s; /* no lag */
 }
+
+/* ✅ Expanded state */
+.collapsible-content.expanded {
+    max-height: 999px; /* Safe max height, big enough for any content */
+    opacity: 1;
+    transform: scaleY(1);
+    padding: var(--spacing-md);
+}
+
+/* 🔥 Optional: Add a semi-dark overlay if needed */
+.collapsible-content::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.1); /* light or dark overlay */
+    pointer-events: none;
+}
+
 
 .collapsible-content.expanded {
     max-height: 1500px; /* Adjust based on your expected max content height */
@@ -658,6 +679,11 @@ body.dark-mode #loading-animation {
     }
     .mobile-user-info {
         display: none; /* Hide mobile-specific info */
+    }
+
+    #admin-controls{
+        margin-top: 20px;
+
     }
 }
 
@@ -832,7 +858,7 @@ body.dark-mode #loading-animation {
 
 .input-field {
     width: 100%;
-    padding: 12px 15px;
+    padding: 6px 10px;
     font-size: 1rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -1163,8 +1189,8 @@ body.dark-mode #loading-animation {
 #member-select {
     padding: var(--spacing-md);
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 1rem;
+    border-radius: var(--radius-md);
+    font-size: 1.5rem;
     width: 100%;
     transition: border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
     color: var(--foreground);
@@ -1180,7 +1206,7 @@ body.dark-mode #loading-animation {
 @media (max-width: 768px) {
     #member-select {
         padding: var(--spacing-sm);
-        font-size: 0.9rem;
+        font-size: 1rem;
         border: 1px solid var(--border);
         color: var(--foreground);
         background-color: var(--light);
@@ -1277,7 +1303,10 @@ body.dark-mode #loading-animation {
 
 
 .stat-box {
-    background: var(--dash);
+    background-image: url('bg.jpg'); 
+    background-size: cover;                 /* Scale image to cover the whole area */
+    background-repeat: no-repeat;           /* Prevent image repetition */
+    background-position: center center; 
     color: var(--foreground);
     padding: var(--spacing-md);
 
@@ -1359,6 +1388,12 @@ body.dark-mode #loading-animation {
     font-size: 0.7rem !important;
 }
 
+#sum-date, #sum-date2{
+    color: rgba(141, 0, 0, 0.71) !important;
+    font-size: 0.5rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
 #current-balance-box{
     grid-column: span 2;
 }
@@ -1416,14 +1451,9 @@ body.dark-mode #loading-animation {
 .day-meal, .night-meal {
     padding: 8px;
     border-radius: var(--radius-lg);
-    background: linear-gradient(145deg, #f6f1cd52, #cbcbcbd4);
-    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
-                inset -3px -3px 6px rgba(255, 255, 255, 0.5);
-    transition: transform 0.2s ease-in-out;
-}
 
-.night-meal {
-    background: linear-gradient(145deg, #53504273, #dfdfd490);
+
+    transition: transform 0.2s ease-in-out;
 }
 
 .meal-count-box p {
@@ -1664,7 +1694,8 @@ body.dark-mode #loading-animation {
 }
 
 .profile-section .collapsible-content, .deposit-history .collapsible-content{
-    background-color: var(--light);
+    box-shadow:  3px 3px 10px rgba(0, 0, 0, 0.268);
+
 }
 
 
@@ -1697,7 +1728,7 @@ body.dark-mode #loading-animation {
     font-size: 0.8rem;
 
     justify-content: space-between;
-    border-bottom: 1px dashed var(--border);
+    border-bottom: 1px dashed rgba(76, 76, 76, 0.405);
     transition: background-color var(--transition-normal);
     display: flex;
     color: var(--foreground);
@@ -1708,6 +1739,11 @@ body.dark-mode #loading-animation {
 
 .deposit-history li:active {
     background-color: var(--light);
+}
+
+.deposit-history li span {
+    font-size: 0.6rem;
+    color: var(--foreground);
 }
 
 #deposit-history-list{
@@ -1796,8 +1832,6 @@ body.dark-mode #loading-animation {
     align-items: center;
     width: 100%;
     gap: var(--spacing-md);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.06);
     color: var(--foreground);
     text-align: center;
     position: relative;
@@ -1828,9 +1862,7 @@ body.dark-mode #loading-animation {
     font-weight: 500;
     align-items: center;
     padding: 12px 12px;
-    border-radius: var(--radius-md);
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px dashed rgba(96, 95, 95, 0.425);
 }
 
 .card-details span {
@@ -1983,15 +2015,10 @@ body.dark-mode #loading-animation {
 
 @media (prefers-color-scheme: dark) {
     .member-card {
-        background: linear-gradient(100deg, var(--dash), var(--dash-2));
-        border-radius: 12px;
+
         padding: 15px;
         padding-bottom: 20px;
         transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-        box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.3), 
-                    inset -4px -4px 8px rgba(255, 255, 255, 0.1), 
-                    0 6px 12px rgba(0, 0, 0, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .member-card .info-row {
@@ -2705,7 +2732,7 @@ body.dark-mode #loading-animation {
 
 /* ON State */
 .toggle-btn.on {
-    background: linear-gradient(135deg, #000000ac 0%, #257d35b4 50%, #3d6244b4 100%);
+    background: linear-gradient(135deg, #000000ac 0%, #01450dde 50%, #015b11e5 100%);
     color: rgb(226, 228, 198);
     box-shadow: 0 4px 10px rgba(6, 105, 31, 0.496),
                 inset 2px 2px 5px rgba(255, 255, 255, 0.2),
@@ -2807,6 +2834,10 @@ body.dark-mode #loading-animation {
     color: var(--foreground);
 }
 
+.modal-content h2 {
+    margin: 0 0 var(--spacing-md) 0; /* Margin below the title */
+    
+}
 @keyframes slideIn {
     from {
         opacity: 0;
@@ -2855,6 +2886,13 @@ body.dark-mode #loading-animation {
     font-size: 1rem;
     font-weight: 600;
     color: var(--foreground);
+}
+
+@media (max-width: 768px) {
+    .form-group input[type="number"] {
+        padding: 5px 8px;
+        color: rgba(17, 70, 1, 0.901);
+}
 }
 
 .input-field,
@@ -3340,11 +3378,6 @@ body.dark-mode .notification-log .notification-separator {
     }
   }
 
-  #export-data-btn {
-    width: 100px;
-
-  }
-  
 
   
 /* --- Admin Controls --- */
