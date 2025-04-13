@@ -943,6 +943,16 @@ body.dark-mode #loading-animation {
     color: var(--light);
 }
 
+.icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9e1601;
+    font-size: 10px;
+    margin: 5px;
+}
+
+
 /* Notification Styling */
 
 
@@ -3563,7 +3573,6 @@ body.dark-mode .notification-log .notification-separator {
     .stat-box span {
         font-size: 1.1rem;
         color: rgb(40, 39, 39);
-        margin-top: var(--spacing-xs);
     }
 
  

@@ -1647,6 +1647,40 @@ elements.sidebar.addEventListener('click', (event) => {
       }
 
 
+      async function refreshApp() {
+        console.log('Refreshing app data'); // Debug
+    
+        try {
+            // Preserve currentUser
+            const savedUser = { ...currentUser };
+    
+            // Clear appState except currentUser
+            appState.members = [];
+            appState.deposits = [];
+            appState.meals = [];
+            appState.expenses = [];
+            appState.notifications = [];
+            appState.hasShownNegativeBalanceWarning = false;
+            appState.showBalanceWarningAfterPopup = false;
+            appState.isAnnouncementPopupOpen = false;
+    
+            // Restore currentUser
+            currentUser = savedUser;
+    
+            // Refetch all data
+            await fetchAllData();
+    
+            // Update UI
+            await updateAllViews();
+    
+            showNotification('Data refreshed successfully!', 'success');
+        } catch (error) {
+            console.error('Error refreshing app:', error.message);
+            showNotification('Failed to refresh data.', 'error');
+        } finally {
+        }
+    }
+
     // --- announcements ---
     async function showAnnouncementPopup() {
         const today = new Date().toISOString().split('T')[0];
