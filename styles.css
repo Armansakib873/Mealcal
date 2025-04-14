@@ -18,7 +18,7 @@
     --theme-button: #444444;
     --background: #ffffff;
     --foreground: #212529;
-    --light: #ffffff;
+    --light: #fffaf3;
     --border: #e2e8f0;
     --dash: 	#ebfffac6;
     --dash-2: #79928f17;
@@ -64,7 +64,9 @@
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 16px;
+    --radius-xlg: 30px;
     --radius-full: 9999px; /* For pills/circles */
+
 
     /* Typography */
     --font-sans: 'Inter', 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
@@ -365,7 +367,7 @@ body.dark-mode .loader-icon {
 .card {
     position: relative;
     margin-bottom: var(--spacing-md);
-    background-color: var(--light);
+    background-color: #fffaf3;
     border-radius: var(--radius-md);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
@@ -440,12 +442,11 @@ body.dark-mode .loader-icon {
     user-select: none;
     border-bottom: var(--border-width) solid transparent; /* Add border when expanded */
     transition: border-color var(--transition-normal) ease, background-color var(--transition-normal) ease;
-    background-color: transparent; /* Default background */
     font-weight: var(--font-weight-semibold);
     position: sticky; /* Optional: make header sticky within card scroll */
     top: 0;
     z-index: var(--z-content);
-    background-color: rgba(232, 233, 235, 0.858);
+    background-color: rgba(221, 233, 235, 0.858);
 }
 body.dark-mode .collapsible-header {
     background-color: hsla(215, 20%, 20%, 0.8); /* Darker sticky header */
@@ -499,12 +500,6 @@ body.dark-mode .collapsible-header {
 }
 
 
-.collapsible-content.expanded {
-    max-height: 999px; /* Safe max height, big enough for any content */
-    opacity: 1;
-    transform: scaleY(1);
-    padding: var(--spacing-md);
-}
 
 
 .collapsible-content.expanded {
@@ -522,8 +517,8 @@ body.dark-mode .collapsible-header {
 .header {
     padding: var(--spacing-sm);
     height: 60px;
-    background: linear-gradient(to right, var(--light), rgba(var(--primary-rgb), 0.05));
-    border-bottom: 1px solid var(--border);
+    background: rgba(210, 210, 210, 0.447);
+
     position: sticky; /* Key for sticky behavior */
     top: 0px;          /* Stick to the top of the viewport */
     z-index: 1000;    /* Ensure it's above other content */
@@ -609,7 +604,7 @@ body.dark-mode .collapsible-header {
 .theme-toggle-btn,
 #notification-log-btn,
 #sidebar-toggle-theme {
-    border-radius: 10px;
+    border-radius: var(--radius-xlg);
     background: var(--theme-button);
     border: 1px solid var(--border);
     transition: all var(--transition-fast) ease;
@@ -657,6 +652,10 @@ body.dark-mode #loading-animation {
 
 /* Add desktop-specific styling */
 @media (min-width: 769px) {
+
+    .header{
+        margin-bottom: 20px;
+    }
     .header-nav {
         display: flex; /* Always visible */
         position: fixed; /* No absolute positioning */
@@ -1311,7 +1310,7 @@ body.dark-mode #loading-animation {
     padding: var(--spacing-md);
 
    
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-xlg);
     text-align: center;
     min-height: 120px;
     display: flex;
@@ -1371,9 +1370,11 @@ body.dark-mode #loading-animation {
 }
 
 
-.custom-date, .custom-date2{
+.custom-date, .custom-date2, #custom-date{
     color: rgba(141, 0, 0, 0.71) !important;
     font-size: 0.7rem !important;
+    border-bottom: 1px dashed rgba(164, 164, 164, 0.699);
+    padding: 5px 20px !important;
 }
 
 #sum-date, #sum-date2{
@@ -1459,19 +1460,19 @@ body.dark-mode #loading-animation {
 }
 
 .m-count {
-    background-color: #3d6244f0;
+
     border-radius: 20px;
-    color: rgb(239, 239, 239);
+    color: rgb(0, 0, 0);
     font-size: 1.4rem;
     font-weight: 800;
-    padding: 0px 40px;
+    padding: 0px 20px;
     margin-bottom: 10px ;
     text-align: center;
     display: inline-block;
     min-width: 40px;
 
     /* Inset shadow for depth effect */
-    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.3), 
+    box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.164), 
                 inset -3px -3px 6px rgba(255, 255, 255, 0.2);
 }
 
@@ -1626,10 +1627,6 @@ body.dark-mode #loading-animation {
 }
 
 /* --- User Overview --- */
-.user-overview {
-    background: var(--light);
-    color: var(--foreground);
-}
 
 .user-overview .overview-grid {
     display: grid;
@@ -1678,20 +1675,27 @@ body.dark-mode #loading-animation {
 .deposit-history .collapsible-header, .profile-section .collapsible-header {
     border-top-left-radius: var(--radius-lg);
     border-top-right-radius: var(--radius-lg);
-    background-color: rgba(213, 234, 255, 0.501);
-    box-shadow:  3px 3px 10px rgba(0, 0, 0, 0.268);
+    background-color: rgba(214, 214, 214, 0.414);
+    box-shadow: 3px 3px 15px rgba(0, 0, 0, 0.2); 
 }
 
-.profile-section .collapsible-content, .deposit-history .collapsible-content{
-    box-shadow:  3px 3px 10px rgba(0, 0, 0, 0.268);
-    background-image: url('bg_optimized.webp'); 
-    background-size: cover;        
-    background-repeat: no-repeat; 
-    background-position: center center; 
-
-
+.profile-section .collapsible-content, 
+.deposit-history .collapsible-content {
+    box-shadow: 3px 3px 15px rgba(0, 0, 0, 0.2);  /* Slightly deeper but more transparent shadow */
+    background-image: url('bg_optimized.webp');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
 }
 
+
+
+/* Ensure content stays above the overlay */
+.profile-section .collapsible-content > *, 
+.deposit-history .collapsible-content > * {
+    position: relative;
+    z-index: 1;
+}
 
 
 
@@ -1772,7 +1776,7 @@ body.dark-mode #loading-animation {
     max-width: 100%;
     padding: var(--spacing-sm);
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-xlg);
     font-size: 1rem;
     color: var(--foreground);
     background-color: var(--light);
@@ -1782,9 +1786,9 @@ body.dark-mode #loading-animation {
     margin: var(--spacing-md);
     width: 100%;
     max-width: 150px;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-sm);
     font-size: 0.85rem;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border);
     color: var(--light);
     background-color: var(--primary);
@@ -1913,7 +1917,7 @@ body.dark-mode #loading-animation {
 }
 
 #user-deposit{
-    background: linear-gradient(90deg, #6b4134ee, #4f355fa9);
+    background: linear-gradient(90deg, #00424f77, #02624fcd);
     color: var(--light);
     text-align: center;
     font-weight: 600;
@@ -2331,7 +2335,7 @@ body.dark-mode #loading-animation {
 
 .chat-header {
     padding: var(--spacing-sm) var(--spacing-md);
-    background: rgba(155, 166, 249, 0.862);
+    background: rgba(125, 129, 175, 0.925);
     color: white;
     display: flex;
     justify-content: space-between;
@@ -2381,7 +2385,8 @@ body.dark-mode #loading-animation {
     flex-grow: 1;
     overflow-y: auto;
     padding: var(--spacing-md);
-    background: var(--background); /* Use base background */
+    background-image: url('bg_optimized.webp');
+    background-size: cover;
     scroll-behavior: smooth;
     display: flex;
     flex-direction: column;
@@ -2445,7 +2450,7 @@ body.dark-mode #loading-animation {
     padding: 12px 16px;
     border: 1px solid #dee2e6;
     border-radius: 24px;
-    background: #f8f9fa;
+    background: #e6e5e2;
     color: #212529;
     transition: all 0.3s ease;
 }
@@ -2646,9 +2651,9 @@ body.dark-mode #loading-animation {
 
 /* --- Buttons --- */
 .btn {
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-sm);
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-xlg);
     font-size: 0.95rem;
     cursor: pointer;
     transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
@@ -2886,7 +2891,8 @@ body.dark-mode #loading-animation {
 .form-group label {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--foreground);
+    margin-left: 10px;
+    color: var(--error);
 }
 
 @media (max-width: 768px) {
@@ -3105,8 +3111,7 @@ body.dark-mode .notification-log .notification-separator {
     left: 0;
     width: 300px;
     height: 100%;
-   background-image: url(bg2_optimized.webp);
-    border-right: 1px solid #b4d4cc; /* Soft teal-gray border */
+   background-color: #edece2;
     z-index: 1050;
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
@@ -3240,7 +3245,8 @@ body.dark-mode .notification-log .notification-separator {
 }
 #sidebar-logout-btn,
 #sidebar-toggle-theme,
-#sidebar-notification-log-btn{
+#sidebar-notification-log-btn,
+#create-announcement-btn{
     display: flex;
     justify-content: center;
     align-items: center;
@@ -3508,8 +3514,9 @@ body.dark-mode .notification-log .notification-separator {
 
     
   #export-data-btn{
-    width: 100%;
+    margin: 0 auto;
     margin-top: 20px;
+    margin-left: 30px;
 
   }
   
@@ -3550,7 +3557,8 @@ body.dark-mode .notification-log .notification-separator {
     }
 
     .btn {
-        width: 100%;
+        width: 80%;
+        margin: 0 auto;
     }
 
     .dashboard-grid {
@@ -3567,6 +3575,10 @@ body.dark-mode .notification-log .notification-separator {
     .stat-box span {
         font-size: 1.1rem;
         color: rgb(40, 39, 39);
+    }
+
+    .stat-box span i{
+        font-size: 0.9rem;
     }
 
  
