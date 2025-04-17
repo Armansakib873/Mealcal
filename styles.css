@@ -484,13 +484,10 @@ body.dark-mode .collapsible-header {
     transform-origin: top;
     border-bottom-left-radius: var(--radius-lg);
     border-bottom-right-radius: var(--radius-lg);
-
     background-image: url('bg2_optimized.webp');
-
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center center;
-    
     transition: 
         max-height 0.5s ease,
         opacity 0.4s ease,
@@ -2128,10 +2125,12 @@ body.dark-mode #loading-animation {
     background-color: var(--light);
     color: var(--foreground);
     z-index: 11;
-    min-width: 130px;
+    min-width: 80px;
     border-right: 2px solid var(--border);
     font-weight: 500;
 }
+
+
 
 #meal-table th:active,
 #meal-table td:active{
@@ -2195,12 +2194,24 @@ body.dark-mode #loading-animation {
     table-layout: fixed; /* Creates more predictable column widths */
 }
 
+#meal-planner-table th:first-child,
+#meal-planner-table td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: var(--light);
+    width: 20px;
+    color: var(--foreground);
+    z-index: 11;
+}
+
+
 /* Improved table styling */
 #meal-planner-table th,
 #meal-planner-table td {
-    padding: 0.75rem;
+    padding: 10px 10px;
     border: 1px solid #e2e8f0;
     text-align: left;
+    width: 5vw !important; /* Set a default width for all columns */
 }
 
 #meal-planner-table th {
@@ -2214,13 +2225,14 @@ body.dark-mode #loading-animation {
 
 /* Ensure inputs are fully visible and consistent */
 #meal-planner-table input[type="text"] {
-    width: 100%;
+
     min-width: 150px;
+    color: rgba(104, 104, 104, 0.879);
     box-sizing: border-box;
     padding: 0.5rem;
     border: 1px solid #cbd5e0;
     border-radius: 0.25rem;
-    font-size: 0.875rem;
+    font-size: 0.775rem;
 }
 
 
@@ -2500,12 +2512,14 @@ body.dark-mode #loading-animation {
 
 
 .data-table input[type="number"] {
-    width: 60px;
-    padding: var(--spacing-sm);
+    width: 30px;
+    padding: 2px 3px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     text-align: center;
+    align-items: center;
+    align-content: center;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     color: var(--foreground);
     background-color: var(--light);
@@ -2516,6 +2530,8 @@ body.dark-mode #loading-animation {
     outline: none;
     box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
 }
+
+
 
 
 #summary-table .negative {
@@ -3409,7 +3425,7 @@ body.dark-mode .notification-log .notification-separator {
     padding: var(--spacing-sm);
     border: var(--border-width) solid var(--border-color);
     border-radius: var(--radius-md);
-    background-color:rgba(220, 232, 246, 0.681);
+    background-color:rgba(253, 248, 232, 0.975);
     min-width: 310px;
 }
 
@@ -3629,6 +3645,11 @@ body.dark-mode .notification-log .notification-separator {
         background-color: rgba(46, 55, 55, 0.226);
         border: 1.2px solid #008bbaa0 ;
         transition: background 0.8s ease-in-out;
+    }
+
+    #meal-table th, #meal-table td {
+        padding: 2px 2px;
+        
     }
     #summary-table th{
         font-size: 0.7rem;
