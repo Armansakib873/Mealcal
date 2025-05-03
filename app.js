@@ -3547,7 +3547,7 @@ async function exportToJPG(fullSummary, balanceData) {
         const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
         // Define table headers
-        const fullHeaders = ['Name', 'Night', 'Day', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
+        const fullHeaders = ['Name', 'Total Meals', 'Total Cost', 'Total Deposit', 'Balance', 'Pre-Month', '1st', '2nd', '3rd', '4th', '5th', 'Total Bazar'];
 
         // Generate Full Summary Table Rows
         const fullTableRows = fullSummary.map((row, index) => `
