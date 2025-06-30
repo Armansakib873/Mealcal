@@ -500,7 +500,7 @@ body.dark-mode .collapsible-header {
 
 
 .collapsible-content.expanded {
-    max-height: 1500px; /* Adjust based on your expected max content height */
+    max-height: 2000px; /* Adjust based on your expected max content height */
     opacity: 1;
     transform: scaleY(1);
     padding: var(--spacing-md);
